@@ -44,19 +44,19 @@ jobs:
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.3.1
-          name: "Antigravity AI Mobile App v1.3.1 (Sabit İmzalı)"
+          tag_name: v1.4.0
+          name: "Antigravity AI Mobile App v1.4.0 (Official Gemini UI Redesign)"
           body: |
-            ### ⚡ Antigravity AI - Jetpack Compose Native Mobile App (v1.3.1)
+            ### ⚡ Antigravity AI - Jetpack Compose Native Mobile App (v1.4.0)
             
-            Android (ARM64-v8a) için optimize edilmiş ve **sabit kalıcı Release Keystore** ile imzalanmış yerel mobil asistan uygulaması.
+            Android (ARM64-v8a) için optimize edilmiş ve **Figma Gemini UI Screens** tasarımı baz alınarak baştan sona yeniden tasarlanmış yerel mobil asistan uygulaması.
             
-            #### 🚀 Bu Sürümdeki Geliştirmeler:
-            - **Sabit İmzalı Güncelleme Desteği:** Artık tüm APK'lar aynı kalıcı anahtarla imzalanır; eski sürümü silmeden doğrudan üstüne güncelleyebilirsiniz.
-            - **Birebir CLI Model Listesi (14 Model):** `agy models` çıktısı (`Gemini 3.7 Flash High/Medium/Low`, `Gemini 3.6 Flash`, `Gemini 3.5 Flash`, `Gemini 3.1 Pro`, `Claude Sonnet 4.6 Thinking`, `Claude Opus 4.6`, `GPT-OSS 120B`) dinamik olarak çekilir ve sunulur.
-            - **Kalan Kota Yüzdesi (% Kalan):** 5 saatlik ve haftalık pencerelerdeki net kalan yüzdeler ve token tüketimleri anlık olarak hesaplanıp gösterilir.
-            - **Görsel Önizleme & Yerel Çalışma Alanı Yüklemesi:** Kullanıcı görselleri Coil ile chat içinde önizlenir ve Termux ortamına aktarılarak Gemini Vision ile doğrudan analiz edilir.
-            - **Çoklu Yapıştırma Çipleri & Vault Kütüphanesi:** Birden çok kopyalanan metin bağımsız çipler olarak saklanır.
+            #### 🎨 Figma Gemini UI Tasarım Yenilikleri:
+            - **'Hello, Osman' Karşılama Ekranı:** Canlı Gemini Sparkle (✦) gradyan ikonu, yatay kaydırılabilir öneri kartları (`Help me`, `Explore`, `Analyze`, `Plan`) ve hızlı yetenek çipi.
+            - **Modern Mesaj Balonları & Aksiyonlar:** Beğen 👍, Beğenme 👎, Paylaş ↗, Panoya Kopyala 📋 aksiyon araç çubuğu ve token telemetrisi.
+            - **Sleek Input Dock:** Yuvarlatılmış `#1E1F20` hap input barı, `+` dosya/resim ekleme, model hızlı geçiş hapı (`Gemini 3.7 Flash ⚡`), sesli yazma ve gönderme butonu.
+            - **Figma Gemini Yan Çekmece:** `Search for chats` arama barı, `New Chat` aksiyonu, `My Stuff (Vault)` ve aktif konuşma vurgusu.
+            - **Sabit İmzalı Kalıcı Keystore:** Üst üste güncelleme garantisi.
           files: build-output/AntigravityAI-arm64-v8a.apk
           make_latest: true
         env:

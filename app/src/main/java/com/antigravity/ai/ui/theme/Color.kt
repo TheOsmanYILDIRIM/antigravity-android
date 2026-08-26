@@ -1,26 +1,44 @@
 package com.antigravity.ai.ui.theme
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-val BackgroundDark = Color(0xFF090D16)
-val SurfaceDark = Color(0xFF111726)
-val SurfaceVariantDark = Color(0xFF161F33)
-val InputBackground = Color(0xFF1A233A)
-val BorderSubtle = Color(0xFF232E4A)
+// Figma Gemini Dark Surface Palette
+val BackgroundDark = Color(0xFF131314)
+val SurfaceDark = Color(0xFF1E1F20)
+val SurfaceVariantDark = Color(0xFF282A2C)
+val SurfaceSelected = Color(0xFF333538)
+val InputBackground = Color(0xFF1E1F20)
+val BorderSubtle = Color(0xFF37393B)
 
-val PrimaryIndigo = Color(0xFF6366F1)
-val SecondaryPurple = Color(0xFF8B5CF6)
-val AccentPink = Color(0xFFD946EF)
+// Gemini Sparkle & Accent Gradients
+val GeminiBlue = Color(0xFF4285F4)
+val GeminiPurple = Color(0xFF9B72CB)
+val GeminiPink = Color(0xFFD96570)
+val GeminiAmber = Color(0xFFF2994A)
 
-val TextPrimary = Color(0xFFF8FAFC)
-val TextSecondary = Color(0xFF94A3B8)
-val TextMuted = Color(0xFF64748B)
+val GeminiSparkleGradient = Brush.linearGradient(
+    colors = listOf(GeminiBlue, GeminiPurple, GeminiPink, GeminiAmber)
+)
 
-val UserBubbleColor = Color(0xFF2563EB)
-val BotBubbleColor = Color(0xFF111726)
+val PrimaryIndigo = Color(0xFF6B8AF6)
+val SecondaryPurple = Color(0xFF9B72CB)
+val AccentPink = Color(0xFFD96570)
 
-val SuccessGreen = Color(0xFF10B981)
-val WarningAmber = Color(0xFFF59E0B)
-val DangerRed = Color(0xFFEF4444)
-val CodeBlockBackground = Color(0xFF0D1117)
-val CodeBlockBorder = Color(0xFF30363D)
+// Typography Palette
+val TextPrimary = Color(0xFFF0F4F9)
+val TextSecondary = Color(0xFFC4C7C5)
+val TextMuted = Color(0xFF8E918F)
+
+// Chat Bubbles
+val UserBubbleColor = Color(0xFF282A2C)
+val BotBubbleColor = Color(0x00000000) // Seamless on dark background as in Figma
+
+// Status Indicators
+val SuccessGreen = Color(0xFF34A853)
+val WarningAmber = Color(0xFFFBBC04)
+val DangerRed = Color(0xFFEA4335)
+
+// Code Blocks
+val CodeBlockBackground = Color(0xFF1E1F20)
+val CodeBlockBorder = Color(0xFF37393B)
