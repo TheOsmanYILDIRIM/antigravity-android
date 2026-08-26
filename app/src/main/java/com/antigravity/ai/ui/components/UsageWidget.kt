@@ -54,7 +54,7 @@ fun UsageWidget(
                 modifier = Modifier
                     .size(8.dp)
                     .clip(CircleShape)
-                    .background(if (fiveHourRemaining > 20) SuccessGreen else ErrorRed)
+                    .background(if (fiveHourRemaining > 20) SuccessGreen else DangerRed)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
@@ -130,14 +130,14 @@ fun UsageDetailDialog(
                         Text(
                             text = "%$fhRemaining KALAN",
                             fontSize = 12.sp,
-                            color = if (fhRemaining > 20) SuccessGreen else ErrorRed,
+                            color = if (fhRemaining > 20) SuccessGreen else DangerRed,
                             fontWeight = FontWeight.Bold
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     LinearProgressIndicator(
                         progress = (fhUsed / 100f).coerceIn(0f, 1f),
-                        color = if (fhRemaining > 20) PrimaryIndigo else ErrorRed,
+                        color = if (fhRemaining > 20) PrimaryIndigo else DangerRed,
                         trackColor = BorderSubtle,
                         modifier = Modifier
                             .fillMaxWidth()
