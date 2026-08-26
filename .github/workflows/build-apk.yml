@@ -28,8 +28,8 @@ jobs:
       - name: Grant Execute Permission for Gradlew
         run: chmod +x gradlew
 
-      - name: Build Android Debug APK (ARM64-v8a)
-        run: ./gradlew assembleDebug --stacktrace
+      - name: Build Android Release APK (ARM64-v8a Signed)
+        run: ./gradlew assembleRelease --stacktrace
 
       - name: Find and Rename APK
         run: |
@@ -43,24 +43,24 @@ jobs:
           name: AntigravityAI-APK
           path: build-output/AntigravityAI-arm64-v8a.apk
 
-      - name: Create GitHub Release
+      - name: Create or Update GitHub Release
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: "Antigravity AI Mobile App v1.0.0"
+          tag_name: v1.3.0
+          name: "Antigravity AI Mobile App v1.3.0 (Sabit İmzalı)"
           body: |
-            ### ⚡ Antigravity AI - Jetpack Compose Native Mobile App
+            ### ⚡ Antigravity AI - Jetpack Compose Native Mobile App (v1.3.0)
             
-            Android (ARM64-v8a) için optimize edilmiş yerel mobil asistan uygulaması.
+            Android (ARM64-v8a) için optimize edilmiş ve **sabit kalıcı Release Keystore** ile imzalanmış yerel mobil asistan uygulaması.
             
-            #### 🚀 Özellikler:
-            - **Jetpack Compose & Material 3:** Modern, karanlık AI neon teması.
-            - **Canlı Araç Çağrısı Kartları (Tool Cards):** Terminal komutları, dosya işlemleri ve arama eylemleri için açılır-kapanır görsel kartlar.
-            - **Çoklu Sohbet Yönetimi (Side Drawer):** Sohbetleri ayrı ayrı görebilme, geçmiş sohbetlere erişim ve yeni sohbet başlatma.
-            - **Sesle Yazma (Speech-to-Text):** Dahili mikrofon desteği ile hızlı sesli komut girişi.
-            - **Termux & Yerel Daemon Köprüsü:** Arka planda çalışan `agy` oturumu ile canlı SSE senkronizasyonu.
-            - **Kalıcı Durum:** Uygulama veya ekran kapansa bile arka planda devam eden işlemler.
+            #### 🚀 Bu Sürümdeki Geliştirmeler:
+            - **Sabit İmzalı Güncelleme Desteği:** Artık tüm APK'lar aynı kalıcı anahtarla imzalanır; eski sürümü silmeden doğrudan üstüne güncelleyebilirsiniz.
+            - **Doğrudan CLI Telemetri & Token Göstergesi:** Gerçek 5 saatlik ve haftalık token tüketimi, dönüş sayıları ve son istek ayrıntıları doğrudan Antigravity CLI transcriptlerinden okunur.
+            - **Dinamik Model & Düşünme Ağırlığı:** CLI ortamındaki modeller ve `--effort` parametreleri dinamik olarak yapılandırılır.
+            - **Görsel Önizleme & Yerel Çalışma Alanı Yüklemesi:** Kullanıcı görselleri Coil ile chat içinde önizlenir ve Termux ortamına aktarılarak Gemini Vision ile doğrudan analiz edilir.
+            - **Çoklu Yapıştırma Çipleri:** Birden çok kopyalanan metin bağımsız çipler olarak saklanır.
+            - **Obsidian-Tarzı AGY Vault Kütüphanesi:** Not oluşturma, düzenleme, klasör açma ve satır/paragraf alıntılama özellikleri.
           files: build-output/AntigravityAI-arm64-v8a.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

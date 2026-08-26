@@ -43,7 +43,9 @@ data class UsageStats(
     @SerializedName("input_tokens")
     val inputTokens: Int = 0,
     @SerializedName("output_tokens")
-    val outputTokens: Int = 0
+    val outputTokens: Int = 0,
+    @SerializedName("cache_read_tokens")
+    val cacheReadTokens: Int = 0
 )
 
 data class PastedBlock(
@@ -188,26 +190,28 @@ data class SkillsResponse(
     val skills: List<SkillItem>?
 )
 
-data class UsageWindow(
-    @SerializedName("usedTokens")
-    val usedTokens: Int = 0,
-    @SerializedName("limitTokens")
-    val limitTokens: Int = 0,
-    @SerializedName("usedPercent")
-    val usedPercent: Int = 0,
-    @SerializedName("remainingPercent")
-    val remainingPercent: Int = 100,
+data class UsageMetrics(
+    @SerializedName("totalTokens")
+    val totalTokens: Long = 0,
+    @SerializedName("turnCount")
+    val turnCount: Int = 0,
     @SerializedName("windowHours")
-    val windowHours: Int = 5
+    val windowHours: Int = 5,
+    @SerializedName("inputTokens")
+    val inputTokens: Long = 0,
+    @SerializedName("outputTokens")
+    val outputTokens: Long = 0,
+    @SerializedName("thinkingTokens")
+    val thinkingTokens: Long = 0
 )
 
 data class UsageData(
-    @SerializedName("fiveHour")
-    val fiveHour: UsageWindow?,
+    @SerializedName("recent5h")
+    val recent5h: UsageMetrics?,
     @SerializedName("weekly")
-    val weekly: UsageWindow?,
-    @SerializedName("totals")
-    val totals: Map<String, Int>?,
+    val weekly: UsageMetrics?,
+    @SerializedName("lastTurn")
+    val lastTurn: UsageStats?,
     @SerializedName("lastUpdated")
     val lastUpdated: String? = null
 )
