@@ -3,7 +3,6 @@ package com.antigravity.ai.ui.components
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -54,6 +53,41 @@ fun VaultManagerScreen(
     onReferenceFile: (VaultItem) -> Unit,
     onReferenceParagraph: (fileName: String, paragraph: String) -> Unit
 ) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = BackgroundDark,
+        contentColor = TextPrimary,
+        modifier = Modifier.fillMaxHeight(0.94f)
+    ) {
+        VaultManagerContent(
+            vaultFiles = vaultFiles,
+            activeFileContent = activeFileContent,
+            activeFilePath = activeFilePath,
+            onDismiss = onDismiss,
+            onLoadFileContent = onLoadFileContent,
+            onSaveNote = onSaveNote,
+            onCreateFolder = onCreateFolder,
+            onDeleteFile = onDeleteFile,
+            onReferenceFile = onReferenceFile,
+            onReferenceParagraph = onReferenceParagraph
+        )
+    }
+}
+
+@Composable
+fun VaultManagerContent(
+    vaultFiles: List<VaultItem>,
+    activeFileContent: String?,
+    activeFilePath: String?,
+    onDismiss: () -> Unit,
+    onLoadFileContent: (String) -> Unit,
+    onSaveNote: (relPath: String?, title: String?, content: String) -> Unit,
+    onCreateFolder: (folderPath: String) -> Unit,
+    onDeleteFile: (relPath: String) -> Unit,
+    onReferenceFile: (VaultItem) -> Unit,
+    onReferenceParagraph: (fileName: String, paragraph: String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     var activeTab by remember { mutableStateOf(ObsidianVaultTab.FILES) }
     var isEditingNote by remember { mutableStateOf(false) }
     var editTitle by remember { mutableStateOf("") }
@@ -65,7 +99,7 @@ fun VaultManagerScreen(
     var selectedTagFilter by remember { mutableStateOf<String?>(null) }
     val bookmarkedPaths = remember { mutableStateListOf<String>() }
 
-    // When active file changes from outside
+    // When active file changes
     LaunchedEffect(activeFilePath, activeFileContent) {
         if (activeFilePath != null && activeFileContent != null) {
             editRelPath = activeFilePath
@@ -74,127 +108,120 @@ fun VaultManagerScreen(
         }
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = BackgroundDark,
-        contentColor = TextPrimary,
-        modifier = Modifier.fillMaxHeight(0.94f)
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 14.dp)
+            .padding(bottom = 16.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 14.dp)
-                .padding(bottom = 16.dp)
-        ) {
-            // 1. Obsidian Top Header (Title + Breadcrumbs + Actions)
-            ObsidianHeader(
-                activeFilePath = activeFilePath,
-                isEditingNote = isEditingNote || activeFilePath != null,
-                onBack = {
+        // 1. Obsidian Top Header (Title + Breadcrumbs + Actions)
+        ObsidianHeader(
+            activeFilePath = activeFilePath,
+            isEditingNote = isEditingNote || activeFilePath != null,
+            onBack = {
+                isEditingNote = false
+                editRelPath = null
+                onLoadFileContent("")
+            },
+            onDismiss = onDismiss
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // If a note is currently opened (Reader / Editor View)
+        if (activeFilePath != null || isEditingNote) {
+            ObsidianNoteEditorView(
+                title = editTitle,
+                content = if (editContent.isNotBlank()) editContent else (activeFileContent ?: ""),
+                relPath = editRelPath,
+                isEditing = isEditingNote,
+                onTitleChange = { editTitle = it },
+                onContentChange = { editContent = it },
+                onToggleEdit = { isEditingNote = !isEditingNote },
+                onSave = {
+                    onSaveNote(editRelPath, editTitle, editContent)
                     isEditingNote = false
-                    editRelPath = null
-                    onLoadFileContent("")
                 },
-                onDismiss = onDismiss
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // If a note is currently opened (Reader / Editor View)
-            if (activeFilePath != null || isEditingNote) {
-                ObsidianNoteEditorView(
-                    title = editTitle,
-                    content = editContent,
-                    relPath = editRelPath,
-                    isEditing = isEditingNote,
-                    onTitleChange = { editTitle = it },
-                    onContentChange = { editContent = it },
-                    onToggleEdit = { isEditingNote = !isEditingNote },
-                    onSave = {
-                        onSaveNote(editRelPath, editTitle, editContent)
-                        isEditingNote = false
-                    },
-                    onReferenceFile = {
-                        activeFilePath?.let { path ->
-                            onReferenceFile(VaultItem(name = path.substringAfterLast("/"), path = path))
-                            onDismiss()
-                        }
-                    },
-                    onReferenceParagraph = { paragraph ->
-                        activeFilePath?.let { path ->
-                            onReferenceParagraph(path.substringAfterLast("/"), paragraph)
-                            onDismiss()
-                        }
+                onReferenceFile = {
+                    activeFilePath?.let { path ->
+                        onReferenceFile(VaultItem(name = path.substringAfterLast("/"), path = path))
+                        onDismiss()
                     }
+                },
+                onReferenceParagraph = { paragraph ->
+                    activeFilePath?.let { path ->
+                        onReferenceParagraph(path.substringAfterLast("/"), paragraph)
+                        onDismiss()
+                    }
+                }
+            )
+        } else {
+            // Main Obsidian Vault Explorer with Ribbon Tabs
+            Column(modifier = Modifier.fillMaxSize()) {
+                // 2. Obsidian Ribbon Tab Bar
+                ObsidianRibbonTabBar(
+                    activeTab = activeTab,
+                    onTabSelect = { activeTab = it }
                 )
-            } else {
-                // Main Obsidian Vault Explorer with Ribbon Tabs
-                Column(modifier = Modifier.fillMaxSize()) {
-                    // 2. Obsidian Ribbon Tab Bar
-                    ObsidianRibbonTabBar(
-                        activeTab = activeTab,
-                        onTabSelect = { activeTab = it }
-                    )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                    // 3. Tab Contents
-                    when (activeTab) {
-                        ObsidianVaultTab.FILES -> {
-                            ObsidianFileExplorerView(
-                                vaultFiles = vaultFiles,
-                                onSelectFile = { item ->
-                                    if (!item.isDirectory) {
-                                        onLoadFileContent(item.path)
-                                    }
-                                },
-                                onNewNote = {
-                                    editRelPath = null
-                                    editTitle = "Yeni-Not-${System.currentTimeMillis() % 10000}.md"
-                                    editContent = "---\ntags: [not]\ncreated: 2026-08-26\n---\n\n# Yeni Not\n\n"
-                                    isEditingNote = true
-                                },
-                                onNewFolder = { showCreateFolderDialog = true },
-                                onReferenceFile = {
-                                    onReferenceFile(it)
-                                    onDismiss()
-                                },
-                                onDeleteFile = onDeleteFile,
-                                onToggleBookmark = { path ->
-                                    if (bookmarkedPaths.contains(path)) bookmarkedPaths.remove(path)
-                                    else bookmarkedPaths.add(path)
-                                },
-                                bookmarkedPaths = bookmarkedPaths
-                            )
-                        }
-
-                        ObsidianVaultTab.SEARCH -> {
-                            ObsidianQuickSwitcherView(
-                                vaultFiles = vaultFiles,
-                                searchQuery = searchQuery,
-                                onQueryChange = { searchQuery = it },
-                                selectedTag = selectedTagFilter,
-                                onTagSelect = { selectedTagFilter = if (selectedTagFilter == it) null else it },
-                                onSelectFile = { item ->
+                // 3. Tab Contents
+                when (activeTab) {
+                    ObsidianVaultTab.FILES -> {
+                        ObsidianFileExplorerView(
+                            vaultFiles = vaultFiles,
+                            onSelectFile = { item ->
+                                if (!item.isDirectory) {
                                     onLoadFileContent(item.path)
                                 }
-                            )
-                        }
+                            },
+                            onNewNote = {
+                                editRelPath = null
+                                editTitle = "Yeni-Not-${System.currentTimeMillis() % 10000}.md"
+                                editContent = "---\ntags: [not]\ncreated: 2026-08-26\n---\n\n# Yeni Not\n\n"
+                                isEditingNote = true
+                            },
+                            onNewFolder = { showCreateFolderDialog = true },
+                            onReferenceFile = {
+                                onReferenceFile(it)
+                                onDismiss()
+                            },
+                            onDeleteFile = onDeleteFile,
+                            onToggleBookmark = { path ->
+                                if (bookmarkedPaths.contains(path)) bookmarkedPaths.remove(path)
+                                else bookmarkedPaths.add(path)
+                            },
+                            bookmarkedPaths = bookmarkedPaths
+                        )
+                    }
 
-                        ObsidianVaultTab.BOOKMARKS -> {
-                            ObsidianBookmarksView(
-                                vaultFiles = vaultFiles.filter { bookmarkedPaths.contains(it.path) },
-                                onSelectFile = { onLoadFileContent(it.path) },
-                                onRemoveBookmark = { bookmarkedPaths.remove(it.path) }
-                            )
-                        }
+                    ObsidianVaultTab.SEARCH -> {
+                        ObsidianQuickSwitcherView(
+                            vaultFiles = vaultFiles,
+                            searchQuery = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            selectedTag = selectedTagFilter,
+                            onTagSelect = { selectedTagFilter = if (selectedTagFilter == it) null else it },
+                            onSelectFile = { item ->
+                                onLoadFileContent(item.path)
+                            }
+                        )
+                    }
 
-                        ObsidianVaultTab.GRAPH -> {
-                            ObsidianGraphSummaryView(
-                                vaultFiles = vaultFiles,
-                                onSelectFile = { onLoadFileContent(it.path) }
-                            )
-                        }
+                    ObsidianVaultTab.BOOKMARKS -> {
+                        ObsidianBookmarksView(
+                            vaultFiles = vaultFiles.filter { bookmarkedPaths.contains(it.path) },
+                            onSelectFile = { onLoadFileContent(it.path) },
+                            onRemoveBookmark = { bookmarkedPaths.remove(it.path) }
+                        )
+                    }
+
+                    ObsidianVaultTab.GRAPH -> {
+                        ObsidianGraphSummaryView(
+                            vaultFiles = vaultFiles,
+                            onSelectFile = { onLoadFileContent(it.path) }
+                        )
                     }
                 }
             }
@@ -261,7 +288,7 @@ fun ObsidianHeader(
                     onClick = onBack,
                     modifier = Modifier.size(34.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Geri", tint = TextPrimary, modifier = Modifier.size(18.dp))
+                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri", tint = TextPrimary, modifier = Modifier.size(18.dp))
                 }
                 Spacer(modifier = Modifier.width(4.dp))
             }
@@ -413,7 +440,7 @@ fun ObsidianFileExplorerView(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 modifier = Modifier.weight(1f).height(38.dp)
             ) {
-                Icon(imageVector = Icons.Default.NoteAdd, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                Icon(imageVector = Icons.AutoMirrored.Filled.NoteAdd, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(text = "Yeni Not", fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
@@ -554,7 +581,7 @@ fun ObsidianQuickSwitcherView(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onQueryChange,
-            placeholder = { Text("Quick Switcher (Dosya adı veya not içi ara…)", color = TextMuted, fontSize = 12.sp) },
+            placeholder = { Text("Quick Switcher (Dosya veya not ara…)", color = TextMuted, fontSize = 12.sp) },
             leadingIcon = { Icon(imageVector = Icons.Outlined.Search, contentDescription = null, tint = PrimaryIndigo, modifier = Modifier.size(18.dp)) },
             trailingIcon = {
                 if (searchQuery.isNotEmpty()) {
@@ -632,7 +659,7 @@ fun ObsidianQuickSwitcherView(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                         ) {
-                            Icon(imageVector = Icons.Outlined.Article, contentDescription = null, tint = PrimaryIndigo, modifier = Modifier.size(16.dp))
+                            Icon(imageVector = Icons.AutoMirrored.Outlined.Article, contentDescription = null, tint = PrimaryIndigo, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(text = item.name, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)

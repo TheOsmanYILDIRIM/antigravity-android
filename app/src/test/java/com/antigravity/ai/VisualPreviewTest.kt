@@ -2,23 +2,19 @@ package com.antigravity.ai
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import com.antigravity.ai.data.model.ChatSettings
-import com.antigravity.ai.data.model.Message
 import com.antigravity.ai.data.model.UsageData
 import com.antigravity.ai.data.model.UsageMetrics
 import com.antigravity.ai.data.model.UsageStats
 import com.antigravity.ai.data.model.VaultItem
 import com.antigravity.ai.ui.components.ChatTopBar
 import com.antigravity.ai.ui.components.MessageInputBar
-import com.antigravity.ai.ui.components.MessageItem
-import com.antigravity.ai.ui.components.VaultManagerScreen
+import com.antigravity.ai.ui.components.VaultManagerContent
 import com.antigravity.ai.ui.screens.FigmaGeminiHomeView
 import com.antigravity.ai.ui.theme.AntigravityAITheme
 import com.antigravity.ai.ui.theme.BackgroundDark
@@ -66,18 +62,23 @@ class VisualPreviewTest {
     fun capture_obsidian_vault_explorer() {
         composeTestRule.setContent {
             AntigravityAITheme {
-                VaultManagerScreen(
-                    vaultFiles = sampleVaultFiles,
-                    activeFileContent = null,
-                    activeFilePath = null,
-                    onDismiss = {},
-                    onLoadFileContent = {},
-                    onSaveNote = { _, _, _ -> },
-                    onCreateFolder = {},
-                    onDeleteFile = {},
-                    onReferenceFile = {},
-                    onReferenceParagraph = { _, _ -> }
-                )
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = BackgroundDark
+                ) {
+                    VaultManagerContent(
+                        vaultFiles = sampleVaultFiles,
+                        activeFileContent = null,
+                        activeFilePath = null,
+                        onDismiss = {},
+                        onLoadFileContent = {},
+                        onSaveNote = { _, _, _ -> },
+                        onCreateFolder = {},
+                        onDeleteFile = {},
+                        onReferenceFile = {},
+                        onReferenceParagraph = { _, _ -> }
+                    )
+                }
             }
         }
         composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_obsidian_vault_explorer.png")
@@ -100,18 +101,23 @@ class VisualPreviewTest {
 
         composeTestRule.setContent {
             AntigravityAITheme {
-                VaultManagerScreen(
-                    vaultFiles = sampleVaultFiles,
-                    activeFileContent = sampleContent,
-                    activeFilePath = "30-Jetpack-Compose.md",
-                    onDismiss = {},
-                    onLoadFileContent = {},
-                    onSaveNote = { _, _, _ -> },
-                    onCreateFolder = {},
-                    onDeleteFile = {},
-                    onReferenceFile = {},
-                    onReferenceParagraph = { _, _ -> }
-                )
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = BackgroundDark
+                ) {
+                    VaultManagerContent(
+                        vaultFiles = sampleVaultFiles,
+                        activeFileContent = sampleContent,
+                        activeFilePath = "30-Jetpack-Compose.md",
+                        onDismiss = {},
+                        onLoadFileContent = {},
+                        onSaveNote = { _, _, _ -> },
+                        onCreateFolder = {},
+                        onDeleteFile = {},
+                        onReferenceFile = {},
+                        onReferenceParagraph = { _, _ -> }
+                    )
+                }
             }
         }
         composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_obsidian_vault_reader.png")
