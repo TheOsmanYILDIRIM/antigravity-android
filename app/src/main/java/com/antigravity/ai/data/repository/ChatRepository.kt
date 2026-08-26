@@ -15,9 +15,25 @@ class ChatRepository(private val apiService: AntigravityApiService = Antigravity
 
     suspend fun deleteConversation(id: String): Result<Unit> = apiService.deleteConversation(id)
 
-    suspend fun fetchSession(): Result<SessionResponse> = apiService.getSession()
+    suspend fun fetchSkills(): Result<SkillsResponse> = apiService.getSkills()
+
+    suspend fun fetchUsage(): Result<UsageResponse> = apiService.getUsage()
 
     suspend fun fetchVaultFiles(): Result<VaultResponse> = apiService.getVaultFiles()
+
+    suspend fun fetchVaultFileContent(relPath: String): Result<VaultFileContent> =
+        apiService.getVaultFileContent(relPath)
+
+    suspend fun saveVaultNote(relPath: String?, title: String?, content: String): Result<Unit> =
+        apiService.saveVaultNote(relPath, title, content)
+
+    suspend fun createVaultFolder(folderPath: String): Result<Unit> =
+        apiService.createVaultFolder(folderPath)
+
+    suspend fun deleteVaultFile(relPath: String): Result<Unit> =
+        apiService.deleteVaultFile(relPath)
+
+    suspend fun fetchSession(): Result<SessionResponse> = apiService.getSession()
 
     suspend fun sendMessage(
         prompt: String,

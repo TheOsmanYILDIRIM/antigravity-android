@@ -46,6 +46,13 @@ data class UsageStats(
     val outputTokens: Int = 0
 )
 
+data class PastedBlock(
+    val id: String = UUID.randomUUID().toString(),
+    val content: String,
+    val lineCount: Int = content.lines().size,
+    val charCount: Int = content.length
+)
+
 data class Attachment(
     val name: String,
     val path: String? = null,
@@ -81,7 +88,11 @@ data class VaultItem(
     @SerializedName("path")
     val path: String,
     @SerializedName("isDirectory")
-    val isDirectory: Boolean = false
+    val isDirectory: Boolean = false,
+    @SerializedName("size")
+    val size: Long? = null,
+    @SerializedName("updatedAt")
+    val updatedAt: String? = null
 )
 
 data class VaultResponse(
@@ -91,6 +102,66 @@ data class VaultResponse(
     val vaultDir: String,
     @SerializedName("files")
     val files: List<VaultItem>?
+)
+
+data class VaultFileContent(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("path")
+    val path: String?,
+    @SerializedName("content")
+    val content: String?
+)
+
+data class SkillItem(
+    @SerializedName("name")
+    val name: String,
+    @SerializedName("command")
+    val command: String,
+    @SerializedName("description")
+    val description: String,
+    @SerializedName("path")
+    val path: String? = null
+)
+
+data class SkillsResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("count")
+    val count: Int = 0,
+    @SerializedName("skills")
+    val skills: List<SkillItem>?
+)
+
+data class UsageWindow(
+    @SerializedName("usedTokens")
+    val usedTokens: Int = 0,
+    @SerializedName("limitTokens")
+    val limitTokens: Int = 0,
+    @SerializedName("usedPercent")
+    val usedPercent: Int = 0,
+    @SerializedName("remainingPercent")
+    val remainingPercent: Int = 100,
+    @SerializedName("windowHours")
+    val windowHours: Int = 5
+)
+
+data class UsageData(
+    @SerializedName("fiveHour")
+    val fiveHour: UsageWindow?,
+    @SerializedName("weekly")
+    val weekly: UsageWindow?,
+    @SerializedName("totals")
+    val totals: Map<String, Int>?,
+    @SerializedName("lastUpdated")
+    val lastUpdated: String? = null
+)
+
+data class UsageResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("usage")
+    val usage: UsageData?
 )
 
 data class ChatSettings(
@@ -142,5 +213,6 @@ data class SessionMessage(
 data class SlashCommand(
     val command: String,
     val description: String,
-    val example: String
+    val example: String,
+    val isSkill: Boolean = false
 )

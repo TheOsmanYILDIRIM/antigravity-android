@@ -17,10 +17,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.antigravity.ai.data.model.SkillItem
 import com.antigravity.ai.data.model.SlashCommand
 import com.antigravity.ai.ui.theme.*
 
-val DefaultSlashCommands = listOf(
+val CoreSlashCommands = listOf(
     SlashCommand("/goal", "Uzun süreli otonom görev modunu etkinleştirir", "/goal <hedef>"),
     SlashCommand("/plan", "Adım adım derin mimari planlama yapar", "/plan <görev>"),
     SlashCommand("/schedule", "Zamanlanmış görev veya hatırlatıcı ayarlar", "/schedule <zaman>"),
@@ -36,10 +37,22 @@ val DefaultSlashCommands = listOf(
 @Composable
 fun SlashCommandPopup(
     query: String,
+    installedSkills: List<SkillItem>,
     onSelect: (SlashCommand) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val filtered = DefaultSlashCommands.filter {
+    val skillsAsCommands = installedSkills.map {
+        SlashCommand(
+            command = it.command,
+            description = it.description,
+            example = it.command,
+            isSkill = true
+        )
+    }
+
+    val allCommands = CoreSlashCommands + skillsAsCommands
+
+    val filtered = allCommands.filter {
         it.command.startsWith(query, ignoreCase = true) || it.description.contains(query.removePrefix("/"), ignoreCase = true)
     }
 
@@ -51,10 +64,10 @@ fun SlashCommandPopup(
                 .clip(RoundedCornerShape(12.dp))
                 .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
                 .background(SurfaceDark)
-                .heightIn(max = 220.dp)
+                .heightIn(max = 240.dp)
         ) {
             Text(
-                text = "KOMUTLAR (CLI SLASH COMMANDS)",
+                text = "KOMUTLAR VE SKILL'LER (/SLASH & /SKILL)",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextMuted,
@@ -72,13 +85,26 @@ fun SlashCommandPopup(
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = cmd.command,
-                                fontFamily = FontFamily.Monospace,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                color = PrimaryIndigo
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = cmd.command,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = if (cmd.isSkill) SecondaryPurple else PrimaryIndigo
+                                )
+                                if (cmd.isSkill) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(Color(0x338B5CF6))
+                                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                                    ) {
+                                        Text(text = "SKILL", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = SecondaryPurple)
+                                    }
+                                }
+                            }
                             Text(
                                 text = cmd.description,
                                 fontSize = 11.sp,

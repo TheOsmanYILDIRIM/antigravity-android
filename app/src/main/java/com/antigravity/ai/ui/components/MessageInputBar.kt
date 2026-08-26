@@ -1,6 +1,5 @@
 package com.antigravity.ai.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,7 +12,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,17 +20,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.antigravity.ai.data.model.Attachment
+import com.antigravity.ai.data.model.PastedBlock
 import com.antigravity.ai.ui.theme.*
 
 @Composable
 fun MessageInputBar(
     text: String,
     onTextChange: (String) -> Unit,
-    pastedBlock: String?,
-    onRemovePastedBlock: () -> Unit,
+    pastedBlocks: List<PastedBlock>,
+    onRemovePastedBlock: (PastedBlock) -> Unit,
     attachments: List<Attachment>,
     onRemoveAttachment: (Attachment) -> Unit,
     isGenerating: Boolean,
@@ -51,8 +52,8 @@ fun MessageInputBar(
             .imePadding()
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // 1. Pasted Content & Attachments Bar (Chips)
-            if (pastedBlock != null || attachments.isNotEmpty()) {
+            // 1. Multi-Paste Blocks & Attachments Chips Bar
+            if (pastedBlocks.isNotEmpty() || attachments.isNotEmpty()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -60,10 +61,8 @@ fun MessageInputBar(
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Collapsed Pasted Text Chip
-                    if (pastedBlock != null) {
-                        val linesCount = pastedBlock.lines().size
-                        val charCount = pastedBlock.length
+                    // Multi-Pasted Text Chips
+                    pastedBlocks.forEachIndexed { index, block ->
                         Surface(
                             shape = RoundedCornerShape(8.dp),
                             color = Color(0xFF1E293B),
@@ -73,10 +72,10 @@ fun MessageInputBar(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
-                                Icon(imageVector = Icons.Default.ContentPaste, contentDescription = null, tint = PrimaryIndigo, modifier = Modifier.size(14.dp))
+                                Icon(imageVector = Icons.Default.ContentPaste, contentDescription = null, tint = PrimaryIndigo, modifier = Modifier.size(13.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Yapıştırılan Metin ($linesCount satır, ${charCount}b)",
+                                    text = "Yapıştırma #${index + 1} (${block.lineCount} satır, ${block.charCount}b)",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = TextPrimary
@@ -88,7 +87,7 @@ fun MessageInputBar(
                                     tint = TextMuted,
                                     modifier = Modifier
                                         .size(14.dp)
-                                        .clickable { onRemovePastedBlock() }
+                                        .clickable { onRemovePastedBlock(block) }
                                 )
                             }
                         }
@@ -193,7 +192,7 @@ fun MessageInputBar(
                             .weight(1f)
                             .padding(vertical = 6.dp)
                     ) {
-                        if (text.isEmpty() && pastedBlock == null) {
+                        if (text.isEmpty() && pastedBlocks.isEmpty()) {
                             Text(
                                 text = if (isListening) "Dinleniyor…" else "Antigravity'ye yazın… (/ ve @ destekli)",
                                 fontSize = 13.sp,
@@ -218,7 +217,7 @@ fun MessageInputBar(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 // Send or Stop
-                val canSend = text.isNotBlank() || pastedBlock != null || attachments.isNotEmpty()
+                val canSend = text.isNotBlank() || pastedBlocks.isNotEmpty() || attachments.isNotEmpty()
 
                 if (isGenerating) {
                     IconButton(

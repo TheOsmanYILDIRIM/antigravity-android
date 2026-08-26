@@ -24,14 +24,19 @@ data class ChatUiState(
     val currentSessionId: String? = null,
     val currentConversationId: String? = null,
     val inputText: String = "",
-    val pastedBlock: String? = null,
+    val pastedBlocks: List<PastedBlock> = emptyList(),
     val attachments: List<Attachment> = emptyList(),
     val settings: ChatSettings = ChatSettings(),
     val vaultFiles: List<VaultItem> = emptyList(),
+    val installedSkills: List<SkillItem> = emptyList(),
+    val usage: UsageData? = null,
+    val activeVaultFileContent: String? = null,
+    val activeVaultFilePath: String? = null,
     val isGenerating: Boolean = false,
     val isListening: Boolean = false,
     val showSettingsDialog: Boolean = false,
-    val showVaultBrowser: Boolean = false,
+    val showVaultManager: Boolean = false,
+    val showUsageDetail: Boolean = false,
     val showSlashCommands: Boolean = false,
     val slashQuery: String = "",
     val showMentions: Boolean = false,
@@ -57,6 +62,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         fetchConversations()
         syncWithServer()
         fetchVaultFiles()
+        fetchSkills()
+        fetchUsage()
     }
 
     private fun initSpeechRecognizer() {
@@ -156,6 +163,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             state.copy(messages = list, isGenerating = false)
                         }
                         fetchConversations()
+                        fetchUsage()
                     }
                     is StreamEvent.SessionLoaded -> {
                         val serverMessages = event.session.messages?.map { mapSessionMessage(it) } ?: emptyList()
@@ -204,6 +212,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun fetchSkills() {
+        viewModelScope.launch {
+            repository.fetchSkills().onSuccess { res ->
+                _uiState.update { it.copy(installedSkills = res.skills ?: emptyList()) }
+            }
+        }
+    }
+
+    fun fetchUsage() {
+        viewModelScope.launch {
+            repository.fetchUsage().onSuccess { res ->
+                _uiState.update { it.copy(usage = res.usage) }
+            }
+        }
+    }
+
     fun selectConversation(id: String) {
         viewModelScope.launch {
             repository.loadConversation(id).onSuccess { res ->
@@ -237,6 +261,51 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun loadVaultFileContent(relPath: String) {
+        if (relPath.isBlank()) {
+            _uiState.update { it.copy(activeVaultFilePath = null, activeVaultFileContent = null) }
+            return
+        }
+        viewModelScope.launch {
+            repository.fetchVaultFileContent(relPath).onSuccess { res ->
+                _uiState.update {
+                    it.copy(
+                        activeVaultFilePath = relPath,
+                        activeVaultFileContent = res.content
+                    )
+                }
+            }
+        }
+    }
+
+    fun saveVaultNote(relPath: String?, title: String?, content: String) {
+        viewModelScope.launch {
+            repository.saveVaultNote(relPath, title, content).onSuccess {
+                fetchVaultFiles()
+                if (relPath != null) loadVaultFileContent(relPath)
+            }
+        }
+    }
+
+    fun createVaultFolder(folderPath: String) {
+        viewModelScope.launch {
+            repository.createVaultFolder(folderPath).onSuccess {
+                fetchVaultFiles()
+            }
+        }
+    }
+
+    fun deleteVaultFile(relPath: String) {
+        viewModelScope.launch {
+            repository.deleteVaultFile(relPath).onSuccess {
+                fetchVaultFiles()
+                if (_uiState.value.activeVaultFilePath == relPath) {
+                    _uiState.update { it.copy(activeVaultFilePath = null, activeVaultFileContent = null) }
+                }
+            }
+        }
+    }
+
     fun syncWithServer() {
         viewModelScope.launch {
             repository.fetchSession().onSuccess { response ->
@@ -264,23 +333,21 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    // Smart Paste Collapsing & Slash/Mention Detection
+    // Smart Multi-Paste Detection & Slash/Mention Triggers
     fun onInputTextChange(newText: String) {
-        // Check if a huge block of text was pasted (> 200 chars or > 4 lines)
-        val isHugePaste = newText.length > 200 || newText.lines().size > 4
-        if (isHugePaste && _uiState.value.pastedBlock == null && _uiState.value.inputText.isEmpty()) {
+        val isHugePaste = (newText.length > 150 || newText.lines().size > 3) && _uiState.value.inputText.isEmpty()
+        if (isHugePaste) {
+            val newBlock = PastedBlock(content = newText)
             _uiState.update {
                 it.copy(
                     inputText = "",
-                    pastedBlock = newText
+                    pastedBlocks = it.pastedBlocks + newBlock
                 )
             }
             return
         }
 
-        // Slash command trigger
         val isSlash = newText.startsWith("/")
-        // Mention trigger
         val lastWord = newText.substringAfterLast(" ")
         val isMention = lastWord.startsWith("@")
 
@@ -315,8 +382,26 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun removePastedBlock() {
-        _uiState.update { it.copy(pastedBlock = null) }
+    fun referenceFile(item: VaultItem) {
+        _uiState.update { state ->
+            val current = state.inputText
+            val refText = "@agy-vault/${item.path}"
+            val updated = if (current.isEmpty()) refText else "$current $refText"
+            state.copy(inputText = updated)
+        }
+    }
+
+    fun referenceParagraph(fileName: String, paragraph: String) {
+        _uiState.update { state ->
+            val current = state.inputText
+            val quote = "> [Alıntı: $fileName]\n> ${paragraph.replace("\n", "\n> ")}\n\n"
+            val updated = if (current.isEmpty()) quote else "$quote\n$current"
+            state.copy(inputText = updated)
+        }
+    }
+
+    fun removePastedBlock(block: PastedBlock) {
+        _uiState.update { it.copy(pastedBlocks = it.pastedBlocks.filter { b -> b.id != block.id }) }
     }
 
     fun addAttachment(attachment: Attachment) {
@@ -335,17 +420,24 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(showSettingsDialog = visible) }
     }
 
-    fun setVaultBrowserVisible(visible: Boolean) {
-        _uiState.update { it.copy(showVaultBrowser = visible) }
+    fun setVaultManagerVisible(visible: Boolean) {
+        _uiState.update { it.copy(showVaultManager = visible) }
+    }
+
+    fun setUsageDetailVisible(visible: Boolean) {
+        _uiState.update { it.copy(showUsageDetail = visible) }
     }
 
     fun sendMessage() {
         val state = _uiState.value
         var finalPrompt = state.inputText.trim()
 
-        if (state.pastedBlock != null) {
-            val block = state.pastedBlock.trim()
-            finalPrompt = if (finalPrompt.isEmpty()) block else "$finalPrompt\n\n```\n$block\n```"
+        if (state.pastedBlocks.isNotEmpty()) {
+            val blocksText = state.pastedBlocks.mapIndexed { idx, b ->
+                "### Ek Metin / Kod Parçası #${idx + 1}:\n```\n${b.content.trim()}\n```"
+            }.joinToString("\n\n")
+
+            finalPrompt = if (finalPrompt.isEmpty()) blocksText else "$finalPrompt\n\n$blocksText"
         }
 
         if (finalPrompt.isEmpty() && state.attachments.isEmpty()) return
@@ -365,7 +457,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 inputText = "",
-                pastedBlock = null,
+                pastedBlocks = emptyList(),
                 attachments = emptyList(),
                 showSlashCommands = false,
                 showMentions = false,

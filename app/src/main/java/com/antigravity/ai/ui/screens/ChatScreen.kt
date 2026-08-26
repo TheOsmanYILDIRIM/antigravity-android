@@ -94,20 +94,27 @@ fun ChatScreen(
         )
     }
 
-    // AGY Vault Browser Bottom Sheet
-    if (uiState.showVaultBrowser) {
-        VaultBrowserSheet(
+    // Usage & Quota Detail Dialog
+    if (uiState.showUsageDetail) {
+        UsageDetailDialog(
+            usage = uiState.usage,
+            onDismiss = { viewModel.setUsageDetailVisible(false) }
+        )
+    }
+
+    // Obsidian-Style AGY Vault Library & Note Editor Screen
+    if (uiState.showVaultManager) {
+        VaultManagerScreen(
             vaultFiles = uiState.vaultFiles,
-            onDismiss = { viewModel.setVaultBrowserVisible(false) },
-            onSelectFile = { item ->
-                viewModel.addAttachment(
-                    Attachment(
-                        name = item.name,
-                        path = item.path,
-                        type = "vault"
-                    )
-                )
-            }
+            activeFileContent = uiState.activeVaultFileContent,
+            activeFilePath = uiState.activeVaultFilePath,
+            onDismiss = { viewModel.setVaultManagerVisible(false) },
+            onLoadFileContent = { path -> viewModel.loadVaultFileContent(path) },
+            onSaveNote = { relPath, title, content -> viewModel.saveVaultNote(relPath, title, content) },
+            onCreateFolder = { folderPath -> viewModel.createVaultFolder(folderPath) },
+            onDeleteFile = { path -> viewModel.deleteVaultFile(path) },
+            onReferenceFile = { item -> viewModel.referenceFile(item) },
+            onReferenceParagraph = { fileName, paragraph -> viewModel.referenceParagraph(fileName, paragraph) }
         )
     }
 
@@ -130,7 +137,7 @@ fun ChatScreen(
                 },
                 onOpenVault = {
                     scope.launch { drawerState.close() }
-                    viewModel.setVaultBrowserVisible(true)
+                    viewModel.setVaultManagerVisible(true)
                 }
             )
         }
@@ -139,6 +146,7 @@ fun ChatScreen(
             topBar = {
                 ChatTopBar(
                     settings = uiState.settings,
+                    usage = uiState.usage,
                     isGenerating = uiState.isGenerating,
                     onMenuClick = {
                         scope.launch { drawerState.open() }
@@ -148,15 +156,19 @@ fun ChatScreen(
                     },
                     onSettingsClick = {
                         viewModel.setSettingsDialogVisible(true)
+                    },
+                    onUsageClick = {
+                        viewModel.setUsageDetailVisible(true)
                     }
                 )
             },
             bottomBar = {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    // Slash command autocomplete popup
+                    // Slash command & Dynamic Skills autocomplete popup
                     if (uiState.showSlashCommands) {
                         SlashCommandPopup(
                             query = uiState.slashQuery,
+                            installedSkills = uiState.installedSkills,
                             onSelect = { cmd -> viewModel.onSelectSlashCommand(cmd) }
                         )
                     }
@@ -173,7 +185,7 @@ fun ChatScreen(
                     MessageInputBar(
                         text = uiState.inputText,
                         onTextChange = viewModel::onInputTextChange,
-                        pastedBlock = uiState.pastedBlock,
+                        pastedBlocks = uiState.pastedBlocks,
                         onRemovePastedBlock = viewModel::removePastedBlock,
                         attachments = uiState.attachments,
                         onRemoveAttachment = viewModel::removeAttachment,

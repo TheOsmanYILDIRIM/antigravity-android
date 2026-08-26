@@ -32,7 +32,7 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
     private val gson = Gson()
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(0, TimeUnit.SECONDS) // For SSE streaming
+        .readTimeout(0, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
@@ -87,6 +87,40 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
         }
     }
 
+    suspend fun getSkills(): Result<SkillsResponse> = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$baseUrl/api/skills")
+                .get()
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext Result.failure(IOException("HTTP ${response.code}"))
+                val body = response.body?.string() ?: "{}"
+                Result.success(gson.fromJson(body, SkillsResponse::class.java))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getUsage(): Result<UsageResponse> = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$baseUrl/api/usage")
+                .get()
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext Result.failure(IOException("HTTP ${response.code}"))
+                val body = response.body?.string() ?: "{}"
+                Result.success(gson.fromJson(body, UsageResponse::class.java))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getVaultFiles(): Result<VaultResponse> = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()
@@ -98,6 +132,76 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                 if (!response.isSuccessful) return@withContext Result.failure(IOException("HTTP ${response.code}"))
                 val body = response.body?.string() ?: "{}"
                 Result.success(gson.fromJson(body, VaultResponse::class.java))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getVaultFileContent(relPath: String): Result<VaultFileContent> = withContext(Dispatchers.IO) {
+        try {
+            val encoded = java.net.URLEncoder.encode(relPath, "UTF-8")
+            val request = Request.Builder()
+                .url("$baseUrl/api/vault/content?path=$encoded")
+                .get()
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext Result.failure(IOException("HTTP ${response.code}"))
+                val body = response.body?.string() ?: "{}"
+                Result.success(gson.fromJson(body, VaultFileContent::class.java))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun saveVaultNote(relPath: String?, title: String?, content: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val json = JsonObject().apply {
+                relPath?.let { addProperty("relPath", it) }
+                title?.let { addProperty("title", it) }
+                addProperty("content", content)
+            }
+            val request = Request.Builder()
+                .url("$baseUrl/api/vault/note")
+                .post(json.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) Result.success(Unit) else Result.failure(IOException("HTTP ${response.code}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun createVaultFolder(folderPath: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val json = JsonObject().apply { addProperty("folderPath", folderPath) }
+            val request = Request.Builder()
+                .url("$baseUrl/api/vault/folder")
+                .post(json.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) Result.success(Unit) else Result.failure(IOException("HTTP ${response.code}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteVaultFile(relPath: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val encoded = java.net.URLEncoder.encode(relPath, "UTF-8")
+            val request = Request.Builder()
+                .url("$baseUrl/api/vault/file?path=$encoded")
+                .delete()
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) Result.success(Unit) else Result.failure(IOException("HTTP ${response.code}"))
             }
         } catch (e: Exception) {
             Result.failure(e)

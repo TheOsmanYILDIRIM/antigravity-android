@@ -19,16 +19,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.antigravity.ai.data.model.ChatSettings
+import com.antigravity.ai.data.model.UsageData
 import com.antigravity.ai.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatTopBar(
     settings: ChatSettings,
+    usage: UsageData?,
     isGenerating: Boolean,
     onMenuClick: () -> Unit,
     onNewChatClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onUsageClick: () -> Unit
 ) {
     TopAppBar(
         title = {
@@ -36,7 +39,7 @@ fun ChatTopBar(
                 Text(
                     text = "Antigravity AI",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     color = TextPrimary
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -49,7 +52,7 @@ fun ChatTopBar(
                     Spacer(modifier = Modifier.width(5.dp))
                     Text(
                         text = if (isGenerating) "İşlem yürütülüyor…" else "${settings.model.replace("gemini-", "").replace("default", "CLI")} • ${settings.effort}",
-                        fontSize = 11.sp,
+                        fontSize = 10.sp,
                         color = TextMuted
                     )
                 }
@@ -61,6 +64,13 @@ fun ChatTopBar(
             }
         },
         actions = {
+            // Real-Time Quota & Usage Widget
+            UsageWidget(
+                usage = usage,
+                onClick = onUsageClick,
+                modifier = Modifier.padding(end = 4.dp)
+            )
+
             // Model & Settings button
             Surface(
                 shape = RoundedCornerShape(8.dp),
@@ -71,10 +81,10 @@ fun ChatTopBar(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.Tune, contentDescription = "Ayarlar", tint = PrimaryIndigo, modifier = Modifier.size(15.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(imageVector = Icons.Default.Tune, contentDescription = "Ayarlar", tint = PrimaryIndigo, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
                     Text(
                         text = settings.effort.uppercase(),
                         fontSize = 10.sp,
@@ -84,17 +94,18 @@ fun ChatTopBar(
                 }
             }
 
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(4.dp))
 
             // New chat
             IconButton(
                 onClick = onNewChatClick,
                 modifier = Modifier
-                    .padding(end = 4.dp)
+                    .padding(end = 2.dp)
                     .clip(CircleShape)
                     .background(SurfaceVariantDark)
+                    .size(34.dp)
             ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Yeni Sohbet", tint = PrimaryIndigo)
+                Icon(imageVector = Icons.Default.Add, contentDescription = "Yeni Sohbet", tint = PrimaryIndigo, modifier = Modifier.size(18.dp))
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark)
