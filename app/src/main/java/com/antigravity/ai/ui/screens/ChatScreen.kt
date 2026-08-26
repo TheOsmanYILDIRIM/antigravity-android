@@ -260,17 +260,17 @@ fun FigmaGeminiHomeView(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.weight(1.2f))
 
         // Figma Centered Greeting: "Hello, Osman"
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            GeminiSparkleIcon(size = 40.dp)
-            Spacer(modifier = Modifier.height(16.dp))
+            GeminiSparkleIcon(size = 44.dp)
+            Spacer(modifier = Modifier.height(18.dp))
             Text(
                 text = "Hello, Osman",
                 fontSize = 32.sp,
@@ -278,7 +278,7 @@ fun FigmaGeminiHomeView(
                 color = TextPrimary,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Antigravity AI is ready for coding & workflows",
                 fontSize = 14.sp,
@@ -287,106 +287,111 @@ fun FigmaGeminiHomeView(
             )
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.weight(1.5f))
 
-        // Figma Horizontal Scroll Suggestion Cards
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        // Bottom Action Block (Suggestion Cards + Promo Banner)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            SuggestionCard(
-                title = "Help me",
-                subtitle = "write code",
-                onClick = { onSuggestionClick("Python ile temiz bir otomasyon betiği yaz") }
-            )
-            SuggestionCard(
-                title = "Explore",
-                subtitle = "AGY Vault",
-                onClick = { onOpenVault() }
-            )
-            SuggestionCard(
-                title = "Analyze",
-                subtitle = "files & photos",
-                onClick = { onSuggestionClick("Termux ortamındaki çalışma alanını ve aktif dosyaları analiz et") }
-            )
-            SuggestionCard(
-                title = "Plan",
-                subtitle = "architecture",
-                onClick = { onSuggestionClick("Geliştireceğimiz yeni mobil özellik için adım adım bir mimari plan hazırla") }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Figma Feature Banner ("New! Edit images 🍌")
-        if (showPromo) {
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = SurfaceVariantDark,
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
-                modifier = Modifier.fillMaxWidth()
+            // Figma Horizontal Scroll Suggestion Cards
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Outlined.AutoAwesome,
-                            contentDescription = null,
-                            tint = GeminiPink,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Vision & Vault Ready ✨",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = TextPrimary
-                        )
-                    }
+                SuggestionCard(
+                    title = "Help me",
+                    subtitle = "write code",
+                    onClick = { onSuggestionClick("Python ile temiz bir otomasyon betiği yaz") }
+                )
+                SuggestionCard(
+                    title = "Explore",
+                    subtitle = "AGY Vault",
+                    onClick = { onOpenVault() }
+                )
+                SuggestionCard(
+                    title = "Analyze",
+                    subtitle = "files & photos",
+                    onClick = { onSuggestionClick("Termux ortamındaki çalışma alanını ve aktif dosyaları analiz et") }
+                )
+                SuggestionCard(
+                    title = "Plan",
+                    subtitle = "architecture",
+                    onClick = { onSuggestionClick("Geliştireceğimiz yeni mobil özellik için adım adım bir mimari plan hazırla") }
+                )
+            }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = TextPrimary,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { onOpenVault() }
-                        ) {
+            // Figma Feature Banner ("Vision & Vault Ready ✨")
+            if (showPromo) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = SurfaceVariantDark,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Outlined.AutoAwesome,
+                                contentDescription = null,
+                                tint = GeminiPink,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Try Now",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = BackgroundDark,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                text = "Vision & Vault Ready ✨",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = TextPrimary
                             )
                         }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        IconButton(
-                            onClick = { showPromo = false },
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Kapat",
-                                tint = TextMuted,
-                                modifier = Modifier.size(14.dp)
-                            )
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = TextPrimary,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { onOpenVault() }
+                            ) {
+                                Text(
+                                    text = "Try Now",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BackgroundDark,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            IconButton(
+                                onClick = { showPromo = false },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Kapat",
+                                    tint = TextMuted,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(14.dp))
     }
 }
 
 @Composable
+
 fun SuggestionCard(
     title: String,
     subtitle: String,

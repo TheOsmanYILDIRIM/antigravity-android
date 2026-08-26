@@ -50,28 +50,49 @@ class VisualPreviewTest {
         lastUpdated = "10:45"
     )
 
-    // 1. Standard Modern Phone (Pixel 7 - 411dp)
+    // 1. Ultra-Tall 21:9 Screen (Sony Xperia / Tall Android format)
+    @Test
+    @Config(qualifiers = "w384dp-h900dp-440dpi", sdk = [33])
+    fun capture_tall_21_9() {
+        renderHomeScreen("build/outputs/roborazzi/matrix_tall_21_9.png")
+    }
+
+    // 2. Modern 20:9 / 19.5:9 Tall Screen (Samsung Galaxy S / Xiaomi / Pixel Pro)
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun capture_tall_20_9() {
+        renderHomeScreen("build/outputs/roborazzi/matrix_tall_20_9.png")
+    }
+
+    // 3. Standard Phone (Pixel 7 - 411dp)
     @Test
     @Config(qualifiers = "w411dp-h891dp-420dpi", sdk = [33])
     fun capture_standard_411dp() {
         renderHomeScreen("build/outputs/roborazzi/matrix_411dp_standard.png")
     }
 
-    // 2. Compact Phone (Galaxy A series / Common Android - 360dp)
+    // 4. Compact Phone (Galaxy A series - 360dp)
     @Test
     @Config(qualifiers = "w360dp-h780dp-360dpi", sdk = [33])
     fun capture_compact_360dp() {
         renderHomeScreen("build/outputs/roborazzi/matrix_360dp_compact.png")
     }
 
-    // 3. Narrow Phone (Extreme Narrow screen - 320dp)
+    // 5. Narrow Phone (Extreme Narrow - 320dp)
     @Test
     @Config(qualifiers = "w320dp-h640dp-320dpi", sdk = [33])
     fun capture_narrow_320dp() {
         renderHomeScreen("build/outputs/roborazzi/matrix_320dp_narrow.png")
     }
 
-    // 4. Large Font / Accessibility (360dp with 1.3x Font Scale)
+    // 6. Split-Screen / Multi-Window Mode (Short height)
+    @Test
+    @Config(qualifiers = "w380dp-h560dp-380dpi", sdk = [33])
+    fun capture_short_split_screen() {
+        renderHomeScreen("build/outputs/roborazzi/matrix_short_split_screen.png")
+    }
+
+    // 7. Large Font / Accessibility (360dp with 1.3x Font Scale)
     @Test
     @Config(qualifiers = "w360dp-h780dp-360dpi", sdk = [33], fontScale = 1.3f)
     fun capture_large_font_1_3x() {
