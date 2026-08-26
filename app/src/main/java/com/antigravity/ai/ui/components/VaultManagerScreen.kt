@@ -288,10 +288,11 @@ fun ObsidianHeader(
                     onClick = onBack,
                     modifier = Modifier.size(34.dp)
                 ) {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri", tint = TextPrimary, modifier = Modifier.size(18.dp))
+                    Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Geri", tint = TextPrimary, modifier = Modifier.size(18.dp))
                 }
                 Spacer(modifier = Modifier.width(4.dp))
             }
+
 
             Box(
                 modifier = Modifier
@@ -440,10 +441,11 @@ fun ObsidianFileExplorerView(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 modifier = Modifier.weight(1f).height(38.dp)
             ) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.NoteAdd, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                Icon(imageVector = Icons.Default.NoteAdd, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(text = "Yeni Not", fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
+
 
             Button(
                 onClick = onNewFolder,
@@ -659,7 +661,7 @@ fun ObsidianQuickSwitcherView(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                         ) {
-                            Icon(imageVector = Icons.AutoMirrored.Outlined.Article, contentDescription = null, tint = PrimaryIndigo, modifier = Modifier.size(16.dp))
+                            Icon(imageVector = Icons.Default.Description, contentDescription = null, tint = PrimaryIndigo, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(text = item.name, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
