@@ -9,9 +9,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
-import com.antigravity.ai.data.model.ChatMessage
-import com.antigravity.ai.data.model.ModelSettings
-import com.antigravity.ai.data.model.UsageInfo
+import com.antigravity.ai.data.model.ChatSettings
+import com.antigravity.ai.data.model.Message
+import com.antigravity.ai.data.model.UsageData
+import com.antigravity.ai.data.model.UsageMetrics
+import com.antigravity.ai.data.model.UsageStats
 import com.antigravity.ai.ui.components.ChatTopBar
 import com.antigravity.ai.ui.components.MessageInputBar
 import com.antigravity.ai.ui.components.MessageItem
@@ -34,6 +36,21 @@ class VisualPreviewTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    private val sampleUsage = UsageData(
+        recent5h = UsageMetrics(
+            totalTokens = 12450,
+            turnCount = 18,
+            usedPercent = 25,
+            remainingPercent = 75,
+            inputTokens = 8200,
+            outputTokens = 4250,
+            thinkingTokens = 1100
+        ),
+        weekly = null,
+        lastTurn = UsageStats(totalTokens = 1420, outputTokens = 650, thinkingTokens = 210),
+        lastUpdated = "10:45"
+    )
+
     @Test
     fun captureFigmaGeminiHomeView() {
         composeTestRule.setContent {
@@ -44,8 +61,8 @@ class VisualPreviewTest {
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         ChatTopBar(
-                            settings = ModelSettings(model = "gemini-2.5-flash"),
-                            usage = UsageInfo(totalTokens = 1420, dailyLimit = 1000000),
+                            settings = ChatSettings(model = "gemini-3.7-flash-medium"),
+                            usage = sampleUsage,
                             isGenerating = false,
                             onMenuClick = {},
                             onNewChatClick = {},
@@ -67,7 +84,7 @@ class VisualPreviewTest {
                             onRemovePastedBlock = {},
                             attachments = emptyList(),
                             onRemoveAttachment = {},
-                            selectedModelName = "Gemini 2.5 Flash ⚡",
+                            selectedModelName = "Gemini 3.7 Flash ⚡",
                             onModelPillClick = {},
                             isGenerating = false,
                             isListening = false,
@@ -87,17 +104,16 @@ class VisualPreviewTest {
     @Test
     fun captureChatConversationView() {
         val mockMessages = listOf(
-            ChatMessage(
+            Message(
                 id = "1",
                 role = "user",
                 content = "Termux üzerinde headless Jetpack Compose UI testini görsel olarak nasıl çalıştırırız?"
             ),
-            ChatMessage(
+            Message(
                 id = "2",
                 role = "bot",
                 content = "Roborazzi kullanarak JVM üzerinde emülatör veya APK olmadan doğrudan PNG çıktısı üretebiliriz:\n\n```bash\n./gradlew recordRoborazziDebug\n```\n\nBu yöntemle üretilen ekran görüntüsü **Antigravity AI** tarafından anında analiz edilir!",
-                tokenCount = 84,
-                durationMs = 1240
+                usage = UsageStats(totalTokens = 84, outputTokens = 50, thinkingTokens = 12)
             )
         )
 
@@ -109,8 +125,8 @@ class VisualPreviewTest {
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         ChatTopBar(
-                            settings = ModelSettings(model = "gemini-2.5-flash"),
-                            usage = UsageInfo(totalTokens = 3580, dailyLimit = 1000000),
+                            settings = ChatSettings(model = "gemini-3.7-flash-medium"),
+                            usage = sampleUsage,
                             isGenerating = false,
                             onMenuClick = {},
                             onNewChatClick = {},
@@ -132,13 +148,13 @@ class VisualPreviewTest {
                         }
 
                         MessageInputBar(
-                            text = "Harika, şimdi kodda değişiklik yapalım",
+                            text = "Harika, şimdi görsel analizi başlatalım!",
                             onTextChange = {},
                             pastedBlocks = emptyList(),
                             onRemovePastedBlock = {},
                             attachments = emptyList(),
                             onRemoveAttachment = {},
-                            selectedModelName = "Gemini 2.5 Flash ⚡",
+                            selectedModelName = "Gemini 3.7 Flash ⚡",
                             onModelPillClick = {},
                             isGenerating = false,
                             isListening = false,
