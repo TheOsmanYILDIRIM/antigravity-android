@@ -1,0 +1,47 @@
+{
+  "pack": "m_outlined",
+  "size": 24,
+  "color": "FFFFFF",
+  "icons": {
+    "terminal": {
+      "id": "85782",
+      "commonName": "console",
+      "previewUrl": "https://img.icons8.com/?id=85782&format=png&size=48&color=FFFFFF"
+    },
+    "chat": {
+      "id": "85175",
+      "commonName": "speech-bubble",
+      "previewUrl": "https://img.icons8.com/?id=85175&format=png&size=48&color=FFFFFF"
+    },
+    "add": {
+      "id": "85038",
+      "commonName": "plus-math",
+      "previewUrl": "https://img.icons8.com/?id=85038&format=png&size=48&color=FFFFFF"
+    },
+    "delete": {
+      "id": "85081",
+      "commonName": "trash",
+      "previewUrl": "https://img.icons8.com/?id=85081&format=png&size=48&color=FFFFFF"
+    },
+    "microphone": {
+      "id": "85055",
+      "commonName": "microphone",
+      "previewUrl": "https://img.icons8.com/?id=85055&format=png&size=48&color=FFFFFF"
+    },
+    "send": {
+      "id": "86859",
+      "commonName": "sent",
+      "previewUrl": "https://img.icons8.com/?id=86859&format=png&size=48&color=FFFFFF"
+    },
+    "copy": {
+      "id": "85043",
+      "commonName": "copy",
+      "previewUrl": "https://img.icons8.com/?id=85043&format=png&size=48&color=FFFFFF"
+    },
+    "stop": {
+      "id": "87063",
+      "commonName": "stop",
+      "previewUrl": "https://img.icons8.com/?id=87063&format=png&size=48&color=FFFFFF"
+    }
+  }
+}
