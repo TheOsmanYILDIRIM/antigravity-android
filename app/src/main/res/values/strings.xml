@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Antigravity AI</string>
+    <string name="new_chat">Yeni Sohbet</string>
+    <string name="conversations">Sohbetler</string>
+    <string name="no_conversations">Henüz kayıtlı bir sohbet yok</string>
+    <string name="type_a_message">Antigravity\'ye bir şey yazın…</string>
+    <string name="listening">Dinleniyor…</string>
+    <string name="status_ready">Hazır</string>
+    <string name="status_busy">İşlem yürütülüyor…</string>
+</resources>
