@@ -35,8 +35,8 @@ fun UsageWidget(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val fiveHourTokens = usage?.recent5h?.totalTokens ?: 0L
-    val weeklyTokens = usage?.weekly?.totalTokens ?: 0L
+    val fiveHourRemaining = usage?.recent5h?.remainingPercent ?: 100
+    val weeklyRemaining = usage?.weekly?.remainingPercent ?: 100
 
     Surface(
         shape = RoundedCornerShape(20.dp),
@@ -54,17 +54,17 @@ fun UsageWidget(
                 modifier = Modifier
                     .size(8.dp)
                     .clip(CircleShape)
-                    .background(PrimaryIndigo)
+                    .background(if (fiveHourRemaining > 20) SuccessGreen else ErrorRed)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = "⚡ 5s: ${formatTokenCount(fiveHourTokens)}",
+                text = "⚡ 5s: %$fiveHourRemaining Kalan",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextPrimary
             )
             Text(
-                text = " • H: ${formatTokenCount(weeklyTokens)}",
+                text = " • H: %$weeklyRemaining",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Normal,
                 color = TextSecondary
@@ -99,7 +99,7 @@ fun UsageDetailDialog(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = PrimaryIndigo, modifier = Modifier.size(22.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "CLI Telemetri & Token Kullanımı", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                    Text(text = "Model Kota & Kullanım Durumu", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
                 }
                 IconButton(onClick = onDismiss) {
                     Icon(imageVector = Icons.Default.Close, contentDescription = "Kapat", tint = TextMuted)
@@ -108,10 +108,12 @@ fun UsageDetailDialog(
 
             Divider(color = BorderSubtle, modifier = Modifier.padding(vertical = 12.dp))
 
-            // 1. 5-Hour Window Telemetry
+            // 1. 5-Hour Window Progress
             val fiveHour = usage?.recent5h
             val fhTokens = fiveHour?.totalTokens ?: 0L
             val fhTurns = fiveHour?.turnCount ?: 0
+            val fhRemaining = fiveHour?.remainingPercent ?: 100
+            val fhUsed = fiveHour?.usedPercent ?: 0
 
             Card(
                 shape = RoundedCornerShape(12.dp),
@@ -124,32 +126,53 @@ fun UsageDetailDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = "Son 5 Saatlik Tüketim", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextPrimary)
-                        Text(text = "$fhTurns Yanıt / Dönüş", fontSize = 11.sp, color = PrimaryIndigo, fontWeight = FontWeight.Bold)
+                        Text(text = "5 Saatlik Kayan Pencere", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextPrimary)
+                        Text(
+                            text = "%$fhRemaining KALAN",
+                            fontSize = 12.sp,
+                            color = if (fhRemaining > 20) SuccessGreen else ErrorRed,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "${String.format("%,d", fhTokens)} token",
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = TextPrimary
+                    LinearProgressIndicator(
+                        progress = (fhUsed / 100f).coerceIn(0f, 1f),
+                        color = if (fhRemaining > 20) PrimaryIndigo else ErrorRed,
+                        trackColor = BorderSubtle,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Antigravity CLI tarafından son 5 saatte işlenen toplam girdi, çıktı ve düşünme tokenları.",
-                        fontSize = 11.sp,
-                        color = TextMuted
-                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Tüketilen: ${String.format("%,d", fhTokens)} token",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
+                        Text(
+                            text = "$fhTurns yanıt",
+                            fontSize = 11.sp,
+                            color = TextMuted
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 2. Weekly Total Telemetry
+            // 2. Weekly Quota Progress
             val weekly = usage?.weekly
             val wTokens = weekly?.totalTokens ?: 0L
             val wTurns = weekly?.turnCount ?: 0
+            val wRemaining = weekly?.remainingPercent ?: 100
+            val wUsed = weekly?.usedPercent ?: 0
 
             Card(
                 shape = RoundedCornerShape(12.dp),
@@ -162,23 +185,42 @@ fun UsageDetailDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = "Haftalık Toplam Tüketim", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextPrimary)
-                        Text(text = "$wTurns Toplam İstek", fontSize = 11.sp, color = SecondaryPurple, fontWeight = FontWeight.Bold)
+                        Text(text = "Haftalık Kota", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextPrimary)
+                        Text(
+                            text = "%$wRemaining KALAN",
+                            fontSize = 12.sp,
+                            color = SecondaryPurple,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "${String.format("%,d", wTokens)} token",
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = TextPrimary
+                    LinearProgressIndicator(
+                        progress = (wUsed / 100f).coerceIn(0f, 1f),
+                        color = SecondaryPurple,
+                        trackColor = BorderSubtle,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Aktif çalışma alanınızdaki tüm oturumlar boyunca üretilen kümülatif token sayısı.",
-                        fontSize = 11.sp,
-                        color = TextMuted
-                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Toplam: ${String.format("%,d", wTokens)} token",
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
+                        Text(
+                            text = "$wTurns istek",
+                            fontSize = 11.sp,
+                            color = TextMuted
+                        )
+                    }
                 }
             }
 

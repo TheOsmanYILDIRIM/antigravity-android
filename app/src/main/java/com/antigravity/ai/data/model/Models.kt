@@ -87,7 +87,7 @@ data class ModelItem(
     @SerializedName("name")
     val name: String,
     @SerializedName("description")
-    val description: String
+    val description: String = ""
 )
 
 data class EffortItem(
@@ -96,7 +96,7 @@ data class EffortItem(
     @SerializedName("name")
     val name: String,
     @SerializedName("description")
-    val description: String
+    val description: String = ""
 )
 
 data class ModeItem(
@@ -195,6 +195,10 @@ data class UsageMetrics(
     val totalTokens: Long = 0,
     @SerializedName("turnCount")
     val turnCount: Int = 0,
+    @SerializedName("usedPercent")
+    val usedPercent: Int = 0,
+    @SerializedName("remainingPercent")
+    val remainingPercent: Int = 100,
     @SerializedName("windowHours")
     val windowHours: Int = 5,
     @SerializedName("inputTokens")
@@ -224,8 +228,8 @@ data class UsageResponse(
 )
 
 data class ChatSettings(
-    val model: String = "default",
-    val effort: String = "medium", // low, medium, high
+    val model: String = "gemini-3.7-flash-medium",
+    val effort: String = "default", // default, low, medium, high
     val mode: String = "default", // default, plan, accept-edits
     val useVault: Boolean = true
 )

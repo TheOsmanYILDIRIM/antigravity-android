@@ -4,7 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -37,14 +39,17 @@ fun ModelSettingsDialog(
     var useVault by remember { mutableStateOf(currentSettings.useVault) }
 
     val modelsList = if (availableModels.isNotEmpty()) availableModels else listOf(
-        ModelItem("default", "Varsayılan (CLI Default)", "CLI ortamında aktif model"),
-        ModelItem("gemini-3.7-flash", "Gemini 3.7 Flash", "Yüksek hızlı hibrit akıl yürütme"),
-        ModelItem("gemini-2.5-pro", "Gemini 2.5 Pro", "Derin mimari ve kodlama"),
-        ModelItem("gemini-2.5-flash", "Gemini 2.5 Flash", "Hızlı genel model"),
-        ModelItem("claude-3-5-sonnet", "Claude 3.5 Sonnet", "Gelişmiş analitik")
+        ModelItem("gemini-3.7-flash-high", "Gemini 3.7 Flash (High)", "Yüksek akıl yürütme"),
+        ModelItem("gemini-3.7-flash-medium", "Gemini 3.7 Flash (Medium)", "Dengeli standart model"),
+        ModelItem("gemini-3.7-flash-low", "Gemini 3.7 Flash (Low)", "Hızlı yanıt"),
+        ModelItem("gemini-3.6-flash-high", "Gemini 3.6 Flash (High)", "Hızlı analitik"),
+        ModelItem("gemini-3.1-pro-high", "Gemini 3.1 Pro (High)", "Derin mimari"),
+        ModelItem("claude-sonnet-4-6", "Claude Sonnet 4.6 (Thinking)", "Gelişmiş düşünme"),
+        ModelItem("claude-opus-4-6-thinking", "Claude Opus 4.6 (Thinking)", "Maksimum kapasite")
     )
 
     val effortsList = if (availableEfforts.isNotEmpty()) availableEfforts else listOf(
+        EffortItem("default", "Varsayılan", "Standart"),
         EffortItem("low", "Düşük", "Hızlı"),
         EffortItem("medium", "Orta", "Dengeli"),
         EffortItem("high", "Yüksek", "Derin")
@@ -60,6 +65,7 @@ fun ModelSettingsDialog(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState())
         ) {
             // Header
             Row(
@@ -80,9 +86,9 @@ fun ModelSettingsDialog(
 
             Divider(color = BorderSubtle, modifier = Modifier.padding(vertical = 12.dp))
 
-            // 1. Dynamic Models from CLI / Backend
+            // 1. Dynamic Models from CLI (`agy models`)
             Text(
-                text = "CLI MODELİ SEÇİN",
+                text = "ANTIGRAVITY CLI MODELLERİ (${modelsList.size} Model)",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextMuted,
@@ -152,7 +158,7 @@ fun ModelSettingsDialog(
                     ) {
                         Text(
                             text = effortItem.name,
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (isSelected) Color.White else TextSecondary,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
