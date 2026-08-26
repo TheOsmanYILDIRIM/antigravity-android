@@ -36,7 +36,6 @@ fun UsageWidget(
     modifier: Modifier = Modifier
 ) {
     val fiveHourRemaining = usage?.recent5h?.remainingPercent ?: 100
-    val weeklyRemaining = usage?.weekly?.remainingPercent ?: 100
 
     Surface(
         shape = RoundedCornerShape(20.dp),
@@ -48,30 +47,26 @@ fun UsageWidget(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(8.dp)
+                    .size(7.dp)
                     .clip(CircleShape)
                     .background(if (fiveHourRemaining > 20) SuccessGreen else DangerRed)
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(5.dp))
             Text(
-                text = "⚡ 5s: %$fiveHourRemaining Kalan",
+                text = "⚡ %$fiveHourRemaining",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
-            Text(
-                text = " • H: %$weeklyRemaining",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Normal,
-                color = TextSecondary
+                color = TextPrimary,
+                maxLines = 1
             )
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

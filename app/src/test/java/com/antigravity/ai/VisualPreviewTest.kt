@@ -30,7 +30,6 @@ import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = "w411dp-h891dp-420dpi", sdk = [33])
 class VisualPreviewTest {
 
     @get:Rule
@@ -51,8 +50,35 @@ class VisualPreviewTest {
         lastUpdated = "10:45"
     )
 
+    // 1. Standard Modern Phone (Pixel 7 - 411dp)
     @Test
-    fun captureFigmaGeminiHomeView() {
+    @Config(qualifiers = "w411dp-h891dp-420dpi", sdk = [33])
+    fun capture_standard_411dp() {
+        renderHomeScreen("build/outputs/roborazzi/matrix_411dp_standard.png")
+    }
+
+    // 2. Compact Phone (Galaxy A series / Common Android - 360dp)
+    @Test
+    @Config(qualifiers = "w360dp-h780dp-360dpi", sdk = [33])
+    fun capture_compact_360dp() {
+        renderHomeScreen("build/outputs/roborazzi/matrix_360dp_compact.png")
+    }
+
+    // 3. Narrow Phone (Extreme Narrow screen - 320dp)
+    @Test
+    @Config(qualifiers = "w320dp-h640dp-320dpi", sdk = [33])
+    fun capture_narrow_320dp() {
+        renderHomeScreen("build/outputs/roborazzi/matrix_320dp_narrow.png")
+    }
+
+    // 4. Large Font / Accessibility (360dp with 1.3x Font Scale)
+    @Test
+    @Config(qualifiers = "w360dp-h780dp-360dpi", sdk = [33], fontScale = 1.3f)
+    fun capture_large_font_1_3x() {
+        renderHomeScreen("build/outputs/roborazzi/matrix_360dp_large_font.png")
+    }
+
+    private fun renderHomeScreen(outputPath: String) {
         composeTestRule.setContent {
             AntigravityAITheme {
                 Surface(
@@ -98,76 +124,6 @@ class VisualPreviewTest {
             }
         }
 
-        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/preview_home_screen.png")
-    }
-
-    @Test
-    fun captureChatConversationView() {
-        val mockMessages = listOf(
-            Message(
-                id = "1",
-                role = "user",
-                content = "Termux üzerinde headless Jetpack Compose UI testini görsel olarak nasıl çalıştırırız?"
-            ),
-            Message(
-                id = "2",
-                role = "bot",
-                content = "Roborazzi kullanarak JVM üzerinde emülatör veya APK olmadan doğrudan PNG çıktısı üretebiliriz:\n\n```bash\n./gradlew recordRoborazziDebug\n```\n\nBu yöntemle üretilen ekran görüntüsü **Antigravity AI** tarafından anında analiz edilir!",
-                usage = UsageStats(totalTokens = 84, outputTokens = 50, thinkingTokens = 12)
-            )
-        )
-
-        composeTestRule.setContent {
-            AntigravityAITheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = BackgroundDark
-                ) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        ChatTopBar(
-                            settings = ChatSettings(model = "gemini-3.7-flash-medium"),
-                            usage = sampleUsage,
-                            isGenerating = false,
-                            onMenuClick = {},
-                            onNewChatClick = {},
-                            onSettingsClick = {},
-                            onUsageClick = {}
-                        )
-
-                        LazyColumn(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                            contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp)
-                        ) {
-                            items(mockMessages, key = { it.id }) { msg ->
-                                val isLastBot = msg.id == "2"
-                                MessageItem(message = msg, isLastBotMessage = isLastBot)
-                            }
-                        }
-
-                        MessageInputBar(
-                            text = "Harika, şimdi görsel analizi başlatalım!",
-                            onTextChange = {},
-                            pastedBlocks = emptyList(),
-                            onRemovePastedBlock = {},
-                            attachments = emptyList(),
-                            onRemoveAttachment = {},
-                            selectedModelName = "Gemini 3.7 Flash ⚡",
-                            onModelPillClick = {},
-                            isGenerating = false,
-                            isListening = false,
-                            onSend = {},
-                            onStop = {},
-                            onMicClick = {},
-                            onAttachClick = {}
-                        )
-                    }
-                }
-            }
-        }
-
-        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/preview_chat_conversation.png")
+        composeTestRule.onRoot().captureRoboImage(outputPath)
     }
 }

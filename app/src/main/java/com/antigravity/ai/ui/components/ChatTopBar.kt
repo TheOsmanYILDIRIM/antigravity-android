@@ -41,15 +41,14 @@ fun ChatTopBar(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
             // Left: Hamburger Menu
             IconButton(
                 onClick = onMenuClick,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(38.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Menu,
@@ -59,28 +58,31 @@ fun ChatTopBar(
                 )
             }
 
-            // Center: App Title with Gemini Sparkle
+            // Center / Title with Gemini Sparkle (safely fills available width)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
+                    .weight(1f)
                     .clip(RoundedCornerShape(12.dp))
                     .clickable { onSettingsClick() }
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .padding(horizontal = 6.dp, vertical = 4.dp)
             ) {
                 GeminiSparkleIcon(size = 18.dp)
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "Antigravity",
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 17.sp,
-                    color = TextPrimary
+                    fontSize = 16.sp,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
 
-            // Right: Usage Badge & New Chat Button
+            // Right Group: Compact Usage Badge & New Chat Button
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 UsageWidget(
                     usage = usage,
@@ -90,7 +92,7 @@ fun ChatTopBar(
                 IconButton(
                     onClick = onNewChatClick,
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(34.dp)
                         .clip(CircleShape)
                         .background(SurfaceVariantDark)
                 ) {
@@ -105,3 +107,4 @@ fun ChatTopBar(
         }
     }
 }
+
