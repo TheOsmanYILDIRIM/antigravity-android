@@ -2,6 +2,8 @@ package com.antigravity.ai.ui.screens
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -23,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.antigravity.ai.data.model.Attachment
 import com.antigravity.ai.ui.components.*
 import com.antigravity.ai.ui.theme.*
 import com.antigravity.ai.ui.viewmodel.ChatViewModel
@@ -47,6 +50,34 @@ fun ChatScreen(
         }
     }
 
+    // Document / Image picker launcher
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            var fileName = "attachment"
+            var fileSize: Long? = null
+            context.contentResolver.query(it, null, null, null, null)?.use { cursor ->
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                if (cursor.moveToFirst()) {
+                    if (nameIndex >= 0) fileName = cursor.getString(nameIndex)
+                    if (sizeIndex >= 0) fileSize = cursor.getLong(sizeIndex)
+                }
+            }
+            val mime = context.contentResolver.getType(it) ?: ""
+            val type = if (mime.startsWith("image/")) "image" else "doc"
+            viewModel.addAttachment(
+                Attachment(
+                    name = fileName,
+                    path = it.toString(),
+                    type = type,
+                    size = fileSize
+                )
+            )
+        }
+    }
+
     // Auto-scroll on new messages
     LaunchedEffect(uiState.messages.size, uiState.messages.lastOrNull()?.content) {
         if (uiState.messages.isNotEmpty()) {
@@ -54,21 +85,52 @@ fun ChatScreen(
         }
     }
 
+    // Model & Settings Bottom Sheet
+    if (uiState.showSettingsDialog) {
+        ModelSettingsDialog(
+            currentSettings = uiState.settings,
+            onDismiss = { viewModel.setSettingsDialogVisible(false) },
+            onSave = { newSettings -> viewModel.updateSettings(newSettings) }
+        )
+    }
+
+    // AGY Vault Browser Bottom Sheet
+    if (uiState.showVaultBrowser) {
+        VaultBrowserSheet(
+            vaultFiles = uiState.vaultFiles,
+            onDismiss = { viewModel.setVaultBrowserVisible(false) },
+            onSelectFile = { item ->
+                viewModel.addAttachment(
+                    Attachment(
+                        name = item.name,
+                        path = item.path,
+                        type = "vault"
+                    )
+                )
+            }
+        )
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ChatDrawer(
                 conversations = uiState.conversations,
-                currentConversationId = uiState.currentConversationId,
-                onSelectConversation = {
+                currentSessionId = uiState.currentSessionId,
+                onSelectConversation = { id ->
+                    viewModel.selectConversation(id)
                     scope.launch { drawerState.close() }
                 },
                 onNewChat = {
                     viewModel.startNewChat()
                     scope.launch { drawerState.close() }
                 },
-                onDeleteConversation = {
-                    // delete
+                onDeleteConversation = { id ->
+                    viewModel.deleteConversation(id)
+                },
+                onOpenVault = {
+                    scope.launch { drawerState.close() }
+                    viewModel.setVaultBrowserVisible(true)
                 }
             )
         }
@@ -76,38 +138,69 @@ fun ChatScreen(
         Scaffold(
             topBar = {
                 ChatTopBar(
+                    settings = uiState.settings,
                     isGenerating = uiState.isGenerating,
                     onMenuClick = {
                         scope.launch { drawerState.open() }
                     },
                     onNewChatClick = {
                         viewModel.startNewChat()
+                    },
+                    onSettingsClick = {
+                        viewModel.setSettingsDialogVisible(true)
                     }
                 )
             },
             bottomBar = {
-                MessageInputBar(
-                    text = uiState.inputText,
-                    onTextChange = viewModel::onInputTextChange,
-                    isGenerating = uiState.isGenerating,
-                    isListening = uiState.isListening,
-                    onSend = viewModel::sendMessage,
-                    onStop = viewModel::stopExecution,
-                    onMicClick = {
-                        val hasPermission = ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.RECORD_AUDIO
-                        ) == PackageManager.PERMISSION_GRANTED
-
-                        if (hasPermission) {
-                            if (uiState.isListening) viewModel.stopListening() else viewModel.startListening()
-                        } else {
-                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                        }
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Slash command autocomplete popup
+                    if (uiState.showSlashCommands) {
+                        SlashCommandPopup(
+                            query = uiState.slashQuery,
+                            onSelect = { cmd -> viewModel.onSelectSlashCommand(cmd) }
+                        )
                     }
-                )
+
+                    // Mention autocomplete popup
+                    if (uiState.showMentions) {
+                        MentionPopup(
+                            query = uiState.mentionQuery,
+                            items = uiState.vaultFiles,
+                            onSelect = { item -> viewModel.onSelectMention(item) }
+                        )
+                    }
+
+                    MessageInputBar(
+                        text = uiState.inputText,
+                        onTextChange = viewModel::onInputTextChange,
+                        pastedBlock = uiState.pastedBlock,
+                        onRemovePastedBlock = viewModel::removePastedBlock,
+                        attachments = uiState.attachments,
+                        onRemoveAttachment = viewModel::removeAttachment,
+                        isGenerating = uiState.isGenerating,
+                        isListening = uiState.isListening,
+                        onSend = viewModel::sendMessage,
+                        onStop = viewModel::stopExecution,
+                        onMicClick = {
+                            val hasPermission = ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.RECORD_AUDIO
+                            ) == PackageManager.PERMISSION_GRANTED
+
+                            if (hasPermission) {
+                                if (uiState.isListening) viewModel.stopListening() else viewModel.startListening()
+                            } else {
+                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        },
+                        onAttachClick = {
+                            filePickerLauncher.launch("*/*")
+                        }
+                    )
+                }
             },
-            containerColor = BackgroundDark
+            containerColor = BackgroundDark,
+            contentWindowInsets = WindowInsets.safeDrawing
         ) { paddingValues ->
             Box(
                 modifier = Modifier
@@ -115,7 +208,6 @@ fun ChatScreen(
                     .padding(paddingValues)
             ) {
                 if (uiState.messages.isEmpty()) {
-                    // Welcome / Empty State
                     WelcomeView(
                         onSuggestionClick = { prompt ->
                             viewModel.onInputTextChange(prompt)
@@ -123,7 +215,6 @@ fun ChatScreen(
                         }
                     )
                 } else {
-                    // Messages list
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
@@ -172,7 +263,6 @@ fun WelcomeView(onSuggestionClick: (String) -> Unit) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Suggestion Chips
         val suggestions = listOf(
             "📁 Projeleri ve durumları listele" to "Termux ortamındaki mevcut projeleri ve durumları listele",
             "🌿 Git durumunu kontrol et" to "Git durumunu kontrol et ve özetle",

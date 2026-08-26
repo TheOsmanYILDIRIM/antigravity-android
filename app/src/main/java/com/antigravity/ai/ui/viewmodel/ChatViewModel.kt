@@ -20,11 +20,22 @@ import java.util.Locale
 
 data class ChatUiState(
     val messages: List<Message> = emptyList(),
-    val conversations: List<Conversation> = emptyList(),
+    val conversations: List<ConversationMeta> = emptyList(),
+    val currentSessionId: String? = null,
     val currentConversationId: String? = null,
     val inputText: String = "",
+    val pastedBlock: String? = null,
+    val attachments: List<Attachment> = emptyList(),
+    val settings: ChatSettings = ChatSettings(),
+    val vaultFiles: List<VaultItem> = emptyList(),
     val isGenerating: Boolean = false,
     val isListening: Boolean = false,
+    val showSettingsDialog: Boolean = false,
+    val showVaultBrowser: Boolean = false,
+    val showSlashCommands: Boolean = false,
+    val slashQuery: String = "",
+    val showMentions: Boolean = false,
+    val mentionQuery: String = "",
     val errorMessage: String? = null
 )
 
@@ -39,7 +50,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     init {
         initSpeechRecognizer()
         observeEvents()
+        refreshAll()
+    }
+
+    fun refreshAll() {
+        fetchConversations()
         syncWithServer()
+        fetchVaultFiles()
     }
 
     private fun initSpeechRecognizer() {
@@ -138,9 +155,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             }
                             state.copy(messages = list, isGenerating = false)
                         }
+                        fetchConversations()
+                    }
+                    is StreamEvent.SessionLoaded -> {
+                        val serverMessages = event.session.messages?.map { mapSessionMessage(it) } ?: emptyList()
+                        _uiState.update {
+                            it.copy(
+                                messages = serverMessages,
+                                currentSessionId = event.session.id,
+                                currentConversationId = event.session.conversationId,
+                                isGenerating = event.session.isGenerating
+                            )
+                        }
                     }
                     is StreamEvent.SessionReset -> {
                         _uiState.update { it.copy(messages = emptyList(), isGenerating = false) }
+                        fetchConversations()
                     }
                     is StreamEvent.Error -> {
                         _uiState.update { state ->
@@ -161,23 +191,61 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun fetchConversations() {
+        viewModelScope.launch {
+            repository.fetchConversations().onSuccess { res ->
+                _uiState.update {
+                    it.copy(
+                        conversations = res.conversations ?: emptyList(),
+                        currentSessionId = res.currentSessionId ?: it.currentSessionId
+                    )
+                }
+            }
+        }
+    }
+
+    fun selectConversation(id: String) {
+        viewModelScope.launch {
+            repository.loadConversation(id).onSuccess { res ->
+                val serverMessages = res.session?.messages?.map { mapSessionMessage(it) } ?: emptyList()
+                _uiState.update {
+                    it.copy(
+                        messages = serverMessages,
+                        currentSessionId = res.session?.id,
+                        currentConversationId = res.session?.conversationId,
+                        isGenerating = res.isGenerating
+                    )
+                }
+            }
+        }
+    }
+
+    fun deleteConversation(id: String) {
+        viewModelScope.launch {
+            repository.deleteConversation(id).onSuccess {
+                fetchConversations()
+                syncWithServer()
+            }
+        }
+    }
+
+    fun fetchVaultFiles() {
+        viewModelScope.launch {
+            repository.fetchVaultFiles().onSuccess { res ->
+                _uiState.update { it.copy(vaultFiles = res.files ?: emptyList()) }
+            }
+        }
+    }
+
     fun syncWithServer() {
         viewModelScope.launch {
             repository.fetchSession().onSuccess { response ->
-                val serverMessages = response.session?.messages?.map { sessionMsg ->
-                    Message(
-                        role = sessionMsg.role,
-                        content = sessionMsg.content ?: "",
-                        tools = sessionMsg.tools?.toMutableList() ?: mutableListOf(),
-                        usage = sessionMsg.usage,
-                        state = if (sessionMsg.state == "generating") MessageState.GENERATING else MessageState.DONE
-                    )
-                } ?: emptyList()
-
+                val serverMessages = response.session?.messages?.map { mapSessionMessage(it) } ?: emptyList()
                 _uiState.update {
                     it.copy(
                         messages = serverMessages,
                         isGenerating = response.isGenerating,
+                        currentSessionId = response.session?.id,
                         currentConversationId = response.session?.conversationId
                     )
                 }
@@ -185,35 +253,149 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun mapSessionMessage(sessionMsg: SessionMessage): Message {
+        return Message(
+            role = sessionMsg.role,
+            content = sessionMsg.content ?: "",
+            tools = sessionMsg.tools?.toMutableList() ?: mutableListOf(),
+            usage = sessionMsg.usage,
+            attachments = sessionMsg.attachments ?: emptyList(),
+            state = if (sessionMsg.state == "generating") MessageState.GENERATING else MessageState.DONE
+        )
+    }
+
+    // Smart Paste Collapsing & Slash/Mention Detection
     fun onInputTextChange(newText: String) {
-        _uiState.update { it.copy(inputText = newText) }
+        // Check if a huge block of text was pasted (> 200 chars or > 4 lines)
+        val isHugePaste = newText.length > 200 || newText.lines().size > 4
+        if (isHugePaste && _uiState.value.pastedBlock == null && _uiState.value.inputText.isEmpty()) {
+            _uiState.update {
+                it.copy(
+                    inputText = "",
+                    pastedBlock = newText
+                )
+            }
+            return
+        }
+
+        // Slash command trigger
+        val isSlash = newText.startsWith("/")
+        // Mention trigger
+        val lastWord = newText.substringAfterLast(" ")
+        val isMention = lastWord.startsWith("@")
+
+        _uiState.update {
+            it.copy(
+                inputText = newText,
+                showSlashCommands = isSlash,
+                slashQuery = if (isSlash) newText else "",
+                showMentions = isMention,
+                mentionQuery = if (isMention) lastWord else ""
+            )
+        }
+    }
+
+    fun onSelectSlashCommand(cmd: SlashCommand) {
+        _uiState.update {
+            it.copy(
+                inputText = cmd.command + " ",
+                showSlashCommands = false
+            )
+        }
+    }
+
+    fun onSelectMention(item: VaultItem) {
+        _uiState.update { state ->
+            val prefix = state.inputText.substringBeforeLast("@")
+            val updated = "$prefix@${item.path} "
+            state.copy(
+                inputText = updated,
+                showMentions = false
+            )
+        }
+    }
+
+    fun removePastedBlock() {
+        _uiState.update { it.copy(pastedBlock = null) }
+    }
+
+    fun addAttachment(attachment: Attachment) {
+        _uiState.update { it.copy(attachments = it.attachments + attachment) }
+    }
+
+    fun removeAttachment(attachment: Attachment) {
+        _uiState.update { it.copy(attachments = it.attachments.filter { a -> a != attachment }) }
+    }
+
+    fun updateSettings(newSettings: ChatSettings) {
+        _uiState.update { it.copy(settings = newSettings) }
+    }
+
+    fun setSettingsDialogVisible(visible: Boolean) {
+        _uiState.update { it.copy(showSettingsDialog = visible) }
+    }
+
+    fun setVaultBrowserVisible(visible: Boolean) {
+        _uiState.update { it.copy(showVaultBrowser = visible) }
     }
 
     fun sendMessage() {
-        val text = _uiState.value.inputText.trim()
-        if (text.isEmpty() || _uiState.value.isGenerating) return
+        val state = _uiState.value
+        var finalPrompt = state.inputText.trim()
 
-        val userMessage = Message(role = "user", content = text)
-        val botPlaceholder = Message(role = "bot", content = "", state = MessageState.GENERATING)
+        if (state.pastedBlock != null) {
+            val block = state.pastedBlock.trim()
+            finalPrompt = if (finalPrompt.isEmpty()) block else "$finalPrompt\n\n```\n$block\n```"
+        }
+
+        if (finalPrompt.isEmpty() && state.attachments.isEmpty()) return
+        if (state.isGenerating) return
+
+        val userMessage = Message(
+            role = "user",
+            content = finalPrompt,
+            attachments = state.attachments
+        )
+        val botPlaceholder = Message(
+            role = "bot",
+            content = "",
+            state = MessageState.GENERATING
+        )
 
         _uiState.update {
             it.copy(
                 inputText = "",
+                pastedBlock = null,
+                attachments = emptyList(),
+                showSlashCommands = false,
+                showMentions = false,
                 messages = it.messages + userMessage + botPlaceholder,
                 isGenerating = true
             )
         }
 
         viewModelScope.launch {
-            repository.sendMessage(text, continueChat = true)
+            repository.sendMessage(
+                prompt = finalPrompt,
+                continueChat = true,
+                settings = state.settings,
+                attachments = userMessage.attachments
+            )
         }
     }
 
     fun startNewChat() {
         viewModelScope.launch {
-            repository.startNewChat()
-            _uiState.update {
-                it.copy(messages = emptyList(), isGenerating = false, currentConversationId = null)
+            repository.startNewChat().onSuccess { res ->
+                _uiState.update {
+                    it.copy(
+                        messages = emptyList(),
+                        isGenerating = false,
+                        currentSessionId = res.session?.id,
+                        currentConversationId = null
+                    )
+                }
+                fetchConversations()
             }
         }
     }

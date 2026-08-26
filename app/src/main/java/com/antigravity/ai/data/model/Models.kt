@@ -9,6 +9,7 @@ data class Message(
     var content: String = "",
     val tools: MutableList<ToolCall> = mutableListOf(),
     var usage: UsageStats? = null,
+    val attachments: List<Attachment> = emptyList(),
     val timestamp: Long = System.currentTimeMillis(),
     var state: MessageState = MessageState.DONE
 )
@@ -45,11 +46,58 @@ data class UsageStats(
     val outputTokens: Int = 0
 )
 
-data class Conversation(
+data class Attachment(
+    val name: String,
+    val path: String? = null,
+    val type: String = "file", // "image", "doc", "vault"
+    val size: Long? = null
+)
+
+data class ConversationMeta(
+    @SerializedName("id")
     val id: String,
-    val title: String,
-    val lastMessageTime: Long = System.currentTimeMillis(),
+    @SerializedName("title")
+    val title: String = "Yeni Sohbet",
+    @SerializedName("createdAt")
+    val createdAt: String? = null,
+    @SerializedName("lastMessageTime")
+    val lastMessageTime: String? = null,
+    @SerializedName("messageCount")
     val messageCount: Int = 0
+)
+
+data class ConversationsResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("currentSessionId")
+    val currentSessionId: String?,
+    @SerializedName("conversations")
+    val conversations: List<ConversationMeta>?
+)
+
+data class VaultItem(
+    @SerializedName("name")
+    val name: String,
+    @SerializedName("path")
+    val path: String,
+    @SerializedName("isDirectory")
+    val isDirectory: Boolean = false
+)
+
+data class VaultResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("vaultDir")
+    val vaultDir: String,
+    @SerializedName("files")
+    val files: List<VaultItem>?
+)
+
+data class ChatSettings(
+    val model: String = "default",
+    val effort: String = "medium", // low, medium, high
+    val mode: String = "default", // default, plan, accept-edits
+    val useVault: Boolean = true
 )
 
 data class SessionResponse(
@@ -62,8 +110,12 @@ data class SessionResponse(
 )
 
 data class SessionData(
+    @SerializedName("id")
+    val id: String?,
     @SerializedName("conversationId")
     val conversationId: String?,
+    @SerializedName("title")
+    val title: String?,
     @SerializedName("messages")
     val messages: List<SessionMessage>?,
     @SerializedName("isGenerating")
@@ -79,19 +131,16 @@ data class SessionMessage(
     val tools: List<ToolCall>?,
     @SerializedName("usage")
     val usage: UsageStats?,
+    @SerializedName("attachments")
+    val attachments: List<Attachment>?,
     @SerializedName("time")
     val time: String?,
     @SerializedName("state")
     val state: String?
 )
 
-data class StatusResponse(
-    @SerializedName("status")
-    val status: String,
-    @SerializedName("busy")
-    val busy: Boolean,
-    @SerializedName("conversationId")
-    val conversationId: String?,
-    @SerializedName("messagesCount")
-    val messagesCount: Int = 0
+data class SlashCommand(
+    val command: String,
+    val description: String,
+    val example: String
 )
