@@ -14,9 +14,11 @@ import com.antigravity.ai.data.model.Message
 import com.antigravity.ai.data.model.UsageData
 import com.antigravity.ai.data.model.UsageMetrics
 import com.antigravity.ai.data.model.UsageStats
+import com.antigravity.ai.data.model.VaultItem
 import com.antigravity.ai.ui.components.ChatTopBar
 import com.antigravity.ai.ui.components.MessageInputBar
 import com.antigravity.ai.ui.components.MessageItem
+import com.antigravity.ai.ui.components.VaultManagerScreen
 import com.antigravity.ai.ui.screens.FigmaGeminiHomeView
 import com.antigravity.ai.ui.theme.AntigravityAITheme
 import com.antigravity.ai.ui.theme.BackgroundDark
@@ -50,62 +52,78 @@ class VisualPreviewTest {
         lastUpdated = "10:45"
     )
 
-    // 1. Ultra-Tall 21:9 Screen (Sony Xperia / Tall Android format)
-    @Test
-    @Config(qualifiers = "w384dp-h900dp-440dpi", sdk = [33])
-    fun capture_tall_21_9() {
-        renderHomeScreen("build/outputs/roborazzi/matrix_tall_21_9.png")
-    }
+    private val sampleVaultFiles = listOf(
+        VaultItem(name = "10-Mimari-Plan.md", path = "10-Mimari-Plan.md", isDirectory = false),
+        VaultItem(name = "20-Termux-Otomasyon.md", path = "20-Termux-Otomasyon.md", isDirectory = false),
+        VaultItem(name = "30-Jetpack-Compose.md", path = "30-Jetpack-Compose.md", isDirectory = false),
+        VaultItem(name = "Projeler", path = "Projeler", isDirectory = true),
+        VaultItem(name = "Notlar", path = "Notlar", isDirectory = true)
+    )
 
-    // 2. Modern 20:9 / 19.5:9 Tall Screen (Samsung Galaxy S / Xiaomi / Pixel Pro)
+    // 1. Obsidian Vault Explorer View
     @Test
     @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
-    fun capture_tall_20_9() {
-        renderHomeScreen("build/outputs/roborazzi/matrix_tall_20_9.png")
-    }
-
-    // 3. Standard Phone (Pixel 7 - 411dp)
-    @Test
-    @Config(qualifiers = "w411dp-h891dp-420dpi", sdk = [33])
-    fun capture_standard_411dp() {
-        renderHomeScreen("build/outputs/roborazzi/matrix_411dp_standard.png")
-    }
-
-    // 4. Compact Phone (Galaxy A series - 360dp)
-    @Test
-    @Config(qualifiers = "w360dp-h780dp-360dpi", sdk = [33])
-    fun capture_compact_360dp() {
-        renderHomeScreen("build/outputs/roborazzi/matrix_360dp_compact.png")
-    }
-
-    // 5. Narrow Phone (Extreme Narrow - 320dp)
-    @Test
-    @Config(qualifiers = "w320dp-h640dp-320dpi", sdk = [33])
-    fun capture_narrow_320dp() {
-        renderHomeScreen("build/outputs/roborazzi/matrix_320dp_narrow.png")
-    }
-
-    // 6. Split-Screen / Multi-Window Mode (Short height)
-    @Test
-    @Config(qualifiers = "w380dp-h560dp-380dpi", sdk = [33])
-    fun capture_short_split_screen() {
-        renderHomeScreen("build/outputs/roborazzi/matrix_short_split_screen.png")
-    }
-
-    // 7. Large Font / Accessibility (360dp with 1.3x Font Scale)
-    @Test
-    @Config(qualifiers = "w360dp-h780dp-360dpi", sdk = [33], fontScale = 1.3f)
-    fun capture_large_font_1_3x() {
-        renderHomeScreen("build/outputs/roborazzi/matrix_360dp_large_font.png")
-    }
-
-    private fun renderHomeScreen(outputPath: String) {
+    fun capture_obsidian_vault_explorer() {
         composeTestRule.setContent {
             AntigravityAITheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = BackgroundDark
-                ) {
+                VaultManagerScreen(
+                    vaultFiles = sampleVaultFiles,
+                    activeFileContent = null,
+                    activeFilePath = null,
+                    onDismiss = {},
+                    onLoadFileContent = {},
+                    onSaveNote = { _, _, _ -> },
+                    onCreateFolder = {},
+                    onDeleteFile = {},
+                    onReferenceFile = {},
+                    onReferenceParagraph = { _, _ -> }
+                )
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_obsidian_vault_explorer.png")
+    }
+
+    // 2. Obsidian Note Editor & Live Reader View
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun capture_obsidian_vault_reader() {
+        val sampleContent = """
+            # Jetpack Compose Mimari Notları
+            
+            Bu notta Antigravity Android uygulamasının UI/UX yapısı ve Obsidian Design System prensipleri listelenmektedir.
+            
+            [[Roborazzi]] ile JVM tabanlı ekran yakalama ve [[Antigravity]] görsel analiz döngüsü aktif olarak çalışır.
+            
+            - [ ] Çoklu ekran görsel testleri (320dp, 360dp, 411dp)
+            - [ ] Obsidian ağ haritası entegrasyonu
+        """.trimIndent()
+
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                VaultManagerScreen(
+                    vaultFiles = sampleVaultFiles,
+                    activeFileContent = sampleContent,
+                    activeFilePath = "30-Jetpack-Compose.md",
+                    onDismiss = {},
+                    onLoadFileContent = {},
+                    onSaveNote = { _, _, _ -> },
+                    onCreateFolder = {},
+                    onDeleteFile = {},
+                    onReferenceFile = {},
+                    onReferenceParagraph = { _, _ -> }
+                )
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_obsidian_vault_reader.png")
+    }
+
+    // 3. Home Screen Standard
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun capture_home_screen() {
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = BackgroundDark) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         ChatTopBar(
                             settings = ChatSettings(model = "gemini-3.7-flash-medium"),
@@ -116,14 +134,9 @@ class VisualPreviewTest {
                             onSettingsClick = {},
                             onUsageClick = {}
                         )
-
                         Box(modifier = Modifier.weight(1f)) {
-                            FigmaGeminiHomeView(
-                                onSuggestionClick = {},
-                                onOpenVault = {}
-                            )
+                            FigmaGeminiHomeView(onSuggestionClick = {}, onOpenVault = {})
                         }
-
                         MessageInputBar(
                             text = "",
                             onTextChange = {},
@@ -144,7 +157,6 @@ class VisualPreviewTest {
                 }
             }
         }
-
-        composeTestRule.onRoot().captureRoboImage(outputPath)
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_home_screen.png")
     }
 }
