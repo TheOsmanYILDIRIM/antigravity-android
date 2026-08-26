@@ -56,8 +56,63 @@ data class PastedBlock(
 data class Attachment(
     val name: String,
     val path: String? = null,
+    val localUri: String? = null,
+    val relPath: String? = null,
     val type: String = "file", // "image", "doc", "vault"
     val size: Long? = null
+)
+
+data class UploadResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("fileName")
+    val fileName: String,
+    @SerializedName("path")
+    val path: String,
+    @SerializedName("relPath")
+    val relPath: String,
+    @SerializedName("workspacePath")
+    val workspacePath: String?,
+    @SerializedName("size")
+    val size: Long,
+    @SerializedName("type")
+    val type: String
+)
+
+data class ModelItem(
+    @SerializedName("id")
+    val id: String,
+    @SerializedName("name")
+    val name: String,
+    @SerializedName("description")
+    val description: String
+)
+
+data class EffortItem(
+    @SerializedName("id")
+    val id: String,
+    @SerializedName("name")
+    val name: String,
+    @SerializedName("description")
+    val description: String
+)
+
+data class ModeItem(
+    @SerializedName("id")
+    val id: String,
+    @SerializedName("name")
+    val name: String
+)
+
+data class ModelsConfigResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("models")
+    val models: List<ModelItem>?,
+    @SerializedName("efforts")
+    val efforts: List<EffortItem>?,
+    @SerializedName("modes")
+    val modes: List<ModeItem>?
 )
 
 data class ConversationMeta(

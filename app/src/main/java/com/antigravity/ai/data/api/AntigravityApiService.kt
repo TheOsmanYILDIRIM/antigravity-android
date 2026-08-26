@@ -31,9 +31,9 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
 
     private val gson = Gson()
     private val client = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(0, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(0, TimeUnit.SECONDS) // For SSE streaming
+        .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
     private val sseFactory = EventSources.createFactory(client)
@@ -87,6 +87,23 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
         }
     }
 
+    suspend fun getModelsConfig(): Result<ModelsConfigResponse> = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$baseUrl/api/models")
+                .get()
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext Result.failure(IOException("HTTP ${response.code}"))
+                val body = response.body?.string() ?: "{}"
+                Result.success(gson.fromJson(body, ModelsConfigResponse::class.java))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getSkills(): Result<SkillsResponse> = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()
@@ -115,6 +132,29 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                 if (!response.isSuccessful) return@withContext Result.failure(IOException("HTTP ${response.code}"))
                 val body = response.body?.string() ?: "{}"
                 Result.success(gson.fromJson(body, UsageResponse::class.java))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun uploadFile(name: String, base64: String, type: String): Result<UploadResponse> = withContext(Dispatchers.IO) {
+        try {
+            val json = JsonObject().apply {
+                addProperty("name", name)
+                addProperty("base64", base64)
+                addProperty("type", type)
+            }
+            val requestBody = json.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
+            val request = Request.Builder()
+                .url("$baseUrl/api/upload")
+                .post(requestBody)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext Result.failure(IOException("Upload failed: ${response.code}"))
+                val body = response.body?.string() ?: "{}"
+                Result.success(gson.fromJson(body, UploadResponse::class.java))
             }
         } catch (e: Exception) {
             Result.failure(e)

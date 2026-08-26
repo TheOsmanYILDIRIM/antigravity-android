@@ -18,12 +18,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.antigravity.ai.data.model.ChatSettings
+import com.antigravity.ai.data.model.EffortItem
+import com.antigravity.ai.data.model.ModelItem
 import com.antigravity.ai.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelSettingsDialog(
     currentSettings: ChatSettings,
+    availableModels: List<ModelItem>,
+    availableEfforts: List<EffortItem>,
     onDismiss: () -> Unit,
     onSave: (ChatSettings) -> Unit
 ) {
@@ -31,6 +35,20 @@ fun ModelSettingsDialog(
     var selectedEffort by remember { mutableStateOf(currentSettings.effort) }
     var selectedMode by remember { mutableStateOf(currentSettings.mode) }
     var useVault by remember { mutableStateOf(currentSettings.useVault) }
+
+    val modelsList = if (availableModels.isNotEmpty()) availableModels else listOf(
+        ModelItem("default", "Varsayılan (CLI Default)", "CLI ortamında aktif model"),
+        ModelItem("gemini-3.7-flash", "Gemini 3.7 Flash", "Yüksek hızlı hibrit akıl yürütme"),
+        ModelItem("gemini-2.5-pro", "Gemini 2.5 Pro", "Derin mimari ve kodlama"),
+        ModelItem("gemini-2.5-flash", "Gemini 2.5 Flash", "Hızlı genel model"),
+        ModelItem("claude-3-5-sonnet", "Claude 3.5 Sonnet", "Gelişmiş analitik")
+    )
+
+    val effortsList = if (availableEfforts.isNotEmpty()) availableEfforts else listOf(
+        EffortItem("low", "Düşük", "Hızlı"),
+        EffortItem("medium", "Orta", "Dengeli"),
+        EffortItem("high", "Yüksek", "Derin")
+    )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -62,26 +80,18 @@ fun ModelSettingsDialog(
 
             Divider(color = BorderSubtle, modifier = Modifier.padding(vertical = 12.dp))
 
-            // 1. AI Model Seçimi
+            // 1. Dynamic Models from CLI / Backend
             Text(
-                text = "YAPAY ZEKA MODELİ",
+                text = "CLI MODELİ SEÇİN",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextMuted,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            val models = listOf(
-                "default" to "Varsayılan (CLI Default)",
-                "gemini-3.7-flash" to "Gemini 3.7 Flash (Hızlı & Hibrit)",
-                "gemini-2.5-pro" to "Gemini 2.5 Pro (Derin Akıl Yürütme)",
-                "gemini-2.5-flash" to "Gemini 2.5 Flash",
-                "claude-3-5-sonnet" to "Claude 3.5 Sonnet"
-            )
-
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                models.forEach { (id, label) ->
-                    val isSelected = selectedModel == id
+                modelsList.forEach { modelItem ->
+                    val isSelected = selectedModel == modelItem.id
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -90,15 +100,24 @@ fun ModelSettingsDialog(
                             .clip(RoundedCornerShape(10.dp))
                             .background(if (isSelected) SurfaceVariantDark else Color.Transparent)
                             .border(1.dp, if (isSelected) PrimaryIndigo else BorderSubtle, RoundedCornerShape(10.dp))
-                            .clickable { selectedModel = id }
+                            .clickable { selectedModel = modelItem.id }
                             .padding(horizontal = 12.dp, vertical = 10.dp)
                     ) {
-                        Text(
-                            text = label,
-                            fontSize = 13.sp,
-                            color = if (isSelected) TextPrimary else TextSecondary,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = modelItem.name,
+                                fontSize = 13.sp,
+                                color = if (isSelected) TextPrimary else TextSecondary,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                            if (modelItem.description.isNotEmpty()) {
+                                Text(
+                                    text = modelItem.description,
+                                    fontSize = 10.sp,
+                                    color = TextMuted
+                                )
+                            }
+                        }
                         if (isSelected) {
                             Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = PrimaryIndigo, modifier = Modifier.size(16.dp))
                         }
@@ -108,7 +127,7 @@ fun ModelSettingsDialog(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 2. Düşünme Ağırlığı (Reasoning Effort)
+            // 2. Dynamic Reasoning Effort
             Text(
                 text = "DÜŞÜNME AĞIRLIĞI (REASONING EFFORT)",
                 fontSize = 11.sp,
@@ -121,18 +140,18 @@ fun ModelSettingsDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf("low" to "Düşük (Hızlı)", "medium" to "Orta", "high" to "Yüksek (Derin)").forEach { (eff, label) ->
-                    val isSelected = selectedEffort == eff
+                effortsList.forEach { effortItem ->
+                    val isSelected = selectedEffort == effortItem.id
                     Surface(
                         shape = RoundedCornerShape(10.dp),
                         color = if (isSelected) PrimaryIndigo else SurfaceVariantDark,
                         border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
                         modifier = Modifier
                             .weight(1f)
-                            .clickable { selectedEffort = eff }
+                            .clickable { selectedEffort = effortItem.id }
                     ) {
                         Text(
-                            text = label,
+                            text = effortItem.name,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (isSelected) Color.White else TextSecondary,

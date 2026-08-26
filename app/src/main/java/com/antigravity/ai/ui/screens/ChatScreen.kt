@@ -55,26 +55,15 @@ fun ChatScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            var fileName = "attachment"
-            var fileSize: Long? = null
+            var fileName = "attachment_${System.currentTimeMillis()}"
             context.contentResolver.query(it, null, null, null, null)?.use { cursor ->
                 val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
-                if (cursor.moveToFirst()) {
-                    if (nameIndex >= 0) fileName = cursor.getString(nameIndex)
-                    if (sizeIndex >= 0) fileSize = cursor.getLong(sizeIndex)
+                if (cursor.moveToFirst() && nameIndex >= 0) {
+                    fileName = cursor.getString(nameIndex)
                 }
             }
-            val mime = context.contentResolver.getType(it) ?: ""
-            val type = if (mime.startsWith("image/")) "image" else "doc"
-            viewModel.addAttachment(
-                Attachment(
-                    name = fileName,
-                    path = it.toString(),
-                    type = type,
-                    size = fileSize
-                )
-            )
+            val mime = context.contentResolver.getType(it) ?: "application/octet-stream"
+            viewModel.uploadAndAttachFile(fileName, it, mime)
         }
     }
 
@@ -85,10 +74,12 @@ fun ChatScreen(
         }
     }
 
-    // Model & Settings Bottom Sheet
+    // Model & Settings Bottom Sheet (Dynamic from backend)
     if (uiState.showSettingsDialog) {
         ModelSettingsDialog(
             currentSettings = uiState.settings,
+            availableModels = uiState.availableModels,
+            availableEfforts = uiState.availableEfforts,
             onDismiss = { viewModel.setSettingsDialogVisible(false) },
             onSave = { newSettings -> viewModel.updateSettings(newSettings) }
         )

@@ -2,20 +2,25 @@ package com.antigravity.ai.ui.viewmodel
 
 import android.app.Application
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Base64
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.antigravity.ai.data.api.StreamEvent
 import com.antigravity.ai.data.model.*
 import com.antigravity.ai.data.repository.ChatRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.InputStream
 import java.util.Locale
 
 data class ChatUiState(
@@ -27,11 +32,14 @@ data class ChatUiState(
     val pastedBlocks: List<PastedBlock> = emptyList(),
     val attachments: List<Attachment> = emptyList(),
     val settings: ChatSettings = ChatSettings(),
+    val availableModels: List<ModelItem> = emptyList(),
+    val availableEfforts: List<EffortItem> = emptyList(),
     val vaultFiles: List<VaultItem> = emptyList(),
     val installedSkills: List<SkillItem> = emptyList(),
     val usage: UsageData? = null,
     val activeVaultFileContent: String? = null,
     val activeVaultFilePath: String? = null,
+    val isUploadingAttachment: Boolean = false,
     val isGenerating: Boolean = false,
     val isListening: Boolean = false,
     val showSettingsDialog: Boolean = false,
@@ -64,6 +72,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         fetchVaultFiles()
         fetchSkills()
         fetchUsage()
+        fetchModelsConfig()
     }
 
     private fun initSpeechRecognizer() {
@@ -212,6 +221,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun fetchModelsConfig() {
+        viewModelScope.launch {
+            repository.fetchModelsConfig().onSuccess { res ->
+                _uiState.update {
+                    it.copy(
+                        availableModels = res.models ?: emptyList(),
+                        availableEfforts = res.efforts ?: emptyList()
+                    )
+                }
+            }
+        }
+    }
+
     fun fetchSkills() {
         viewModelScope.launch {
             repository.fetchSkills().onSuccess { res ->
@@ -302,6 +324,45 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 if (_uiState.value.activeVaultFilePath == relPath) {
                     _uiState.update { it.copy(activeVaultFilePath = null, activeVaultFileContent = null) }
                 }
+            }
+        }
+    }
+
+    fun uploadAndAttachFile(fileName: String, uri: Uri, mimeType: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUploadingAttachment = true) }
+            try {
+                val bytes = withContext(Dispatchers.IO) {
+                    getApplication<Application>().contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                }
+
+                if (bytes != null) {
+                    val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                    val type = if (mimeType.startsWith("image/")) "image" else "doc"
+
+                    repository.uploadFile(fileName, base64, type).onSuccess { res ->
+                        val attachment = Attachment(
+                            name = res.fileName,
+                            path = res.path,
+                            localUri = uri.toString(),
+                            relPath = res.relPath,
+                            type = res.type,
+                            size = res.size
+                        )
+                        _uiState.update {
+                            it.copy(
+                                attachments = it.attachments + attachment,
+                                isUploadingAttachment = false
+                            )
+                        }
+                    }.onFailure {
+                        _uiState.update { it.copy(isUploadingAttachment = false) }
+                    }
+                } else {
+                    _uiState.update { it.copy(isUploadingAttachment = false) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isUploadingAttachment = false) }
             }
         }
     }

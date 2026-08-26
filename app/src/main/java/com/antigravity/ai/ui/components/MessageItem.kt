@@ -5,6 +5,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -12,10 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.antigravity.ai.data.model.Message
 import com.antigravity.ai.data.model.MessageState
 import com.antigravity.ai.ui.theme.*
@@ -73,6 +78,58 @@ fun MessageItem(message: Message) {
                 )
                 .padding(12.dp)
         ) {
+            // Attachments Preview (Images & Docs)
+            if (message.attachments.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    message.attachments.forEach { att ->
+                        if (att.type == "image") {
+                            val imageModel = att.localUri ?: (if (att.relPath != null) "http://127.0.0.1:8080/${att.relPath}" else att.path)
+                            AsyncImage(
+                                model = imageModel,
+                                contentDescription = att.name,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 120.dp, max = 220.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .border(1.dp, BorderSubtle, RoundedCornerShape(10.dp))
+                            )
+                        } else {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = SurfaceVariantDark,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (att.type == "vault") Icons.Default.Storage else Icons.Default.Description,
+                                        contentDescription = null,
+                                        tint = if (att.type == "vault") WarningAmber else PrimaryIndigo,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = att.name,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = TextPrimary,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Tool calls (if any)
             if (message.tools.isNotEmpty()) {
                 Column(
@@ -154,7 +211,6 @@ fun MessageItem(message: Message) {
 
 @Composable
 fun FormattedMessageText(text: String) {
-    // Simple code-block extractor (```lang\ncode\n```)
     val parts = text.split("```")
     Column(modifier = Modifier.fillMaxWidth()) {
         parts.forEachIndexed { index, part ->

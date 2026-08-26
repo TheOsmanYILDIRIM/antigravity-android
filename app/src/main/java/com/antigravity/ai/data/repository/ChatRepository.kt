@@ -15,9 +15,14 @@ class ChatRepository(private val apiService: AntigravityApiService = Antigravity
 
     suspend fun deleteConversation(id: String): Result<Unit> = apiService.deleteConversation(id)
 
+    suspend fun fetchModelsConfig(): Result<ModelsConfigResponse> = apiService.getModelsConfig()
+
     suspend fun fetchSkills(): Result<SkillsResponse> = apiService.getSkills()
 
     suspend fun fetchUsage(): Result<UsageResponse> = apiService.getUsage()
+
+    suspend fun uploadFile(name: String, base64: String, type: String): Result<UploadResponse> =
+        apiService.uploadFile(name, base64, type)
 
     suspend fun fetchVaultFiles(): Result<VaultResponse> = apiService.getVaultFiles()
 
