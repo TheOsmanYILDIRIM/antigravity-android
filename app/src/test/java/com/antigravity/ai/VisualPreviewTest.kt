@@ -2,6 +2,7 @@ package com.antigravity.ai
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -196,6 +197,246 @@ class VisualPreviewTest {
             }
         }
         composeTestRule.onAllNodes(isRoot()).onLast().captureRoboImage("build/outputs/roborazzi/matrix_auth_token_dialog.png")
+    }
+
+    // 6. Full Chat Conversation (user + bot markdown + bot tool call)
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun capture_chat_conversation() {
+        val userMsg = Message(role = "user", content = "Termux'ta opencode serve çalıştırıp GUI'den bağlanabilir miyiz?")
+        val botMarkdown = Message(
+            role = "bot",
+            content = "Evet. `opencode serve --port 4096` ile sunucu açılır; uygulama **Arka Uç** switch'inden OpenCode'u seçer.",
+            usage = UsageStats(totalTokens = 540, outputTokens = 210, thinkingTokens = 90)
+        )
+        val botTool = Message(
+            role = "bot",
+            content = "",
+            tools = mutableListOf(
+                ToolCall(
+                    stepIndex = 1,
+                    name = "Terminal",
+                    state = "ACTIVE",
+                    parameters = mapOf("command" to "opencode serve --port 4096")
+                )
+            )
+        )
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = BackgroundDark) {
+                    Column(modifier = Modifier.verticalScroll(androidx.compose.foundation.ScrollState(0)).padding(12.dp)) {
+                        MessageItem(message = userMsg, fontSizeSp = 13.5f)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        MessageItem(message = botMarkdown, isLastBotMessage = false, fontSizeSp = 13.5f)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        MessageItem(message = botTool, isLastBotMessage = true, fontSizeSp = 13.5f)
+                    }
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_chat_conversation.png")
+    }
+
+    // 7. Code Block with Syntax Highlighting
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun capture_code_block() {
+        val code = """fun greet(name: String) = "Hello, $name"
+// opencode sunucusuna bağlan
+val client = OpenCodeApiService("http://127.0.0.1:4096")"""
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = BackgroundDark) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        CodeBlock(code = code, language = "kotlin", fontSizeSp = 13.5f)
+                    }
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_code_block.png")
+    }
+
+    // 8. Usage Widget
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun capture_usage_widget() {
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = BackgroundDark) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        UsageWidget(usage = sampleUsage, onClick = {})
+                    }
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_usage_widget.png")
+    }
+
+    // 9. Chat Drawer (Side Menu)
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun capture_chat_drawer() {
+        val convs = listOf(
+            ConversationMeta(id = "1", title = "opencode entegrasyonu", messageCount = 12),
+            ConversationMeta(id = "2", title = "Termux otomasyonu", messageCount = 4),
+            ConversationMeta(id = "3", title = "Vault notları", messageCount = 1)
+        )
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = BackgroundDark) {
+                    ChatDrawer(
+                        conversations = convs,
+                        currentSessionId = "1",
+                        onSelectConversation = {},
+                        onNewChat = {},
+                        onDeleteConversation = {},
+                        onOpenVault = {}
+                    )
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_chat_drawer.png")
+    }
+
+    // 10. Vault Browser Sheet
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun capture_vault_browser_sheet() {
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = BackgroundDark) {
+                    VaultBrowserSheet(
+                        vaultFiles = sampleVaultFiles,
+                        onDismiss = {},
+                        onSelectFile = {}
+                    )
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_vault_browser_sheet.png")
+    }
+
+    // 11. Vault Manager Screen (full editor)
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun capture_vault_manager_screen() {
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = BackgroundDark) {
+                    VaultManagerScreen(
+                        vaultFiles = sampleVaultFiles,
+                        activeFileContent = "# Mimari Plan\n\n- OpenCode backend adapter eklendi.",
+                        activeFilePath = "10-Mimari-Plan.md",
+                        onDismiss = {},
+                        onLoadFileContent = {},
+                        onSaveNote = { _, _, _ -> },
+                        onCreateFolder = {},
+                        onDeleteFile = {},
+                        onReferenceFile = {},
+                        onReferenceParagraph = { _, _ -> }
+                    )
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_vault_manager_screen.png")
+    }
+
+    // 12. Settings with OpenCode backend selected (Arka Uç switch)
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun capture_settings_opencode_backend() {
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = BackgroundDark) {
+                    ModelSettingsDialog(
+                        currentSettings = ChatSettings(fontSizeSp = 13.5f, thermalMode = "eco"),
+                        availableModels = emptyList(),
+                        availableEfforts = emptyList(),
+                        onDismiss = {},
+                        onSave = {},
+                        currentBackend = "opencode",
+                        onBackendChange = {}
+                    )
+                }
+            }
+        }
+        composeTestRule.onAllNodes(isRoot()).onLast().captureRoboImage("build/outputs/roborazzi/matrix_settings_opencode_backend.png")
+    }
+
+    // 13. Multi-Device: Standard 360dp Home Screen
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-420dpi", sdk = [33])
+    fun capture_home_screen_360dp() {
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = BackgroundDark) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        ChatTopBar(
+                            settings = ChatSettings(model = "gemini-3.7-flash-medium", fontSizeSp = 13.5f),
+                            usage = sampleUsage,
+                            isGenerating = false,
+                            onMenuClick = {},
+                            onNewChatClick = {},
+                            onSettingsClick = {},
+                            onUsageClick = {}
+                        )
+                        Box(modifier = Modifier.weight(1f)) {
+                            FigmaGeminiHomeView(onSuggestionClick = {}, onOpenVault = {})
+                        }
+                    }
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_home_screen_360dp.png")
+    }
+
+    // 14. Multi-Device: Large 411dp + Accessibility Font Scale 1.25x
+    @Test
+    @Config(qualifiers = "w411dp-h915dp-420dpi", sdk = [33], fontScale = 1.25f)
+    fun capture_home_screen_411dp_fontscale() {
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = BackgroundDark) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        ChatTopBar(
+                            settings = ChatSettings(model = "gemini-3.7-flash-medium", fontSizeSp = 16f),
+                            usage = sampleUsage,
+                            isGenerating = true,
+                            onMenuClick = {},
+                            onNewChatClick = {},
+                            onSettingsClick = {},
+                            onUsageClick = {}
+                        )
+                        Box(modifier = Modifier.weight(1f)) {
+                            FigmaGeminiHomeView(onSuggestionClick = {}, onOpenVault = {})
+                        }
+                    }
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_home_screen_411dp_fontscale.png")
+    }
+
+    // 15. Compact 320dp Settings Sheet (Arka Uç switch on narrow screen)
+    @Test
+    @Config(qualifiers = "w320dp-h640dp-320dpi", sdk = [33], fontScale = 1.3f)
+    fun capture_compact_320_settings() {
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = BackgroundDark) {
+                    ModelSettingsDialog(
+                        currentSettings = ChatSettings(fontSizeSp = 11.5f, thermalMode = "eco"),
+                        availableModels = emptyList(),
+                        availableEfforts = emptyList(),
+                        onDismiss = {},
+                        onSave = {},
+                        currentBackend = "auto",
+                        onBackendChange = {}
+                    )
+                }
+            }
+        }
+        composeTestRule.onAllNodes(isRoot()).onLast().captureRoboImage("build/outputs/roborazzi/matrix_compact_320_settings.png")
     }
 }
 
