@@ -13,8 +13,6 @@ jobs:
     name: SonarCloud Scan
     runs-on: ubuntu-latest
     # SONAR_TOKEN repo Secrets'e eklenince otomatik devreye girer; yoksa atlanır.
-    # Ayrıca repo/organizasyon ayarlarında üçüncü taraf action'lara izin verilmeli:
-    #   SonarSource/sonarcloud-github-action
     if: ${{ secrets.SONAR_TOKEN != '' }}
     steps:
       - name: Checkout (full history for SonarCloud)
@@ -35,8 +33,7 @@ jobs:
       - name: Run Android Lint (SonarCloud import için rapor üret)
         run: ./gradlew lintDebug --stacktrace
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+      - name: SonarCloud Scan (Gradle plugin)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew sonarqube --stacktrace

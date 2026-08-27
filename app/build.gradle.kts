@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.sonarqube")
 }
 
 android {
@@ -78,6 +79,17 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+}
+
+sonarqube {
+    properties {
+        property("sonar.projectKey", "TheOsmanYILDIRIM_antigravity-android")
+        property("sonar.organization", "theosmanyildirim")
+        property("sonar.host.url", "https://sonarcloud.io")
+        property("sonar.android.lint.report", "build/reports/lint-results-debug.xml")
+        property("sonar.sourceEncoding", "UTF-8")
+        System.getenv("SONAR_TOKEN")?.let { property("sonar.login", it) }
     }
 }
 

@@ -42,7 +42,15 @@ object NotificationHelper {
     }
 
     fun notify(context: Context, title: String, message: String) {
-        if (!canNotify(context)) return
+        // Lint (MissingPermission) için izin kontrolünü çağrı noktasında açıkça yapıyoruz.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            && ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
         ensureChannel(context)
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_email)
