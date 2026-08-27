@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Psychology
@@ -429,7 +430,7 @@ fun ModelSettingsDialog(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Outlined.Key, contentDescription = null, tint = GeminiAmber, modifier = Modifier.size(16.dp))
+                            Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = GeminiAmber, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(text = "Oturum & Token Yönetimi", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextPrimary)
                         }
