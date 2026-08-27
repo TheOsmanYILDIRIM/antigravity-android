@@ -231,7 +231,9 @@ data class ChatSettings(
     val model: String = "gemini-3.7-flash-medium",
     val effort: String = "default", // default, low, medium, high
     val mode: String = "default", // default, plan, accept-edits
-    val useVault: Boolean = true
+    val useVault: Boolean = true,
+    val fontSizeSp: Float = 13.5f, // 11.5f (Kompakt), 13.5f (Küçük/Standart), 15.0f (Orta), 16.5f (Büyük)
+    val thermalMode: String = "eco" // "eco" (%50 CPU Sınırı), "balanced", "performance"
 )
 
 data class SessionResponse(

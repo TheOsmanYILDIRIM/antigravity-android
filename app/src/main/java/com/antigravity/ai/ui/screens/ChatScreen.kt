@@ -239,7 +239,11 @@ fun ChatScreen(
                     ) {
                         items(uiState.messages, key = { it.id }) { msg ->
                             val isLastBot = msg == uiState.messages.lastOrNull { it.role == "bot" }
-                            MessageItem(message = msg, isLastBotMessage = isLastBot)
+                            MessageItem(
+                                message = msg,
+                                isLastBotMessage = isLastBot,
+                                fontSizeSp = uiState.settings.fontSizeSp
+                            )
                         }
                     }
                 }

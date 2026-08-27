@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -43,12 +44,12 @@ fun ChatTopBar(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp)
+                .padding(horizontal = 6.dp, vertical = 6.dp)
         ) {
             // Left: Hamburger Menu
             IconButton(
                 onClick = onMenuClick,
-                modifier = Modifier.size(38.dp)
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Menu,
@@ -58,37 +59,62 @@ fun ChatTopBar(
                 )
             }
 
-            // Center / Title with Gemini Sparkle (safely fills available width)
+            // Center: Gemini Sparkle + Antigravity Title
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .clickable { onSettingsClick() }
                     .padding(horizontal = 6.dp, vertical = 4.dp)
             ) {
                 GeminiSparkleIcon(size = 18.dp)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Antigravity",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp,
-                    color = TextPrimary,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                )
+                Column {
+                    Text(
+                        text = "Antigravity",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "${settings.fontSizeSp.toInt()}sp • ${if (settings.thermalMode == "eco") "❄️ %50 CPU" else "⚡ Tam Hız"}",
+                        fontSize = 10.sp,
+                        color = TextMuted,
+                        maxLines = 1
+                    )
+                }
             }
 
-            // Right Group: Compact Usage Badge & New Chat Button
+            // Right Group: Usage, Settings & New Chat
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 UsageWidget(
                     usage = usage,
                     onClick = onUsageClick
                 )
 
+                // Dedicated Gemini Settings Button
+                IconButton(
+                    onClick = onSettingsClick,
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(SurfaceVariantDark)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Tune,
+                        contentDescription = "Ayarlar",
+                        tint = GeminiBlue,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                // New Chat Button
                 IconButton(
                     onClick = onNewChatClick,
                     modifier = Modifier
@@ -107,4 +133,3 @@ fun ChatTopBar(
         }
     }
 }
-

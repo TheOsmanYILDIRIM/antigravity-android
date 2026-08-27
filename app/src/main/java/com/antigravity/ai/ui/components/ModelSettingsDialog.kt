@@ -5,17 +5,24 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.FormatSize
+import androidx.compose.material.icons.outlined.LocalFireDepartment
+import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.SmartToy
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,28 +44,38 @@ fun ModelSettingsDialog(
     var selectedEffort by remember { mutableStateOf(currentSettings.effort) }
     var selectedMode by remember { mutableStateOf(currentSettings.mode) }
     var useVault by remember { mutableStateOf(currentSettings.useVault) }
+    var currentFontSize by remember { mutableStateOf(currentSettings.fontSizeSp) }
+    var thermalMode by remember { mutableStateOf(currentSettings.thermalMode) }
 
     val modelsList = if (availableModels.isNotEmpty()) availableModels else listOf(
-        ModelItem("gemini-3.7-flash-high", "Gemini 3.7 Flash (High)", "Yüksek akıl yürütme"),
-        ModelItem("gemini-3.7-flash-medium", "Gemini 3.7 Flash (Medium)", "Dengeli standart model"),
-        ModelItem("gemini-3.7-flash-low", "Gemini 3.7 Flash (Low)", "Hızlı yanıt"),
-        ModelItem("gemini-3.6-flash-high", "Gemini 3.6 Flash (High)", "Hızlı analitik"),
-        ModelItem("gemini-3.1-pro-high", "Gemini 3.1 Pro (High)", "Derin mimari"),
-        ModelItem("claude-sonnet-4-6", "Claude Sonnet 4.6 (Thinking)", "Gelişmiş düşünme"),
-        ModelItem("claude-opus-4-6-thinking", "Claude Opus 4.6 (Thinking)", "Maksimum kapasite")
+        ModelItem("gemini-3.7-flash-medium", "Gemini 3.7 Flash (Medium)", "Dengeli ve hızlı standart model"),
+        ModelItem("gemini-3.7-flash-high", "Gemini 3.7 Flash (High)", "Yüksek akıl yürütme ve analitik"),
+        ModelItem("gemini-3.7-flash-low", "Gemini 3.7 Flash (Low)", "Minimum düşünme gecikmesi"),
+        ModelItem("gemini-3.6-flash-high", "Gemini 3.6 Flash (High)", "Hızlı analitik model"),
+        ModelItem("gemini-3.1-pro-high", "Gemini 3.1 Pro (High)", "Derin mimari ve kodlama"),
+        ModelItem("claude-sonnet-4-6", "Claude Sonnet 4.6 (Thinking)", "Gelişmiş analitik düşünme"),
+        ModelItem("claude-opus-4-6-thinking", "Claude Opus 4.6 (Thinking)", "Maksimum kapasiteli model")
     )
 
     val effortsList = if (availableEfforts.isNotEmpty()) availableEfforts else listOf(
         EffortItem("default", "Varsayılan", "Standart"),
-        EffortItem("low", "Düşük", "Hızlı"),
+        EffortItem("low", "Düşük", "Hızlı yanıt"),
         EffortItem("medium", "Orta", "Dengeli"),
-        EffortItem("high", "Yüksek", "Derin")
+        EffortItem("high", "Yüksek", "Derin analiz")
+    )
+
+    val fontPresets = listOf(
+        Pair("Kompakt", 11.5f),
+        Pair("Küçük", 13.5f),
+        Pair("Orta", 15.0f),
+        Pair("Büyük", 16.5f)
     )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = SurfaceDark,
-        contentColor = TextPrimary
+        contentColor = TextPrimary,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(
             modifier = Modifier
@@ -67,18 +84,22 @@ fun ModelSettingsDialog(
                 .padding(bottom = 32.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header
+            // 1. Header (Gemini Style)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text = "Model ve Yürütme Ayarları",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
-                    color = TextPrimary
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    GeminiSparkleIcon(size = 22.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Gemini & Sistem Ayarları",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = TextPrimary
+                    )
+                }
                 IconButton(onClick = onDismiss) {
                     Icon(imageVector = Icons.Default.Close, contentDescription = "Kapat", tint = TextMuted)
                 }
@@ -86,14 +107,192 @@ fun ModelSettingsDialog(
 
             Divider(color = BorderSubtle, modifier = Modifier.padding(vertical = 12.dp))
 
-            // 1. Dynamic Models from CLI (`agy models`)
-            Text(
-                text = "ANTIGRAVITY CLI MODELLERİ (${modelsList.size} Model)",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextMuted,
-                modifier = Modifier.padding(bottom = 8.dp)
+            // 2. FONT VE METİN BOYUTU AYARI (User Request)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.FormatSize,
+                    contentDescription = null,
+                    tint = GeminiBlue,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "METİN VE FONT BOYUTU",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GeminiBlue
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Live Preview Card
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = SurfaceVariantDark,
+                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Canlı Önizleme (${String.format("%.1f", currentFontSize)} sp):",
+                        fontSize = 11.sp,
+                        color = TextMuted
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Antigravity Termux ortamında %50 CPU ile optimize çalışıyor.",
+                        fontSize = currentFontSize.sp,
+                        lineHeight = (currentFontSize * 1.4f).sp,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "$ agy-limit 50 --continue",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = (currentFontSize * 0.9f).sp,
+                        color = Color(0xFF93B4FC)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Font Preset Chips
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                fontPresets.forEach { (label, size) ->
+                    val isSelected = Math.abs(currentFontSize - size) < 0.5f
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isSelected) PrimaryIndigo else SurfaceVariantDark,
+                        border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { currentFontSize = size }
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 11.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) Color.White else TextSecondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                }
+            }
+
+            // Fine-tuning Slider
+            Slider(
+                value = currentFontSize,
+                onValueChange = { currentFontSize = it },
+                valueRange = 10.5f..18.0f,
+                steps = 15,
+                colors = SliderDefaults.colors(
+                    thumbColor = PrimaryIndigo,
+                    activeTrackColor = PrimaryIndigo,
+                    inactiveTrackColor = BorderSubtle
+                ),
+                modifier = Modifier.padding(top = 4.dp)
             )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 3. TERMAL VE CPU KORUMA MODU
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.LocalFireDepartment,
+                    contentDescription = null,
+                    tint = GeminiAmber,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "TERMAL VE İŞLEMCİ (CPU) KORUMASI",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GeminiAmber
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val isEco = thermalMode == "eco"
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isEco) Color(0xFF1B3B2B) else SurfaceVariantDark,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isEco) SuccessGreen else BorderSubtle),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { thermalMode = "eco" }
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(
+                            text = "❄️ %50 Sınır (Eko)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isEco) SuccessGreen else TextPrimary
+                        )
+                        Text(
+                            text = "Aşırı ısınmayı önler",
+                            fontSize = 10.sp,
+                            color = TextMuted
+                        )
+                    }
+                }
+
+                val isPerf = thermalMode == "performance"
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isPerf) Color(0xFF3E2D1D) else SurfaceVariantDark,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isPerf) GeminiAmber else BorderSubtle),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { thermalMode = "performance" }
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(
+                            text = "⚡ Tam Güç",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isPerf) GeminiAmber else TextPrimary
+                        )
+                        Text(
+                            text = "Sınırsız CPU modu",
+                            fontSize = 10.sp,
+                            color = TextMuted
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // 4. MODEL SEÇİMİ (CLI Modelleri)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.SmartToy,
+                    contentDescription = null,
+                    tint = PrimaryIndigo,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "YAPAY ZEKA MODELİ (${modelsList.size} Model)",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = PrimaryIndigo
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 modelsList.forEach { modelItem ->
@@ -125,32 +324,47 @@ fun ModelSettingsDialog(
                             }
                         }
                         if (isSelected) {
-                            Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = PrimaryIndigo, modifier = Modifier.size(16.dp))
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = PrimaryIndigo,
+                                modifier = Modifier.size(16.dp)
+                            )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            // 2. Dynamic Reasoning Effort
-            Text(
-                text = "DÜŞÜNME AĞIRLIĞI (REASONING EFFORT)",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextMuted,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            // 5. DÜŞÜNME AĞIRLIĞI (REASONING EFFORT)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.Psychology,
+                    contentDescription = null,
+                    tint = GeminiPurple,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "DÜŞÜNME SEVİYESİ (REASONING EFFORT)",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GeminiPurple
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 effortsList.forEach { effortItem ->
                     val isSelected = selectedEffort == effortItem.id
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (isSelected) PrimaryIndigo else SurfaceVariantDark,
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isSelected) GeminiPurple else SurfaceVariantDark,
                         border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
                         modifier = Modifier
                             .weight(1f)
@@ -162,38 +376,45 @@ fun ModelSettingsDialog(
                             fontWeight = FontWeight.Medium,
                             color = if (isSelected) Color.White else TextSecondary,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            modifier = Modifier.padding(vertical = 10.dp)
+                            modifier = Modifier.padding(vertical = 9.dp)
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            // 3. AGY Vault Entegrasyonu Toggle
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(SurfaceVariantDark)
-                    .padding(horizontal = 14.dp, vertical = 12.dp)
+            // 6. AGY VAULT HAFIZA ENTEGRASYONU
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = SurfaceVariantDark,
+                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "AGY Vault Entegrasyonu", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextPrimary)
-                    Text(text = "/storage/emulated/0/Documents/AGY-Vault hafızası", fontSize = 11.sp, color = TextMuted)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Outlined.Storage, contentDescription = null, tint = GeminiBlue, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "AGY Vault Hafızası", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextPrimary)
+                        }
+                        Text(text = "Not ve doküman hafızasını sohbete dahil eder", fontSize = 10.sp, color = TextMuted)
+                    }
+                    Switch(
+                        checked = useVault,
+                        onCheckedChange = { useVault = it },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = GeminiBlue)
+                    )
                 }
-                Switch(
-                    checked = useVault,
-                    onCheckedChange = { useVault = it },
-                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = PrimaryIndigo)
-                )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Kaydet Button
+            // Kaydet Butonu
             Button(
                 onClick = {
                     onSave(
@@ -201,15 +422,17 @@ fun ModelSettingsDialog(
                             model = selectedModel,
                             effort = selectedEffort,
                             mode = selectedMode,
-                            useVault = useVault
+                            useVault = useVault,
+                            fontSizeSp = currentFontSize,
+                            thermalMode = thermalMode
                         )
                     )
                     onDismiss()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(46.dp),
-                shape = RoundedCornerShape(12.dp),
+                    .height(48.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryIndigo)
             ) {
                 Text(text = "Ayarları Kaydet ve Uygula", fontWeight = FontWeight.Bold, fontSize = 14.sp)

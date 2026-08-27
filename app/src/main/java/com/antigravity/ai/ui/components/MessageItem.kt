@@ -38,7 +38,8 @@ import com.antigravity.ai.ui.theme.*
 @Composable
 fun MessageItem(
     message: Message,
-    isLastBotMessage: Boolean = false
+    isLastBotMessage: Boolean = false,
+    fontSizeSp: Float = 13.5f
 ) {
     val isUser = message.role == "user"
     val context = LocalContext.current
@@ -118,8 +119,8 @@ fun MessageItem(
 
                 Text(
                     text = message.content,
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp,
+                    fontSize = fontSizeSp.sp,
+                    lineHeight = (fontSizeSp * 1.45f).sp,
                     color = TextPrimary
                 )
             }
@@ -154,7 +155,7 @@ fun MessageItem(
                     }
                 }
 
-                // Message content
+                // Message content with Full Markdown Renderer
                 if (message.content.isEmpty() && message.state == MessageState.GENERATING) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -168,12 +169,15 @@ fun MessageItem(
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = "Antigravity düşünüyor…",
-                            fontSize = 14.sp,
+                            fontSize = (fontSizeSp * 0.95f).sp,
                             color = TextMuted
                         )
                     }
                 } else {
-                    FormattedMessageText(text = message.content)
+                    MarkdownRenderer(
+                        markdown = message.content,
+                        fontSizeSp = fontSizeSp
+                    )
                 }
 
                 // Figma Actions Toolbar (👍 👎 ↗ 📋 ⋮) + Token Stats
@@ -275,28 +279,3 @@ fun MessageItem(
     }
 }
 
-@Composable
-fun FormattedMessageText(text: String) {
-    val parts = text.split("```")
-    Column(modifier = Modifier.fillMaxWidth()) {
-        parts.forEachIndexed { index, part ->
-            if (index % 2 == 1) {
-                // Code block
-                val lines = part.split("\n", limit = 2)
-                val lang = lines.getOrNull(0)?.trim() ?: "code"
-                val code = lines.getOrNull(1) ?: ""
-                CodeBlock(code = code.trimEnd(), language = lang)
-            } else {
-                // Normal text
-                if (part.isNotEmpty()) {
-                    Text(
-                        text = part.trim(),
-                        fontSize = 15.sp,
-                        lineHeight = 23.sp,
-                        color = TextPrimary
-                    )
-                }
-            }
-        }
-    }
-}

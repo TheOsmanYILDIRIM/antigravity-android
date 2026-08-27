@@ -55,7 +55,8 @@ data class ChatUiState(
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = ChatRepository()
-    private val _uiState = MutableStateFlow(ChatUiState())
+    private val prefs = application.getSharedPreferences("agy_settings", android.content.Context.MODE_PRIVATE)
+    private val _uiState = MutableStateFlow(ChatUiState(settings = loadSavedSettings()))
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     private var speechRecognizer: SpeechRecognizer? = null
@@ -64,6 +65,27 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         initSpeechRecognizer()
         observeEvents()
         refreshAll()
+    }
+
+    private fun loadSavedSettings(): ChatSettings {
+        val model = prefs.getString("model", "gemini-3.7-flash-medium") ?: "gemini-3.7-flash-medium"
+        val effort = prefs.getString("effort", "default") ?: "default"
+        val mode = prefs.getString("mode", "default") ?: "default"
+        val useVault = prefs.getBoolean("useVault", true)
+        val fontSizeSp = prefs.getFloat("fontSizeSp", 13.5f)
+        val thermalMode = prefs.getString("thermalMode", "eco") ?: "eco"
+        return ChatSettings(model, effort, mode, useVault, fontSizeSp, thermalMode)
+    }
+
+    private fun saveSettings(settings: ChatSettings) {
+        prefs.edit()
+            .putString("model", settings.model)
+            .putString("effort", settings.effort)
+            .putString("mode", settings.mode)
+            .putBoolean("useVault", settings.useVault)
+            .putFloat("fontSizeSp", settings.fontSizeSp)
+            .putString("thermalMode", settings.thermalMode)
+            .apply()
     }
 
     fun refreshAll() {
@@ -474,6 +496,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateSettings(newSettings: ChatSettings) {
+        saveSettings(newSettings)
         _uiState.update { it.copy(settings = newSettings) }
     }
 

@@ -7,14 +7,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
-import com.antigravity.ai.data.model.ChatSettings
-import com.antigravity.ai.data.model.UsageData
-import com.antigravity.ai.data.model.UsageMetrics
-import com.antigravity.ai.data.model.UsageStats
-import com.antigravity.ai.data.model.VaultItem
-import com.antigravity.ai.ui.components.ChatTopBar
-import com.antigravity.ai.ui.components.MessageInputBar
-import com.antigravity.ai.ui.components.VaultManagerContent
+import com.antigravity.ai.data.model.*
+import com.antigravity.ai.ui.components.*
 import com.antigravity.ai.ui.screens.FigmaGeminiHomeView
 import com.antigravity.ai.ui.theme.AntigravityAITheme
 import com.antigravity.ai.ui.theme.BackgroundDark
@@ -56,83 +50,89 @@ class VisualPreviewTest {
         VaultItem(name = "Notlar", path = "Notlar", isDirectory = true)
     )
 
-    // 1. Obsidian Vault Explorer View
+    // 1. Rich Markdown & Syntax Highlighting Message Test
     @Test
     @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
-    fun capture_obsidian_vault_explorer() {
-        composeTestRule.setContent {
-            AntigravityAITheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = BackgroundDark
-                ) {
-                    VaultManagerContent(
-                        vaultFiles = sampleVaultFiles,
-                        activeFileContent = null,
-                        activeFilePath = null,
-                        onDismiss = {},
-                        onLoadFileContent = {},
-                        onSaveNote = { _, _, _ -> },
-                        onCreateFolder = {},
-                        onDeleteFile = {},
-                        onReferenceFile = {},
-                        onReferenceParagraph = { _, _ -> }
-                    )
-                }
-            }
-        }
-        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_obsidian_vault_explorer.png")
-    }
-
-    // 2. Obsidian Note Editor & Live Reader View
-    @Test
-    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
-    fun capture_obsidian_vault_reader() {
-        val sampleContent = """
-            # Jetpack Compose Mimari Notları
+    fun capture_rich_markdown_rendering() {
+        val sampleMarkdown = """
+            # Termux & Antigravity Optimizasyonu
             
-            Bu notta Antigravity Android uygulamasının UI/UX yapısı ve Obsidian Design System prensipleri listelenmektedir.
+            Termux ortamında dosya yolları ve yapılandırmalar `~/.bashrc` ve `.ignore` dosyalarında saklanır.
             
-            [[Roborazzi]] ile JVM tabanlı ekran yakalama ve [[Antigravity]] görsel analiz döngüsü aktif olarak çalışır.
+            > [!TIP]
+            > CLI komutlarını çalıştırmadan önce `cpulimit -l 50` korumasını aktif tutun.
             
-            - [ ] Çoklu ekran görsel testleri (320dp, 360dp, 411dp)
-            - [ ] Obsidian ağ haritası entegrasyonu
+            ```bash
+            # Termal koruma ile agy başlatma
+            alias agy='agy-limit 50'
+            export NODE_OPTIONS="--max-old-space-size=512"
+            ```
+            
+            - **Dosya Yolu:** [`~/.bashrc`](file:///data/data/com.termux/files/home/.bashrc)
+            - **CPU Sınırı:** %50 sabit frekans koruması
+            
+            1. Paketleri güncelleyin
+            2. Arka plan süreçlerini denetleyin
         """.trimIndent()
 
+        val botMessage = Message(
+            role = "bot",
+            content = sampleMarkdown,
+            usage = UsageStats(totalTokens = 840, outputTokens = 320, thinkingTokens = 120)
+        )
+
         composeTestRule.setContent {
             AntigravityAITheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = BackgroundDark
                 ) {
-                    VaultManagerContent(
-                        vaultFiles = sampleVaultFiles,
-                        activeFileContent = sampleContent,
-                        activeFilePath = "30-Jetpack-Compose.md",
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        MessageItem(
+                            message = botMessage,
+                            isLastBotMessage = true,
+                            fontSizeSp = 13.5f
+                        )
+                    }
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_rich_markdown_rendering.png")
+    }
+
+    // 2. Gemini Settings Sheet with Font Size & Thermal Guard
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun capture_gemini_settings_sheet() {
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = BackgroundDark
+                ) {
+                    ModelSettingsDialog(
+                        currentSettings = ChatSettings(fontSizeSp = 13.5f, thermalMode = "eco"),
+                        availableModels = emptyList(),
+                        availableEfforts = emptyList(),
                         onDismiss = {},
-                        onLoadFileContent = {},
-                        onSaveNote = { _, _, _ -> },
-                        onCreateFolder = {},
-                        onDeleteFile = {},
-                        onReferenceFile = {},
-                        onReferenceParagraph = { _, _ -> }
+                        onSave = {}
                     )
                 }
             }
         }
-        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_obsidian_vault_reader.png")
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_gemini_settings_sheet.png")
     }
 
-    // 3. Home Screen Standard
+    // 3. Compact Screen (320dp) with Scaled Font (1.3x Accessibility)
     @Test
-    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
-    fun capture_home_screen() {
+    @Config(qualifiers = "w320dp-h640dp-320dpi", sdk = [33], fontScale = 1.3f)
+    fun capture_compact_screen_accessibility() {
         composeTestRule.setContent {
             AntigravityAITheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = BackgroundDark) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         ChatTopBar(
-                            settings = ChatSettings(model = "gemini-3.7-flash-medium"),
+                            settings = ChatSettings(model = "gemini-3.7-flash-medium", fontSizeSp = 11.5f),
                             usage = sampleUsage,
                             isGenerating = false,
                             onMenuClick = {},
@@ -143,22 +143,33 @@ class VisualPreviewTest {
                         Box(modifier = Modifier.weight(1f)) {
                             FigmaGeminiHomeView(onSuggestionClick = {}, onOpenVault = {})
                         }
-                        MessageInputBar(
-                            text = "",
-                            onTextChange = {},
-                            pastedBlocks = emptyList(),
-                            onRemovePastedBlock = {},
-                            attachments = emptyList(),
-                            onRemoveAttachment = {},
-                            selectedModelName = "Gemini 3.7 Flash ⚡",
-                            onModelPillClick = {},
+                    }
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_compact_screen_accessibility.png")
+    }
+
+    // 4. Standard Home Screen
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun capture_home_screen() {
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = BackgroundDark) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        ChatTopBar(
+                            settings = ChatSettings(model = "gemini-3.7-flash-medium", fontSizeSp = 13.5f),
+                            usage = sampleUsage,
                             isGenerating = false,
-                            isListening = false,
-                            onSend = {},
-                            onStop = {},
-                            onMicClick = {},
-                            onAttachClick = {}
+                            onMenuClick = {},
+                            onNewChatClick = {},
+                            onSettingsClick = {},
+                            onUsageClick = {}
                         )
+                        Box(modifier = Modifier.weight(1f)) {
+                            FigmaGeminiHomeView(onSuggestionClick = {}, onOpenVault = {})
+                        }
                     }
                 }
             }
