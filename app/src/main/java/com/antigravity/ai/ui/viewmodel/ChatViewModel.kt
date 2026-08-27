@@ -43,6 +43,9 @@ data class ChatUiState(
     val isGenerating: Boolean = false,
     val isListening: Boolean = false,
     val showSettingsDialog: Boolean = false,
+    val showAuthDialog: Boolean = false,
+    val isAuthenticated: Boolean = true,
+    val authMethod: String = "oauth",
     val showVaultManager: Boolean = false,
     val showUsageDetail: Boolean = false,
     val showSlashCommands: Boolean = false,
@@ -95,6 +98,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         fetchSkills()
         fetchUsage()
         fetchModelsConfig()
+        fetchAuthStatus()
     }
 
     private fun initSpeechRecognizer() {
@@ -510,6 +514,33 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setUsageDetailVisible(visible: Boolean) {
         _uiState.update { it.copy(showUsageDetail = visible) }
+    }
+
+    fun setAuthDialogVisible(visible: Boolean) {
+        _uiState.update { it.copy(showAuthDialog = visible) }
+    }
+
+    fun fetchAuthStatus() {
+        viewModelScope.launch {
+            repository.fetchAuthStatus().onSuccess { res ->
+                _uiState.update { it.copy(isAuthenticated = res.isAuthenticated, authMethod = res.authMethod) }
+            }
+        }
+    }
+
+    fun submitAuthToken(token: String) {
+        viewModelScope.launch {
+            repository.submitAuthToken(token).onSuccess { res ->
+                if (res.status == "ok") {
+                    _uiState.update { it.copy(isAuthenticated = true, showAuthDialog = false) }
+                    refreshAll()
+                } else {
+                    _uiState.update { it.copy(errorMessage = res.error ?: "Token doğrulanamadı") }
+                }
+            }.onFailure { err ->
+                _uiState.update { it.copy(errorMessage = err.message) }
+            }
+        }
     }
 
     fun sendMessage() {

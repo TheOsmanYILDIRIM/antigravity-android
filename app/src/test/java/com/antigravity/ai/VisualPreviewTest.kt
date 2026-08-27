@@ -176,4 +176,24 @@ class VisualPreviewTest {
         }
         composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_home_screen.png")
     }
+
+    // 5. Auth Token Input Dialog Test
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun capture_auth_token_dialog() {
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = BackgroundDark) {
+                    AuthTokenDialog(
+                        isAuthenticated = false,
+                        authMethod = "oauth",
+                        onDismiss = {},
+                        onSubmitToken = {}
+                    )
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_auth_token_dialog.png")
+    }
 }
+

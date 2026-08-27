@@ -227,6 +227,24 @@ data class UsageResponse(
     val usage: UsageData?
 )
 
+data class AuthStatusResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("isAuthenticated")
+    val isAuthenticated: Boolean = false,
+    @SerializedName("authMethod")
+    val authMethod: String = "none"
+)
+
+data class AuthTokenResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("message")
+    val message: String? = null,
+    @SerializedName("error")
+    val error: String? = null
+)
+
 data class ChatSettings(
     val model: String = "gemini-3.7-flash-medium",
     val effort: String = "default", // default, low, medium, high

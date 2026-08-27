@@ -38,7 +38,8 @@ fun ModelSettingsDialog(
     availableModels: List<ModelItem>,
     availableEfforts: List<EffortItem>,
     onDismiss: () -> Unit,
-    onSave: (ChatSettings) -> Unit
+    onSave: (ChatSettings) -> Unit,
+    onOpenAuthDialog: () -> Unit = {}
 ) {
     var selectedModel by remember { mutableStateOf(currentSettings.model) }
     var selectedEffort by remember { mutableStateOf(currentSettings.effort) }
@@ -409,6 +410,41 @@ fun ModelSettingsDialog(
                         onCheckedChange = { useVault = it },
                         colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = GeminiBlue)
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // 7. GOOGLE HESAP VE TOKEN GİRİŞİ (User Request)
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = SurfaceVariantDark,
+                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Outlined.Key, contentDescription = null, tint = GeminiAmber, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "Oturum & Token Yönetimi", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextPrimary)
+                        }
+                        Text(text = "Google OAuth yetkilendirme kodu veya token yapıştırın", fontSize = 10.sp, color = TextMuted)
+                    }
+
+                    OutlinedButton(
+                        onClick = onOpenAuthDialog,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = GeminiAmber),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, GeminiAmber.copy(alpha = 0.6f)),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(text = "Token Gir", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 

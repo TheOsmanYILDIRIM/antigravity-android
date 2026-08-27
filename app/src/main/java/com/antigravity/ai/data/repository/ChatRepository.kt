@@ -50,4 +50,8 @@ class ChatRepository(private val apiService: AntigravityApiService = Antigravity
     suspend fun startNewChat(): Result<SessionResponse> = apiService.newChat()
 
     suspend fun stopExecution(): Result<Unit> = apiService.stopGeneration()
+
+    suspend fun fetchAuthStatus(): Result<AuthStatusResponse> = apiService.getAuthStatus()
+
+    suspend fun submitAuthToken(token: String): Result<AuthTokenResponse> = apiService.submitAuthToken(token)
 }

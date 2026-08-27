@@ -105,7 +105,21 @@ fun ChatScreen(
             availableModels = uiState.availableModels,
             availableEfforts = uiState.availableEfforts,
             onDismiss = { viewModel.setSettingsDialogVisible(false) },
-            onSave = { newSettings -> viewModel.updateSettings(newSettings) }
+            onSave = { newSettings -> viewModel.updateSettings(newSettings) },
+            onOpenAuthDialog = {
+                viewModel.setSettingsDialogVisible(false)
+                viewModel.setAuthDialogVisible(true)
+            }
+        )
+    }
+
+    // Auth & Token Input Sheet
+    if (uiState.showAuthDialog) {
+        AuthTokenDialog(
+            isAuthenticated = uiState.isAuthenticated,
+            authMethod = uiState.authMethod,
+            onDismiss = { viewModel.setAuthDialogVisible(false) },
+            onSubmitToken = { token -> viewModel.submitAuthToken(token) }
         )
     }
 
