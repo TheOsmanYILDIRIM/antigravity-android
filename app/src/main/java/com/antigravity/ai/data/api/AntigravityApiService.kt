@@ -27,6 +27,8 @@ sealed class StreamEvent {
     data class Error(val message: String) : StreamEvent()
     data class SessionLoaded(val session: SessionData) : StreamEvent()
     object SessionReset : StreamEvent()
+    data class PermissionRequested(val request: PermissionRequestData) : StreamEvent()
+    data class QuestionRequested(val request: QuestionRequestData) : StreamEvent()
 }
 
 class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080") {

@@ -109,6 +109,61 @@ fun ChatScreen(
             onOpenAuthDialog = {
                 viewModel.setSettingsDialogVisible(false)
                 viewModel.setAuthDialogVisible(true)
+            },
+            currentBackend = uiState.activeBackend,
+            onBackendChange = { viewModel.setBackend(it) }
+        )
+    }
+
+    // opencode izin onayı dialogu
+    if (uiState.pendingPermission != null) {
+        val perm = uiState.pendingPermission!!
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissPermission() },
+            title = { Text("İzin Gerekli (${perm.action})") },
+            text = {
+                Column {
+                    Text("OpenCode bu işlemi çalıştırmak istiyor:")
+                    Spacer(Modifier.height(6.dp))
+                    perm.resources.forEach { Text("• $it", fontSize = 12.sp) }
+                }
+            },
+            confirmButton = {
+                Button(onClick = { viewModel.replyPermission(allow = true, always = false) }) { Text("İzin Ver") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { viewModel.replyPermission(allow = true, always = true) }) { Text("Her Zaman") }
+                    TextButton(onClick = { viewModel.replyPermission(allow = false, always = false) }) { Text("Reddet") }
+                }
+            }
+        )
+    }
+
+    // opencode kullanıcı sorusu dialogu
+    if (uiState.pendingQuestion != null) {
+        val q = uiState.pendingQuestion!!
+        var answer by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissQuestion() },
+            title = { Text("OpenCode Sorusu") },
+            text = {
+                Column {
+                    q.questions.forEach { Text("• $it", fontSize = 13.sp) }
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = answer,
+                        onValueChange = { answer = it },
+                        label = { Text("Yanıt") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = { viewModel.replyQuestion(listOf(answer)) }) { Text("Gönder") }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissQuestion() }) { Text("İptal") }
             }
         )
     }

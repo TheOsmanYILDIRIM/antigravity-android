@@ -33,6 +33,19 @@ app/src/main/java/com/antigravity/ai/
 
 ---
 
+## 🔌 Çift Arka Uç Desteği (AGY CLI + OpenCode)
+
+Uygulama **aynı APK** içinde iki arka ucu da destekler; ayarlar panelinden (`⚙️ Ayarlar → Arka Uç`) seçilir veya **Otomatik** modda açık olan sunucuya bağlanır:
+
+| Arka Uç | Sunucu | Varsayılan Port | Protokol |
+|---------|--------|-----------------|----------|
+| **AGY CLI** | `agy` TUI sunucusu | `127.0.0.1:8080` | HTTP REST + SSE (`/api/chat`, `/api/events`) |
+| **OpenCode** | `opencode serve` | `127.0.0.1:4096` | HTTP REST + SSE (`/api/session`, `/api/event`) |
+
+- **OpenCode modu:** `opencode serve --port 4096` (cihazda Termux'tan) çalıştırılır. Uygulama bu sunucuya bağlanır; opencode'un **izin istekleri** (`permission.v2.asked`) ve **kullanıcı soruları** (`question.v2.asked`) otomatik olarak onay dialoglarına dönüşür.
+- Mimari: `data/api/ChatBackend` arayüzü + `AgyBackend` / `OpenCodeBackend` adapter'ları. Her iki backend, olaylarını ortak `StreamEvent` modeline çevirir; UI/ViewModel hangi arka ucun çalıştığından habersizdir.
+- `OPENCODE_SERVER_PASSWORD` ile korunan sunucular için `OpenCodeApiService(baseUrl, password)` kullanılır.
+
 ## 🚀 GitHub Actions ile Otomatik APK Derleme
 
 Her commit ve tag oluşturulduğunda GitHub Actions iş akışı (`build-apk.yml`) otomatik olarak tetiklenir ve ARM64-v8a uyumlu debug/release APK dosyasını derleyip GitHub Releases bölümünde yayınlar.

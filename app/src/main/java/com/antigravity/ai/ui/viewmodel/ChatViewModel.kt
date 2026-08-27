@@ -10,7 +10,7 @@ import android.speech.SpeechRecognizer
 import android.util.Base64
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.antigravity.ai.data.api.StreamEvent
+import com.antigravity.ai.data.api.*
 import com.antigravity.ai.data.model.*
 import com.antigravity.ai.data.repository.ChatRepository
 import kotlinx.coroutines.Dispatchers
@@ -52,13 +52,17 @@ data class ChatUiState(
     val slashQuery: String = "",
     val showMentions: Boolean = false,
     val mentionQuery: String = "",
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val activeBackend: String = "agy",
+    val pendingPermission: PermissionRequestData? = null,
+    val pendingQuestion: QuestionRequestData? = null
 )
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = ChatRepository()
     private val prefs = application.getSharedPreferences("agy_settings", android.content.Context.MODE_PRIVATE)
+    private lateinit var repository: ChatRepository
+    private var eventsJob: Job? = null
     private val _uiState = MutableStateFlow(ChatUiState(settings = loadSavedSettings()))
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
@@ -66,8 +70,52 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         initSpeechRecognizer()
-        observeEvents()
-        refreshAll()
+        viewModelScope.launch(Dispatchers.IO) {
+            val name = resolveBackendName()
+            repository = ChatRepository(buildBackend(name))
+            _uiState.update { it.copy(activeBackend = name) }
+            startEventCollection()
+            refreshAll()
+        }
+    }
+
+    private fun loadBackendPref(): String = prefs.getString("backend", "auto") ?: "auto"
+
+    private fun resolveBackendName(): String {
+        val pref = loadBackendPref()
+        return if (pref == "auto") detectBackend() else pref
+    }
+
+    private fun buildBackend(name: String): ChatBackend = when (name) {
+        "opencode" -> OpenCodeBackend()
+        else -> AgyBackend()
+    }
+
+    /** Açık olan sunucuyu bulur: :8080 (agy) veya :4096 (opencode). İkisi de açıksa agy tercih edilir. */
+    private fun detectBackend(): String {
+        val agy = isPortOpen("127.0.0.1", 8080)
+        val oc = isPortOpen("127.0.0.1", 4096)
+        return when {
+            agy -> "agy"
+            oc -> "opencode"
+            else -> "agy"
+        }
+    }
+
+    private fun isPortOpen(host: String, port: Int): Boolean = runCatching {
+        java.net.Socket().use { s -> s.connect(java.net.InetSocketAddress(host, port), 600) }
+    }.isSuccess
+
+    /** Backend'i değiştirir (agy <-> opencode) ve olay akışını yeniden başlatır. */
+    fun setBackend(name: String) {
+        prefs.edit().putString("backend", name).apply()
+        viewModelScope.launch(Dispatchers.IO) {
+            val resolved = if (name == "auto") detectBackend() else name
+            repository = ChatRepository(buildBackend(resolved))
+            _uiState.update { it.copy(activeBackend = resolved, messages = emptyList(), isGenerating = false) }
+            startEventCollection()
+            refreshAll()
+        }
     }
 
     private fun loadSavedSettings(): ChatSettings {
@@ -148,8 +196,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(isListening = false) }
     }
 
-    private fun observeEvents() {
-        viewModelScope.launch {
+    private fun startEventCollection() {
+        eventsJob?.cancel()
+        eventsJob = viewModelScope.launch {
             repository.observeStreamEvents().collect { event ->
                 when (event) {
                     is StreamEvent.Init -> {
@@ -233,6 +282,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     is StreamEvent.SessionReset -> {
                         _uiState.update { it.copy(messages = emptyList(), isGenerating = false) }
                         fetchConversations()
+                    }
+                    is StreamEvent.PermissionRequested -> {
+                        _uiState.update { it.copy(pendingPermission = event.request) }
+                    }
+                    is StreamEvent.QuestionRequested -> {
+                        _uiState.update { it.copy(pendingQuestion = event.request) }
                     }
                     is StreamEvent.Error -> {
                         _uiState.update { state ->
@@ -640,6 +695,32 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             repository.stopExecution()
             _uiState.update { it.copy(isGenerating = false) }
         }
+    }
+
+    // --- opencode izin & soru onayları ---
+
+    fun replyPermission(allow: Boolean, always: Boolean) {
+        val req = _uiState.value.pendingPermission ?: return
+        viewModelScope.launch {
+            repository.replyPermission(req.sessionID, req.id, allow, always)
+            _uiState.update { it.copy(pendingPermission = null) }
+        }
+    }
+
+    fun dismissPermission() {
+        _uiState.update { it.copy(pendingPermission = null) }
+    }
+
+    fun replyQuestion(answers: List<String>) {
+        val req = _uiState.value.pendingQuestion ?: return
+        viewModelScope.launch {
+            repository.replyQuestion(req.sessionID, req.id, answers)
+            _uiState.update { it.copy(pendingQuestion = null) }
+        }
+    }
+
+    fun dismissQuestion() {
+        _uiState.update { it.copy(pendingQuestion = null) }
     }
 
     override fun onCleared() {

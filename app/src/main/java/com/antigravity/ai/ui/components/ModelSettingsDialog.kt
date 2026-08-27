@@ -40,8 +40,11 @@ fun ModelSettingsDialog(
     availableEfforts: List<EffortItem>,
     onDismiss: () -> Unit,
     onSave: (ChatSettings) -> Unit,
-    onOpenAuthDialog: () -> Unit = {}
+    onOpenAuthDialog: () -> Unit = {},
+    currentBackend: String = "agy",
+    onBackendChange: (String) -> Unit = {}
 ) {
+    var selectedBackend by remember { mutableStateOf(currentBackend) }
     var selectedModel by remember { mutableStateOf(currentSettings.model) }
     var selectedEffort by remember { mutableStateOf(currentSettings.effort) }
     var selectedMode by remember { mutableStateOf(currentSettings.mode) }
@@ -108,6 +111,61 @@ fun ModelSettingsDialog(
             }
 
             Divider(color = BorderSubtle, modifier = Modifier.padding(vertical = 12.dp))
+
+            // 0. BACKEND SEÇİMİ (agy CLI <-> opencode)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.SmartToy,
+                    contentDescription = null,
+                    tint = GeminiBlue,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "ARKA UÇ (BACKEND)",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GeminiBlue
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                val backends = listOf(
+                    "auto" to "Otomatik",
+                    "agy" to "AGY CLI",
+                    "opencode" to "OpenCode"
+                )
+                backends.forEach { (id, label) ->
+                    val isSel = selectedBackend == id
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isSel) GeminiBlue else SurfaceVariantDark,
+                        border = if (isSel) null else androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable {
+                                selectedBackend = id
+                                onBackendChange(id)
+                            }
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = if (isSel) Color.White else TextSecondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 9.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             // 2. FONT VE METİN BOYUTU AYARI (User Request)
             Row(verticalAlignment = Alignment.CenterVertically) {
