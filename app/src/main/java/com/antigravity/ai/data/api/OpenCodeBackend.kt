@@ -43,7 +43,7 @@ class OpenCodeBackend(
         val sessionMessages = msgs.map { mapMessage(it) }
         SessionResponse(
             status = "ok",
-            session = SessionData(id = id, conversationId = id, messages = sessionMessages, isGenerating = false),
+            session = SessionData(id = id, conversationId = id, title = "Sohbet", messages = sessionMessages, isGenerating = false),
             isGenerating = false
         )
     }
@@ -109,7 +109,7 @@ class OpenCodeBackend(
         controlEvents.tryEmit(StreamEvent.Init(sid))
         SessionResponse(
             status = "ok",
-            session = SessionData(id = sid, conversationId = sid, messages = emptyList(), isGenerating = false),
+            session = SessionData(id = sid, conversationId = sid, title = "Yeni Sohbet", messages = emptyList(), isGenerating = false),
             isGenerating = false
         )
     }

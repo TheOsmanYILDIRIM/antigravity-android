@@ -90,6 +90,7 @@ class OpenCodeApiService(
             val prompt = JsonObject().apply { addProperty("text", text) }
             val body = JsonObject().apply { add("prompt", prompt); addProperty("delivery", "queue") }
             postJson("/api/session/$sessionID/prompt", body).getOrThrow()
+            Unit
         }
     }
 
