@@ -248,6 +248,31 @@ fun ChatScreen(
             },
             bottomBar = {
                 Column(modifier = Modifier.fillMaxWidth()) {
+                    // Üretim başarısız olduysa / sunucu durduysa net hata banner'ı (TUI benzeri geri bildirim)
+                    if (uiState.errorMessage != null) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "⚠️ ${uiState.errorMessage}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(onClick = viewModel::clearErrorMessage) {
+                                    Icon(Icons.Default.Close, contentDescription = "Kapat")
+                                }
+                            }
+                        }
+                    }
+
                     // Slash command & Dynamic Skills autocomplete popup
                     if (uiState.showSlashCommands) {
                         SlashCommandPopup(

@@ -724,6 +724,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(pendingQuestion = null) }
     }
 
+    fun clearErrorMessage() {
+        _uiState.update { it.copy(errorMessage = null) }
+    }
+
     override fun onCleared() {
         super.onCleared()
         speechRecognizer?.destroy()

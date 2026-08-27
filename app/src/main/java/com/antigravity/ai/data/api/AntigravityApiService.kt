@@ -385,6 +385,7 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
     }
 
     fun observeEvents(): Flow<StreamEvent> = callbackFlow {
+        var terminated = false
         val request = Request.Builder()
             .url("$baseUrl/api/events")
             .header("Accept", "text/event-stream")
@@ -393,8 +394,10 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
         val listener = object : EventSourceListener() {
             override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
                 try {
+                    if (type != "done" && type != "stopped" && type != "error") terminated = false
                     when (type) {
                         "init" -> {
+                            terminated = false
                             val json = gson.fromJson(data, JsonObject::class.java)
                             val convId = json.get("conversationId")?.asString ?: ""
                             if (convId.isNotEmpty()) {
@@ -402,6 +405,7 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                             }
                         }
                         "chunk" -> {
+                            terminated = false
                             val json = gson.fromJson(data, JsonObject::class.java)
                             val delta = json.get("text_delta")?.asString ?: ""
                             val full = json.get("full_content")?.asString ?: ""
@@ -414,6 +418,7 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                             trySend(StreamEvent.ToolUpdate(tool))
                         }
                         "done" -> {
+                            terminated = true
                             val json = gson.fromJson(data, JsonObject::class.java)
                             val botMsg = if (json.has("botMessage")) {
                                 gson.fromJson(json.get("botMessage"), SessionMessage::class.java)
@@ -421,6 +426,7 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                             trySend(StreamEvent.Done(botMsg))
                         }
                         "stopped" -> {
+                            terminated = true
                             trySend(StreamEvent.Stopped)
                         }
                         "session_loaded" -> {
@@ -434,6 +440,7 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                             trySend(StreamEvent.SessionReset)
                         }
                         "error" -> {
+                            terminated = true
                             val json = gson.fromJson(data, JsonObject::class.java)
                             val err = json.get("error")?.asString ?: "Unknown error"
                             trySend(StreamEvent.Error(err))
@@ -445,10 +452,24 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
             }
 
             override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {
-                // Connection lost or error; signal non-fatal error so UI can reconnect
+                if (!terminated) {
+                    terminated = true
+                    trySend(
+                        StreamEvent.Error(
+                            "Sunucu bağlantısı kesildi${t?.message?.let { " ($it)" } ?: ""}. Üretim durdu, yanıt tamamlanamadı."
+                        )
+                    )
+                }
             }
 
-            override fun onClosed(eventSource: EventSource) {}
+            override fun onClosed(eventSource: EventSource) {
+                if (!terminated) {
+                    terminated = true
+                    trySend(
+                        StreamEvent.Error("Sunucu yanıt akışı beklenmedik şekilde kapandı. Üretim tamamlanamadı.")
+                    )
+                }
+            }
         }
 
         val eventSource = sseFactory.newEventSource(request, listener)

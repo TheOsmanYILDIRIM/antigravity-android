@@ -120,6 +120,7 @@ class OpenCodeApiService(
 
     /** Sunucu olay akışı (SSE). Ham olaylar [RawEvent] olarak yayılır. */
     fun observeRawEvents(): Flow<RawEvent> = callbackFlow {
+        var terminated = false
         val req = Request.Builder()
             .url("$baseUrl/api/event")
             .header("Accept", "text/event-stream")
@@ -131,14 +132,44 @@ class OpenCodeApiService(
                 try {
                     val json = gson.fromJson(data, JsonObject::class.java) ?: return
                     val t = json.get("type")?.asString ?: return
+                    if (t == "session.next.text.ended" || t == "session.error") terminated = true
+                    if (t != "session.next.text.ended" && t != "session.error") terminated = false
                     val props = json.getAsJsonObject("properties") ?: JsonObject()
                     trySend(RawEvent(t, props))
                 } catch (_: Exception) {
                 }
             }
 
-            override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {}
-            override fun onClosed(eventSource: EventSource) {}
+            override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {
+                if (!terminated) {
+                    terminated = true
+                    trySend(
+                        RawEvent(
+                            "__error__",
+                            JsonObject().apply {
+                                addProperty(
+                                    "message",
+                                    "OpenCode sunucu bağlantısı kesildi${t?.message?.let { " ($it)" } ?: ""}. Üretim durdu."
+                                )
+                            }
+                        )
+                    )
+                }
+            }
+
+            override fun onClosed(eventSource: EventSource) {
+                if (!terminated) {
+                    terminated = true
+                    trySend(
+                        RawEvent(
+                            "__error__",
+                            JsonObject().apply {
+                                addProperty("message", "OpenCode yanıt akışı beklenmedik şekilde kapandı. Üretim tamamlanamadı.")
+                            }
+                        )
+                    )
+                }
+            }
         }
 
         val es = sseFactory.newEventSource(req, listener)

@@ -207,6 +207,9 @@ class OpenCodeBackend(
             "session.error" -> StreamEvent.Error(
                 p.getAsJsonObject("error")?.get("message")?.asString ?: "Bilinmeyen hata"
             )
+            "__error__" -> StreamEvent.Error(
+                p.get("message")?.asString ?: "Sunucu bağlantısı kesildi"
+            )
             "permission.v2.asked" -> {
                 val tool = p.getAsJsonObject("tool")
                 StreamEvent.PermissionRequested(
