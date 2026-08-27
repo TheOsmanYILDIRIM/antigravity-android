@@ -3,8 +3,9 @@ package com.antigravity.ai
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import com.antigravity.ai.data.model.*
@@ -120,7 +121,7 @@ class VisualPreviewTest {
                 }
             }
         }
-        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_gemini_settings_sheet.png")
+        composeTestRule.onAllNodes(isRoot()).onLast().captureRoboImage("build/outputs/roborazzi/matrix_gemini_settings_sheet.png")
     }
 
     // 3. Compact Screen (320dp) with Scaled Font (1.3x Accessibility)
@@ -193,7 +194,7 @@ class VisualPreviewTest {
                 }
             }
         }
-        composeTestRule.onRoot().captureRoboImage("build/outputs/roborazzi/matrix_auth_token_dialog.png")
+        composeTestRule.onAllNodes(isRoot()).onLast().captureRoboImage("build/outputs/roborazzi/matrix_auth_token_dialog.png")
     }
 }
 
