@@ -19,9 +19,11 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 sealed class StreamEvent {
+    data class Init(val conversationId: String) : StreamEvent()
     data class Chunk(val textDelta: String, val fullContent: String) : StreamEvent()
     data class ToolUpdate(val tool: ToolCall) : StreamEvent()
     data class Done(val botMessage: SessionMessage?) : StreamEvent()
+    object Stopped : StreamEvent()
     data class Error(val message: String) : StreamEvent()
     data class SessionLoaded(val session: SessionData) : StreamEvent()
     object SessionReset : StreamEvent()
@@ -390,6 +392,13 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
             override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
                 try {
                     when (type) {
+                        "init" -> {
+                            val json = gson.fromJson(data, JsonObject::class.java)
+                            val convId = json.get("conversationId")?.asString ?: ""
+                            if (convId.isNotEmpty()) {
+                                trySend(StreamEvent.Init(convId))
+                            }
+                        }
                         "chunk" -> {
                             val json = gson.fromJson(data, JsonObject::class.java)
                             val delta = json.get("text_delta")?.asString ?: ""
@@ -408,6 +417,9 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                                 gson.fromJson(json.get("botMessage"), SessionMessage::class.java)
                             } else null
                             trySend(StreamEvent.Done(botMsg))
+                        }
+                        "stopped" -> {
+                            trySend(StreamEvent.Stopped)
                         }
                         "session_loaded" -> {
                             val json = gson.fromJson(data, JsonObject::class.java)
@@ -430,7 +442,10 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                 }
             }
 
-            override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {}
+            override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {
+                // Connection lost or error; signal non-fatal error so UI can reconnect
+            }
+
             override fun onClosed(eventSource: EventSource) {}
         }
 

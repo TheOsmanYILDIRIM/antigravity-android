@@ -152,6 +152,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.observeStreamEvents().collect { event ->
                 when (event) {
+                    is StreamEvent.Init -> {
+                        _uiState.update {
+                            it.copy(
+                                currentSessionId = event.conversationId,
+                                currentConversationId = event.conversationId
+                            )
+                        }
+                        fetchConversations()
+                    }
                     is StreamEvent.Chunk -> {
                         _uiState.update { state ->
                             val list = state.messages.toMutableList()
@@ -199,6 +208,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                         fetchConversations()
                         fetchUsage()
+                    }
+                    is StreamEvent.Stopped -> {
+                        _uiState.update { state ->
+                            val list = state.messages.toMutableList()
+                            if (list.isNotEmpty() && list.last().role == "bot") {
+                                val last = list.last()
+                                list[list.size - 1] = last.copy(state = MessageState.DONE)
+                            }
+                            state.copy(messages = list, isGenerating = false)
+                        }
                     }
                     is StreamEvent.SessionLoaded -> {
                         val serverMessages = event.session.messages?.map { mapSessionMessage(it) } ?: emptyList()
@@ -587,7 +606,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 continueChat = true,
                 settings = state.settings,
                 attachments = userMessage.attachments
-            )
+            ).onFailure { err ->
+                _uiState.update { current ->
+                    val cleanList = current.messages.filter { it.id != botPlaceholder.id }
+                    current.copy(
+                        messages = cleanList,
+                        isGenerating = false,
+                        errorMessage = err.message ?: "Mesaj gönderilemedi"
+                    )
+                }
+            }
         }
     }
 
