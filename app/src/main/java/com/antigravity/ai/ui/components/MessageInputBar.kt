@@ -1,5 +1,9 @@
 package com.antigravity.ai.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,10 +18,12 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -46,6 +52,26 @@ fun MessageInputBar(
     onAttachClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val infiniteTransition = rememberInfiniteTransition(label = "generating_pulse")
+    val rotationAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "spinner_rotation"
+    )
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_alpha"
+    )
+
     Surface(
         color = BackgroundDark,
         modifier = modifier
@@ -58,13 +84,45 @@ fun MessageInputBar(
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 8.dp)
         ) {
+            // Live Status Banner when Generating (Running / Thinking)
+            AnimatedVisibility(
+                visible = isGenerating,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 6.dp, start = 6.dp, end = 6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(GeminiBlue.copy(alpha = pulseAlpha))
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Antigravity düşünüyor ve komutları yürütüyor (Running)...",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = GeminiBlue.copy(alpha = pulseAlpha)
+                    )
+                }
+            }
+
             // Container (Figma Gemini Rounded Pill Input #1E1F20)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(24.dp))
                     .background(InputBackground)
-                    .border(1.dp, BorderSubtle, RoundedCornerShape(24.dp))
+                    .border(
+                        1.dp,
+                        if (isGenerating) GeminiBlue.copy(alpha = 0.5f) else BorderSubtle,
+                        RoundedCornerShape(24.dp)
+                    )
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 // Multi-Paste and Attachment Chips
@@ -99,18 +157,15 @@ fun MessageInputBar(
                                         fontWeight = FontWeight.Medium,
                                         color = TextPrimary
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    IconButton(
-                                        onClick = { onRemovePastedBlock(block) },
-                                        modifier = Modifier.size(16.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Kaldır",
-                                            tint = TextMuted,
-                                            modifier = Modifier.size(12.dp)
-                                        )
-                                    }
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Kaldır",
+                                        tint = TextMuted,
+                                        modifier = Modifier
+                                            .size(14.dp)
+                                            .clickable { onRemovePastedBlock(block) }
+                                    )
                                 }
                             }
                         }
@@ -126,9 +181,9 @@ fun MessageInputBar(
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                 ) {
                                     Icon(
-                                        imageVector = if (att.type == "image") Icons.Default.Image else Icons.Default.Description,
+                                        imageVector = if (att.type == "vault") Icons.Default.Storage else Icons.Default.Attachment,
                                         contentDescription = null,
-                                        tint = GeminiPurple,
+                                        tint = if (att.type == "vault") GeminiPurple else PrimaryIndigo,
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
@@ -139,35 +194,32 @@ fun MessageInputBar(
                                         color = TextPrimary,
                                         maxLines = 1
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    IconButton(
-                                        onClick = { onRemoveAttachment(att) },
-                                        modifier = Modifier.size(16.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Kaldır",
-                                            tint = TextMuted,
-                                            modifier = Modifier.size(12.dp)
-                                        )
-                                    }
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Kaldır",
+                                        tint = TextMuted,
+                                        modifier = Modifier
+                                            .size(14.dp)
+                                            .clickable { onRemoveAttachment(att) }
+                                    )
                                 }
                             }
                         }
                     }
                 }
 
-                // Text Input Field
+                // Input Text Field
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 28.dp, max = 140.dp)
+                        .heightIn(min = 28.dp, max = 130.dp)
                 ) {
-                    if (text.isEmpty() && pastedBlocks.isEmpty()) {
+                    if (text.isEmpty() && pastedBlocks.isEmpty() && attachments.isEmpty()) {
                         Text(
-                            text = if (isListening) "Dinleniyor..." else "Ask Gemini...",
+                            text = if (isGenerating) "Antigravity çalışıyor..." else "Antigravity'ye bir şey sorun veya / yazın...",
                             color = TextMuted,
-                            fontSize = 16.sp
+                            fontSize = 15.sp
                         )
                     }
 
@@ -176,7 +228,7 @@ fun MessageInputBar(
                         onValueChange = onTextChange,
                         textStyle = TextStyle(
                             color = TextPrimary,
-                            fontSize = 16.sp,
+                            fontSize = 15.sp,
                             lineHeight = 22.sp
                         ),
                         cursorBrush = SolidColor(GeminiBlue),
@@ -244,7 +296,7 @@ fun MessageInputBar(
                         }
                     }
 
-                    // Right Actions: Mic & Send
+                    // Right Actions: Mic & Send / Stop Button with Gemini Spinner
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -265,21 +317,43 @@ fun MessageInputBar(
                             )
                         }
 
-                        // Send / Stop Button
+                        // Send / Stop Button with Animated Rotating Spinner
                         if (isGenerating) {
-                            IconButton(
-                                onClick = onStop,
+                            Box(
+                                contentAlignment = Alignment.Center,
                                 modifier = Modifier
-                                    .size(34.dp)
+                                    .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(DangerRed)
+                                    .clickable { onStop() }
                             ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Stop,
-                                    contentDescription = "Durdur",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
+                                // Animated rotating gradient ring
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .rotate(rotationAngle)
+                                        .border(
+                                            2.dp,
+                                            Brush.sweepGradient(
+                                                listOf(GeminiBlue, GeminiPurple, GeminiPink, GeminiAmber, GeminiBlue)
+                                            ),
+                                            CircleShape
+                                        )
                                 )
+                                // Inner Stop Button
+                                Box(
+                                    modifier = Modifier
+                                        .size(26.dp)
+                                        .clip(CircleShape)
+                                        .background(DangerRed),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Stop,
+                                        contentDescription = "Durdur",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
                             }
                         } else {
                             val canSend = text.isNotBlank() || pastedBlocks.isNotEmpty() || attachments.isNotEmpty()

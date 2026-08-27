@@ -1,10 +1,12 @@
 package com.antigravity.ai.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
@@ -32,21 +34,32 @@ fun ToolCard(tool: ToolCall) {
     var isExpanded by remember { mutableStateOf(false) }
     val isDone = tool.state == "DONE"
 
+    val infiniteTransition = rememberInfiniteTransition(label = "tool_pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(700, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "tool_alpha"
+    )
+
     val toolIcon: ImageVector = when {
-        tool.name.contains("command") -> Icons.Default.Terminal
-        tool.name.contains("file") -> Icons.Default.Description
-        tool.name.contains("search") || tool.name.contains("find") -> Icons.Default.Search
+        tool.name.contains("command") || tool.name.contains("run") -> Icons.Default.Terminal
+        tool.name.contains("file") || tool.name.contains("view") || tool.name.contains("write") -> Icons.Default.Description
+        tool.name.contains("search") || tool.name.contains("find") || tool.name.contains("grep") -> Icons.Default.Search
         else -> Icons.Default.Code
     }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(10.dp))
             .border(
                 1.dp,
-                if (isDone) BorderSubtle else PrimaryIndigo,
-                RoundedCornerShape(8.dp)
+                if (isDone) BorderSubtle else WarningAmber.copy(alpha = pulseAlpha),
+                RoundedCornerShape(10.dp)
             )
             .background(Color(0xFF0D1322))
     ) {
@@ -58,40 +71,54 @@ fun ToolCard(tool: ToolCall) {
                 .fillMaxWidth()
                 .background(Color(0xFF141D33))
                 .clickable { isExpanded = !isExpanded }
-                .padding(horizontal = 10.dp, vertical = 8.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = toolIcon,
                     contentDescription = null,
-                    tint = PrimaryIndigo,
-                    modifier = Modifier.size(15.dp)
+                    tint = if (isDone) PrimaryIndigo else WarningAmber,
+                    modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = tool.name,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
-                    color = Color(0xFF67E8F9)
+                    color = if (isDone) Color(0xFF67E8F9) else WarningAmber
                 )
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(
-                            if (isDone) Color(0x2610B981) else Color(0x33F59E0B)
-                        )
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = if (isDone) "TAMAMLANDI" else "ÇALIŞIYOR",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isDone) SuccessGreen else WarningAmber
+                // Status Pill with Active Animation
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isDone) Color(0x2610B981) else WarningAmber.copy(alpha = 0.2f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (isDone) SuccessGreen.copy(alpha = 0.4f) else WarningAmber.copy(alpha = pulseAlpha)
                     )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        if (!isDone) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(8.dp),
+                                strokeWidth = 1.5.dp,
+                                color = WarningAmber
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                        }
+                        Text(
+                            text = if (isDone) "TAMAMLANDI" else "ÇALIŞIYOR",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isDone) SuccessGreen else WarningAmber
+                        )
+                    }
                 }
 
                 if (tool.durationSeconds != null) {
@@ -115,8 +142,8 @@ fun ToolCard(tool: ToolCall) {
             }
         }
 
-        // Expanded Body
-        AnimatedVisibility(visible = isExpanded) {
+        // Expanded Body (Parameters and Output)
+        AnimatedVisibility(visible = isExpanded || !isDone) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -154,6 +181,22 @@ fun ToolCard(tool: ToolCall) {
                         color = Color(0xFFA7F3D0),
                         modifier = Modifier.padding(top = 4.dp)
                     )
+                } else if (!isDone) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(10.dp),
+                            strokeWidth = 1.5.dp,
+                            color = WarningAmber
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Komut yürütülüyor ve çıktı bekleniyor...",
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = TextMuted
+                        )
+                    }
                 }
             }
         }

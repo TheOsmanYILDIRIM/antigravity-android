@@ -6,6 +6,11 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -14,9 +19,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -46,6 +53,17 @@ fun ChatScreen(
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val context = LocalContext.current
+
+    val showScrollToBottom by remember {
+        derivedStateOf {
+            val totalItems = uiState.messages.size
+            if (totalItems <= 1) false
+            else {
+                val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                lastVisibleIndex < totalItems - 1
+            }
+        }
+    }
 
     // Audio record permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -243,6 +261,40 @@ fun ChatScreen(
                                 message = msg,
                                 isLastBotMessage = isLastBot,
                                 fontSizeSp = uiState.settings.fontSizeSp
+                            )
+                        }
+                    }
+                }
+
+                // Floating Scroll To Bottom Button (Gemini App / Figma Style)
+                AnimatedVisibility(
+                    visible = showScrollToBottom,
+                    enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
+                    exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 }),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 12.dp, end = 16.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = SurfaceVariantDark,
+                        shadowElevation = 6.dp,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .clickable {
+                                scope.launch {
+                                    listState.animateScrollToItem(uiState.messages.size - 1)
+                                }
+                            }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = "En alta kaydır",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
