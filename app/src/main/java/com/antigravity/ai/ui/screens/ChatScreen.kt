@@ -74,6 +74,11 @@ fun ChatScreen(
         }
     }
 
+    // Notification permission launcher (Android 13+)
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { /* izin verilirse bildirimler çalışır; reddedilirse NotificationHelper zaten korur */ }
+
     // Document / Image picker launcher
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -111,7 +116,12 @@ fun ChatScreen(
                 viewModel.setAuthDialogVisible(true)
             },
             currentBackend = uiState.activeBackend,
-            onBackendChange = { viewModel.setBackend(it) }
+            onBackendChange = { viewModel.setBackend(it) },
+            onNotificationToggle = { enabled ->
+                if (enabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
         )
     }
 
@@ -267,6 +277,31 @@ fun ChatScreen(
                                     modifier = Modifier.weight(1f)
                                 )
                                 IconButton(onClick = viewModel::clearErrorMessage) {
+                                    Icon(Icons.Default.Close, contentDescription = "Kapat")
+                                }
+                            }
+                        }
+                    }
+
+                    // Agy stderr / sistem bildirimleri (izin reddi, bekleme vb.) — sessiz donmayı önler
+                    if (uiState.notice != null) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "ℹ️ ${uiState.notice}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(onClick = viewModel::clearNotice) {
                                     Icon(Icons.Default.Close, contentDescription = "Kapat")
                                 }
                             }

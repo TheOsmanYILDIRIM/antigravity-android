@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.LocalFireDepartment
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material.icons.outlined.Storage
@@ -42,7 +43,8 @@ fun ModelSettingsDialog(
     onSave: (ChatSettings) -> Unit,
     onOpenAuthDialog: () -> Unit = {},
     currentBackend: String = "agy",
-    onBackendChange: (String) -> Unit = {}
+    onBackendChange: (String) -> Unit = {},
+    onNotificationToggle: (Boolean) -> Unit = {}
 ) {
     var selectedBackend by remember { mutableStateOf(currentBackend) }
     var selectedModel by remember { mutableStateOf(currentSettings.model) }
@@ -51,6 +53,7 @@ fun ModelSettingsDialog(
     var useVault by remember { mutableStateOf(currentSettings.useVault) }
     var currentFontSize by remember { mutableStateOf(currentSettings.fontSizeSp) }
     var thermalMode by remember { mutableStateOf(currentSettings.thermalMode) }
+    var notificationsEnabled by remember { mutableStateOf(currentSettings.notificationsEnabled) }
 
     val modelsList = if (availableModels.isNotEmpty()) availableModels else listOf(
         ModelItem("gemini-3.7-flash-medium", "Gemini 3.7 Flash (Medium)", "Dengeli ve hızlı standart model"),
@@ -474,6 +477,39 @@ fun ModelSettingsDialog(
 
             Spacer(modifier = Modifier.height(18.dp))
 
+            // 6.5 BİLDİRİMLER
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = SurfaceVariantDark,
+                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Outlined.Notifications, contentDescription = null, tint = GeminiBlue, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "Bildirimler", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextPrimary)
+                        }
+                        Text(text = "Üretim bitince / hata olunca yerel bildirim gönder", fontSize = 10.sp, color = TextMuted)
+                    }
+                    Switch(
+                        checked = notificationsEnabled,
+                        onCheckedChange = {
+                            notificationsEnabled = it
+                            onNotificationToggle(it)
+                        },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = GeminiBlue)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
             // 7. GOOGLE HESAP VE TOKEN GİRİŞİ (User Request)
             Surface(
                 shape = RoundedCornerShape(12.dp),
@@ -519,7 +555,8 @@ fun ModelSettingsDialog(
                             mode = selectedMode,
                             useVault = useVault,
                             fontSizeSp = currentFontSize,
-                            thermalMode = thermalMode
+                            thermalMode = thermalMode,
+                            notificationsEnabled = notificationsEnabled
                         )
                     )
                     onDismiss()

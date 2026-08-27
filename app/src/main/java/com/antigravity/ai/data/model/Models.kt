@@ -32,7 +32,9 @@ data class ToolCall(
     @SerializedName("output")
     var output: String? = null,
     @SerializedName("duration_seconds")
-    var durationSeconds: Double? = null
+    var durationSeconds: Double? = null,
+    @SerializedName("error")
+    val error: String? = null
 )
 
 data class UsageStats(
@@ -251,7 +253,8 @@ data class ChatSettings(
     val mode: String = "default", // default, plan, accept-edits
     val useVault: Boolean = true,
     val fontSizeSp: Float = 13.5f, // 11.5f (Kompakt), 13.5f (Küçük/Standart), 15.0f (Orta), 16.5f (Büyük)
-    val thermalMode: String = "eco" // "eco" (%50 CPU Sınırı), "balanced", "performance"
+    val thermalMode: String = "eco", // "eco" (%50 CPU Sınırı), "balanced", "performance"
+    val notificationsEnabled: Boolean = true // Üretim bittiğinde / hata olduğunda yerel bildirim
 )
 
 data class SessionResponse(

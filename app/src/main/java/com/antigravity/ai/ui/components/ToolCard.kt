@@ -32,7 +32,13 @@ import com.antigravity.ai.ui.theme.*
 @Composable
 fun ToolCard(tool: ToolCall) {
     var isExpanded by remember { mutableStateOf(false) }
-    val isDone = tool.state == "DONE"
+    val isDone = tool.state.equals("DONE", ignoreCase = true) || tool.state.equals("ERROR", ignoreCase = true)
+    val isError = tool.state.equals("ERROR", ignoreCase = true)
+    val accent = when {
+        isError -> Color(0xFFF87171)
+        isDone -> SuccessGreen
+        else -> WarningAmber
+    }
 
     val infiniteTransition = rememberInfiniteTransition(label = "tool_pulse")
     val pulseAlpha by infiniteTransition.animateFloat(
@@ -58,7 +64,7 @@ fun ToolCard(tool: ToolCall) {
             .clip(RoundedCornerShape(10.dp))
             .border(
                 1.dp,
-                if (isDone) BorderSubtle else WarningAmber.copy(alpha = pulseAlpha),
+                if (isError || isDone) BorderSubtle else WarningAmber.copy(alpha = pulseAlpha),
                 RoundedCornerShape(10.dp)
             )
             .background(Color(0xFF0D1322))
@@ -77,7 +83,7 @@ fun ToolCard(tool: ToolCall) {
                 Icon(
                     imageVector = toolIcon,
                     contentDescription = null,
-                    tint = if (isDone) PrimaryIndigo else WarningAmber,
+                    tint = accent,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -86,7 +92,7 @@ fun ToolCard(tool: ToolCall) {
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
-                    color = if (isDone) Color(0xFF67E8F9) else WarningAmber
+                    color = accent
                 )
             }
 
@@ -94,10 +100,10 @@ fun ToolCard(tool: ToolCall) {
                 // Status Pill with Active Animation
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = if (isDone) Color(0x2610B981) else WarningAmber.copy(alpha = 0.2f),
+                    color = if (isError || isDone) Color(0x26F87171) else WarningAmber.copy(alpha = 0.2f),
                     border = androidx.compose.foundation.BorderStroke(
                         1.dp,
-                        if (isDone) SuccessGreen.copy(alpha = 0.4f) else WarningAmber.copy(alpha = pulseAlpha)
+                        if (isError || isDone) accent.copy(alpha = 0.4f) else WarningAmber.copy(alpha = pulseAlpha)
                     )
                 ) {
                     Row(
@@ -113,10 +119,14 @@ fun ToolCard(tool: ToolCall) {
                             Spacer(modifier = Modifier.width(5.dp))
                         }
                         Text(
-                            text = if (isDone) "TAMAMLANDI" else "ÇALIŞIYOR",
+                            text = when {
+                            isError -> "HATA"
+                            isDone -> "TAMAMLANDI"
+                            else -> "ÇALIŞIYOR"
+                        },
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isDone) SuccessGreen else WarningAmber
+                            color = accent
                         )
                     }
                 }
@@ -181,7 +191,26 @@ fun ToolCard(tool: ToolCall) {
                         color = Color(0xFFA7F3D0),
                         modifier = Modifier.padding(top = 4.dp)
                     )
-                } else if (!isDone) {
+                }
+
+                if (!tool.error.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "HATA:",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFF87171)
+                    )
+                    Text(
+                        text = tool.error!!,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        color = Color(0xFFFCA5A5),
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+
+                if (tool.output.isNullOrEmpty() && tool.error.isNullOrEmpty() && !isDone) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(

@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import com.antigravity.ai.data.api.*
 import com.antigravity.ai.data.model.*
 import com.antigravity.ai.data.repository.ChatRepository
+import com.antigravity.ai.util.NotificationHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -54,6 +55,7 @@ data class ChatUiState(
     val showMentions: Boolean = false,
     val mentionQuery: String = "",
     val errorMessage: String? = null,
+    val notice: String? = null,
     val activeBackend: String = "agy",
     val pendingPermission: PermissionRequestData? = null,
     val pendingQuestion: QuestionRequestData? = null
@@ -126,7 +128,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val useVault = prefs.getBoolean("useVault", true)
         val fontSizeSp = prefs.getFloat("fontSizeSp", 13.5f)
         val thermalMode = prefs.getString("thermalMode", "eco") ?: "eco"
-        return ChatSettings(model, effort, mode, useVault, fontSizeSp, thermalMode)
+        val notificationsEnabled = prefs.getBoolean("notificationsEnabled", true)
+        return ChatSettings(model, effort, mode, useVault, fontSizeSp, thermalMode, notificationsEnabled)
     }
 
     private fun saveSettings(settings: ChatSettings) {
@@ -137,6 +140,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             .putBoolean("useVault", settings.useVault)
             .putFloat("fontSizeSp", settings.fontSizeSp)
             .putString("thermalMode", settings.thermalMode)
+            .putBoolean("notificationsEnabled", settings.notificationsEnabled)
             .apply()
     }
 
@@ -256,6 +260,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             }
                             state.copy(messages = list, isGenerating = false)
                         }
+                        fireNotification("Antigravity AI", "Yanıt hazır — sıra sende")
                         fetchConversations()
                         fetchUsage()
                     }
@@ -268,6 +273,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             }
                             state.copy(messages = list, isGenerating = false)
                         }
+                        fireNotification("Antigravity AI", "Üretim durduruldu")
                     }
                     is StreamEvent.SessionLoaded -> {
                         val serverMessages = event.session.messages?.map { mapSessionMessage(it) } ?: emptyList()
@@ -296,13 +302,17 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             if (list.isNotEmpty() && list.last().role == "bot") {
                                 val last = list.last()
                                 val updated = last.copy(
-                                    content = last.content + "\n\n⚠️ *Hata: ${event.message}*",
+                                    content = last.content + "\n\n⚠️ Hata: ${event.message}*",
                                     state = MessageState.ERROR
                                 )
                                 list[list.size - 1] = updated
                             }
-                            state.copy(messages = list, isGenerating = false, errorMessage = event.message)
+                            state.copy(messages = list, isGenerating = false, errorMessage = event.message, notice = null)
                         }
+                        fireNotification("Antigravity AI", "Üretim hatası: ${event.message.take(140)}")
+                    }
+                    is StreamEvent.Stderr -> {
+                        _uiState.update { it.copy(notice = event.text) }
                     }
                 }
             }
@@ -652,7 +662,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 showSlashCommands = false,
                 showMentions = false,
                 messages = it.messages + userMessage + botPlaceholder,
-                isGenerating = true
+                isGenerating = true,
+                notice = null
             )
         }
 
@@ -726,6 +737,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearErrorMessage() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    fun clearNotice() {
+        _uiState.update { it.copy(notice = null) }
+    }
+
+    private fun fireNotification(title: String, message: String) {
+        if (prefs.getBoolean("notificationsEnabled", true)) {
+            NotificationHelper.notify(getApplication(), title, message)
+        }
     }
 
     override fun onCleared() {

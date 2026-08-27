@@ -29,6 +29,7 @@ sealed class StreamEvent {
     object SessionReset : StreamEvent()
     data class PermissionRequested(val request: PermissionRequestData) : StreamEvent()
     data class QuestionRequested(val request: QuestionRequestData) : StreamEvent()
+    data class Stderr(val text: String) : StreamEvent()
 }
 
 class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080") {
@@ -444,6 +445,11 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                             val json = gson.fromJson(data, JsonObject::class.java)
                             val err = json.get("error")?.asString ?: "Unknown error"
                             trySend(StreamEvent.Error(err))
+                        }
+                        "stderr" -> {
+                            val json = gson.fromJson(data, JsonObject::class.java)
+                            val txt = json.get("text")?.asString ?: ""
+                            if (txt.isNotBlank()) trySend(StreamEvent.Stderr(txt.trim()))
                         }
                     }
                 } catch (e: Exception) {
