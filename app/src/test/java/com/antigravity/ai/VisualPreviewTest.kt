@@ -241,7 +241,7 @@ class VisualPreviewTest {
     @Test
     @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
     fun capture_code_block() {
-        val code = """fun greet(name: String) = "Hello, $name"
+        val code = """fun greet(name: String) = "Hello, ${'$'}name"
 // opencode sunucusuna bağlan
 val client = OpenCodeApiService("http://127.0.0.1:4096")"""
         composeTestRule.setContent {
