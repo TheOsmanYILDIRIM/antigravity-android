@@ -29,10 +29,10 @@ jobs:
       - name: Run Android Lint (Debug)
         run: ./gradlew lintDebug --stacktrace
 
-      - name: Run Unit Tests (Debug)
-        # Screenshot (Roborazzi) testleri ayrı "visual-preview" job'unda record/verify edilir;
-        # burada record modunda çalıştırıp golden'a bağımlı verify hatasını engelliyoruz.
-        run: ./gradlew testDebugUnitTest -Proborazzi.record=true --stacktrace
+      - name: Run Compose UI Semantic Tests (Debug)
+        # Roborazzi piksel testleri kaldırıldı; yerine deterministik semantik UI
+        # testleri (UiSemanticsTest) çalışır — golden görsele bağımlı değildir.
+        run: ./gradlew testDebugUnitTest --stacktrace
 
       - name: Upload Lint Report
         if: always()

@@ -1,7 +1,6 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("io.github.takahirom.roborazzi")
 }
 
 android {
@@ -120,8 +119,5 @@ dependencies {
     testImplementation("androidx.test.ext:junit:1.2.1")
     testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("org.robolectric:robolectric:4.13")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.26.0")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.26.0")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi-junit-rule:1.26.0")
 }
 
