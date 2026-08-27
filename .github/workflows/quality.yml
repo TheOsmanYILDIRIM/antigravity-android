@@ -30,7 +30,9 @@ jobs:
         run: ./gradlew lintDebug --stacktrace
 
       - name: Run Unit Tests (Debug)
-        run: ./gradlew testDebugUnitTest --stacktrace
+        # Screenshot (Roborazzi) testleri ayrı "visual-preview" job'unda record/verify edilir;
+        # burada record modunda çalıştırıp golden'a bağımlı verify hatasını engelliyoruz.
+        run: ./gradlew testDebugUnitTest -Proborazzi.record=true --stacktrace
 
       - name: Upload Lint Report
         if: always()
