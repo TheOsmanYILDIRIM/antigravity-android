@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.InputStream
 import java.util.Locale
@@ -50,6 +51,10 @@ data class ChatUiState(
     val authMethod: String = "oauth",
     val isAuthenticating: Boolean = false,
     val authError: String? = null,
+    val isAgyAuthLoading: Boolean = false,
+    val agyAuthError: String? = null,
+    val isAgyWaitingCode: Boolean = false,
+    val agyAuthUrl: String? = null,
     val showVaultManager: Boolean = false,
     val showUsageDetail: Boolean = false,
     val showSlashCommands: Boolean = false,
@@ -609,7 +614,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 showAuthDialog = visible,
                 // Dialog açılınca önceki hata/yükleniyor durumunu temizle
                 authError = if (visible) null else it.authError,
-                isAuthenticating = if (visible) false else it.isAuthenticating
+                isAuthenticating = if (visible) false else it.isAuthenticating,
+                agyAuthError = if (visible) null else it.agyAuthError,
+                isAgyAuthLoading = if (visible) false else it.isAgyAuthLoading,
+                isAgyWaitingCode = if (visible) false else it.isAgyWaitingCode,
+                agyAuthUrl = if (visible) it.agyAuthUrl else null
             )
         }
     }
@@ -656,6 +665,91 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     } else raw
                     _uiState.update { it.copy(isAuthenticating = false, authError = friendly) }
                 }
+        }
+    }
+
+    // agy'nin kendi OAuth akışını başlatır (TUI gibi): sunucu agy'yi spawn edip
+    // ürettiği state+code_challenge'lı URL'yi döndürür; app bunu tarayıcıda açar.
+    fun startAgyLogin(openUri: (String) -> Unit) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isAgyAuthLoading = true, agyAuthError = null) }
+            repository.startAgLogin()
+                .onSuccess { res ->
+                    if (res.status == "ok" && !res.authUrl.isNullOrBlank()) {
+                        _uiState.update { it.copy(isAgyAuthLoading = false, agyAuthUrl = res.authUrl, isAgyWaitingCode = true) }
+                        openUri(res.authUrl)
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                isAgyAuthLoading = false,
+                                agyAuthError = "Giriş başlatılamadı (sunucu URL döndüremedi). agy-web sunucusu güncel mi?"
+                            )
+                        }
+                    }
+                }
+                .onFailure { err ->
+                    val raw = err.message ?: "Bilinmeyen hata"
+                    val friendly = if (raw.contains("timed out", true) || raw.contains("timeout", true) || raw.contains("failed to connect", true)) {
+                        "Sunucuya ulaşılamadı (127.0.0.1:8080). agy-web sunucusu çalışıyor mu? ($raw)"
+                    } else raw
+                    _uiState.update { it.copy(isAgyAuthLoading = false, agyAuthError = friendly) }
+                }
+        }
+    }
+
+    // Tarayıcıdan dönen 4/... yetkilendirme kodunu agy'ye geri besler; agy token'ı yazar.
+    fun submitAgyCode(code: String) {
+        val trimmed = code.trim()
+        if (trimmed.isBlank()) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isAgyAuthLoading = true, agyAuthError = null) }
+            repository.submitAuthCode(trimmed)
+                .onSuccess { res ->
+                    if (res.status == "ok") {
+                        // agy kodu işliyor; token dosyasının yazılmasını bekle.
+                        pollAgyAuth()
+                    } else {
+                        _uiState.update { it.copy(isAgyAuthLoading = false, agyAuthError = res.error ?: "Kod gönderilemedi.") }
+                    }
+                }
+                .onFailure { err ->
+                    val raw = err.message ?: "Bilinmeyen hata"
+                    val friendly = if (raw.contains("timed out", true) || raw.contains("timeout", true) || raw.contains("failed to connect", true)) {
+                        "Sunucuya ulaşılamadı (127.0.0.1:8080). agy-web sunucusu çalışıyor mu? ($raw)"
+                    } else raw
+                    _uiState.update { it.copy(isAgyAuthLoading = false, agyAuthError = friendly) }
+                }
+        }
+    }
+
+    private suspend fun pollAgyAuth() {
+        repeat(20) {
+            delay(1500)
+            repository.fetchAuthStatus()
+                .onSuccess { res ->
+                    if (res.isAuthenticated) {
+                        _uiState.update {
+                            it.copy(
+                                isAuthenticated = true,
+                                authMethod = res.authMethod,
+                                showAuthDialog = false,
+                                isAgyAuthLoading = false,
+                                isAgyWaitingCode = false,
+                                agyAuthError = null,
+                                agyAuthUrl = null
+                            )
+                        }
+                        refreshAll()
+                        return
+                    }
+                }
+        }
+        _uiState.update {
+            it.copy(
+                isAgyAuthLoading = false,
+                isAgyWaitingCode = false,
+                agyAuthError = "Token alınamadı. Tarayıcıda girişi tamamladığınızdan ve dönen 4/... kodunu doğru yapıştırdığınızdan emin olun."
+            )
         }
     }
 

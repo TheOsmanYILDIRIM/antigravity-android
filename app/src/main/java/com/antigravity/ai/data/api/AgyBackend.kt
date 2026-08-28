@@ -45,4 +45,6 @@ class AgyBackend(private val api: AntigravityApiService = AntigravityApiService(
     override suspend fun fetchSession(): Result<SessionResponse> = api.getSession()
     override suspend fun fetchAuthStatus(): Result<AuthStatusResponse> = api.getAuthStatus()
     override suspend fun submitAuthToken(token: String): Result<AuthTokenResponse> = api.submitAuthToken(token)
+    override suspend fun startAgLogin(): Result<AgLoginResponse> = api.startAgLogin()
+    override suspend fun submitAuthCode(code: String): Result<AgLoginCodeResponse> = api.submitAuthCode(code)
 }

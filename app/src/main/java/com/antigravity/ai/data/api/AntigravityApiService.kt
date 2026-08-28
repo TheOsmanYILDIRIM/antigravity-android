@@ -366,6 +366,39 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
         }
     }
 
+    suspend fun startAgLogin(): Result<AgLoginResponse> = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$baseUrl/api/auth/login")
+                .post("{}".toRequestBody("application/json".toMediaType()))
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: "{}"
+                Result.success(gson.fromJson(body, AgLoginResponse::class.java))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun submitAuthCode(code: String): Result<AgLoginCodeResponse> = withContext(Dispatchers.IO) {
+        try {
+            val json = JsonObject().apply { addProperty("code", code) }
+            val request = Request.Builder()
+                .url("$baseUrl/api/auth/login/code")
+                .post(json.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: "{}"
+                Result.success(gson.fromJson(body, AgLoginCodeResponse::class.java))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun submitAuthToken(token: String): Result<AuthTokenResponse> = withContext(Dispatchers.IO) {
         try {
             val json = JsonObject().apply {
