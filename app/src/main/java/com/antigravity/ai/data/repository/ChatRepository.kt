@@ -59,7 +59,4 @@ class ChatRepository(private val backend: ChatBackend) {
     ): Result<Unit> = backend.replyQuestion(sessionID, requestID, answers)
 
     suspend fun fetchAuthStatus(): Result<AuthStatusResponse> = backend.fetchAuthStatus()
-    suspend fun submitAuthToken(token: String): Result<AuthTokenResponse> = backend.submitAuthToken(token)
-    suspend fun startAgLogin(): Result<AgLoginResponse> = backend.startAgLogin()
-    suspend fun submitAuthCode(code: String): Result<AgLoginCodeResponse> = backend.submitAuthCode(code)
 }

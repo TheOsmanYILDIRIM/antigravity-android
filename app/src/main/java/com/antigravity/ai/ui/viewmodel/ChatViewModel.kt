@@ -49,12 +49,6 @@ data class ChatUiState(
     val showAuthDialog: Boolean = false,
     val isAuthenticated: Boolean = true,
     val authMethod: String = "oauth",
-    val isAuthenticating: Boolean = false,
-    val authError: String? = null,
-    val isAgyAuthLoading: Boolean = false,
-    val agyAuthError: String? = null,
-    val isAgyWaitingCode: Boolean = false,
-    val agyAuthUrl: String? = null,
     val showVaultManager: Boolean = false,
     val showUsageDetail: Boolean = false,
     val showSlashCommands: Boolean = false,
@@ -317,6 +311,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             state.copy(messages = list, isGenerating = false, errorMessage = event.message, notice = null)
                         }
                         fireNotification("Antigravity AI", "Üretim hatası: ${event.message.take(140)}")
+                    }
+                    is StreamEvent.AuthRequired -> {
+                        _uiState.update {
+                            it.copy(
+                                isAuthenticated = false,
+                                isGenerating = false,
+                                errorMessage = event.message,
+                                showAuthDialog = true,
+                                authError = event.message
+                            )
+                        }
+                        fireNotification("Antigravity AI", "Oturum yenileme gerekli: ${event.message.take(140)}")
                     }
                     is StreamEvent.Stderr -> {
                         _uiState.update { it.copy(notice = event.text) }
@@ -610,16 +616,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setAuthDialogVisible(visible: Boolean) {
         _uiState.update {
-            it.copy(
-                showAuthDialog = visible,
-                // Dialog açılınca önceki hata/yükleniyor durumunu temizle
-                authError = if (visible) null else it.authError,
-                isAuthenticating = if (visible) false else it.isAuthenticating,
-                agyAuthError = if (visible) null else it.agyAuthError,
-                isAgyAuthLoading = if (visible) false else it.isAgyAuthLoading,
-                isAgyWaitingCode = if (visible) false else it.isAgyWaitingCode,
-                agyAuthUrl = if (visible) it.agyAuthUrl else null
-            )
+            it.copy(showAuthDialog = visible)
         }
     }
 
@@ -628,128 +625,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             repository.fetchAuthStatus().onSuccess { res ->
                 _uiState.update { it.copy(isAuthenticated = res.isAuthenticated, authMethod = res.authMethod) }
             }
-        }
-    }
-
-    fun submitAuthToken(token: String) {
-        val trimmed = token.trim()
-        if (trimmed.isBlank()) return
-        viewModelScope.launch {
-            // Başarısız olunca dialog KAPANMASIN ve token KAYBOLMASIN; sadece hata göster.
-            _uiState.update { it.copy(isAuthenticating = true, authError = null) }
-            repository.submitAuthToken(trimmed)
-                .onSuccess { res ->
-                    if (res.status == "ok") {
-                        _uiState.update {
-                            it.copy(
-                                isAuthenticated = true,
-                                showAuthDialog = false,
-                                isAuthenticating = false,
-                                authError = null
-                            )
-                        }
-                        refreshAll()
-                    } else {
-                        _uiState.update {
-                            it.copy(
-                                isAuthenticating = false,
-                                authError = res.error ?: "Token doğrulanamadı"
-                            )
-                        }
-                    }
-                }
-                .onFailure { err ->
-                    val raw = err.message ?: "Bilinmeyen hata"
-                    val friendly = if (raw.contains("timed out", true) || raw.contains("timeout", true) || raw.contains("failed to connect", true)) {
-                        "Sunucuya ulaşılamadı (127.0.0.1:8080). agy-web sunucusu çalışıyor mu? ($raw)"
-                    } else raw
-                    _uiState.update { it.copy(isAuthenticating = false, authError = friendly) }
-                }
-        }
-    }
-
-    // agy'nin kendi OAuth akışını başlatır (TUI gibi): sunucu agy'yi spawn edip
-    // ürettiği state+code_challenge'lı URL'yi döndürür; app bunu tarayıcıda açar.
-    fun startAgyLogin(openUri: (String) -> Unit) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isAgyAuthLoading = true, agyAuthError = null) }
-            repository.startAgLogin()
-                .onSuccess { res ->
-                    if (res.status == "ok" && !res.authUrl.isNullOrBlank()) {
-                        _uiState.update { it.copy(isAgyAuthLoading = false, agyAuthUrl = res.authUrl, isAgyWaitingCode = true) }
-                        openUri(res.authUrl)
-                    } else {
-                        _uiState.update {
-                            it.copy(
-                                isAgyAuthLoading = false,
-                                agyAuthError = "Giriş başlatılamadı (sunucu URL döndüremedi). agy-web sunucusu güncel mi?"
-                            )
-                        }
-                    }
-                }
-                .onFailure { err ->
-                    val raw = err.message ?: "Bilinmeyen hata"
-                    val friendly = if (raw.contains("timed out", true) || raw.contains("timeout", true) || raw.contains("failed to connect", true)) {
-                        "Sunucuya ulaşılamadı (127.0.0.1:8080). agy-web sunucusu çalışıyor mu? ($raw)"
-                    } else raw
-                    _uiState.update { it.copy(isAgyAuthLoading = false, agyAuthError = friendly) }
-                }
-        }
-    }
-
-    // Tarayıcıdan dönen 4/... yetkilendirme kodunu agy'ye geri besler; agy token'ı yazar.
-    fun submitAgyCode(code: String) {
-        val trimmed = code.trim()
-        if (trimmed.isBlank()) return
-        viewModelScope.launch {
-            _uiState.update { it.copy(isAgyAuthLoading = true, agyAuthError = null) }
-            repository.submitAuthCode(trimmed)
-                .onSuccess { res ->
-                    if (res.status == "ok") {
-                        // agy kodu işliyor; token dosyasının yazılmasını bekle.
-                        pollAgyAuth()
-                    } else {
-                        _uiState.update { it.copy(isAgyAuthLoading = false, agyAuthError = res.error ?: "Kod gönderilemedi.") }
-                    }
-                }
-                .onFailure { err ->
-                    val raw = err.message ?: "Bilinmeyen hata"
-                    val friendly = if (raw.contains("timed out", true) || raw.contains("timeout", true) || raw.contains("failed to connect", true)) {
-                        "Sunucuya ulaşılamadı (127.0.0.1:8080). agy-web sunucusu çalışıyor mu? ($raw)"
-                    } else raw
-                    _uiState.update { it.copy(isAgyAuthLoading = false, agyAuthError = friendly) }
-                }
-        }
-    }
-
-    private suspend fun pollAgyAuth() {
-        repeat(20) {
-            delay(1500)
-            repository.fetchAuthStatus()
-                .onSuccess { res ->
-                    if (res.isAuthenticated) {
-                        _uiState.update {
-                            it.copy(
-                                isAuthenticated = true,
-                                authMethod = res.authMethod,
-                                showAuthDialog = false,
-                                isAgyAuthLoading = false,
-                                isAgyWaitingCode = false,
-                                agyAuthError = null,
-                                agyAuthUrl = null
-                            )
-                        }
-                        refreshAll()
-                        return
-                    }
-                }
-        }
-        _uiState.update {
-            it.copy(
-                isAgyAuthLoading = false,
-                isAgyWaitingCode = false,
-                agyAuthError = "Token alınamadı. Tarayıcıda girişi tamamladığınızdan ve dönen 4/... kodunu doğru yapıştırdığınızdan emin olun."
-            )
         }
     }
 

@@ -32,7 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
+
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -181,19 +181,9 @@ fun ChatScreen(
 
     // Auth & Token Input Sheet
     if (uiState.showAuthDialog) {
-        val uriHandler = LocalUriHandler.current
         AuthTokenDialog(
             isAuthenticated = uiState.isAuthenticated,
-            authMethod = uiState.authMethod,
-            onDismiss = { viewModel.setAuthDialogVisible(false) },
-            onSubmitToken = { token -> viewModel.submitAuthToken(token) },
-            isSubmitting = uiState.isAuthenticating,
-            error = uiState.authError,
-            onStartAgyLogin = { viewModel.startAgyLogin { url -> uriHandler.openUri(url) } },
-            onAgyCodeSubmit = { code -> viewModel.submitAgyCode(code) },
-            isAgyAuthLoading = uiState.isAgyAuthLoading,
-            agyAuthError = uiState.agyAuthError,
-            isAgyWaitingCode = uiState.isAgyWaitingCode
+            onDismiss = { viewModel.setAuthDialogVisible(false) }
         )
     }
 

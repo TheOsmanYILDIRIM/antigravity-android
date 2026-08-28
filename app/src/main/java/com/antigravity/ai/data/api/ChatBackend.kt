@@ -67,15 +67,6 @@ interface ChatBackend {
 
     suspend fun fetchAuthStatus(): Result<AuthStatusResponse> =
         Result.success(AuthStatusResponse("ok", true, "none"))
-
-    suspend fun submitAuthToken(token: String): Result<AuthTokenResponse> =
-        Result.success(AuthTokenResponse("ok"))
-
-    suspend fun startAgLogin(): Result<AgLoginResponse> =
-        Result.failure(UnsupportedOperationException("agy auth desteklenmiyor"))
-
-    suspend fun submitAuthCode(code: String): Result<AgLoginCodeResponse> =
-        Result.failure(UnsupportedOperationException("agy auth desteklenmiyor"))
 }
 
 /** opencode tarafından sorulan izin isteği (StreamEvent.PermissionRequested ile taşınır). */
