@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.MoreVert
@@ -45,12 +46,12 @@ fun MessageItem(
     val context = LocalContext.current
 
     if (isUser) {
-        // User Message (Figma: Right-aligned #282A2C bubble)
-        Row(
+        // User Message (Figma: Right-aligned #282A2C bubble with action toolbar)
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.End
+                .padding(vertical = 6.dp),
+            horizontalAlignment = Alignment.End
         ) {
             Column(
                 modifier = Modifier
@@ -85,6 +86,7 @@ fun MessageItem(
                                         .fillMaxWidth()
                                         .heightIn(min = 120.dp, max = 220.dp)
                                         .clip(RoundedCornerShape(12.dp))
+                                        .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
                                 )
                             } else {
                                 Surface(
@@ -117,12 +119,58 @@ fun MessageItem(
                     }
                 }
 
-                Text(
-                    text = message.content,
-                    fontSize = fontSizeSp.sp,
-                    lineHeight = (fontSizeSp * 1.45f).sp,
-                    color = TextPrimary
-                )
+                // Selectable text for User Message
+                SelectionContainer {
+                    Text(
+                        text = message.content,
+                        fontSize = fontSizeSp.sp,
+                        lineHeight = (fontSizeSp * 1.45f).sp,
+                        color = TextPrimary
+                    )
+                }
+            }
+
+            // User Message Toolbar (Copy & Share Button)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier.padding(top = 2.dp, end = 4.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText("User Message", message.content)
+                        clipboard.setPrimaryClip(clip)
+                        Toast.makeText(context, "Mesaj kopyalandı", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.size(26.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.ContentCopy,
+                        contentDescription = "Kopyala",
+                        tint = TextMuted.copy(alpha = 0.7f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        val sendIntent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_TEXT, message.content)
+                            type = "text/plain"
+                        }
+                        context.startActivity(Intent.createChooser(sendIntent, "Mesajı Paylaş"))
+                    },
+                    modifier = Modifier.size(26.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Share,
+                        contentDescription = "Paylaş",
+                        tint = TextMuted.copy(alpha = 0.7f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
             }
         }
     } else {
@@ -130,7 +178,7 @@ fun MessageItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp),
+                .padding(vertical = 10.dp),
             horizontalArrangement = Arrangement.Start
         ) {
             GeminiSparkleIcon(
@@ -155,7 +203,7 @@ fun MessageItem(
                     }
                 }
 
-                // Message content with Full Markdown Renderer
+                // Message content with Full Markdown Renderer wrapped in SelectionContainer
                 if (message.content.isEmpty() && message.state == MessageState.GENERATING) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -174,10 +222,12 @@ fun MessageItem(
                         )
                     }
                 } else {
-                    MarkdownRenderer(
-                        markdown = message.content,
-                        fontSizeSp = fontSizeSp
-                    )
+                    SelectionContainer {
+                        MarkdownRenderer(
+                            markdown = message.content,
+                            fontSizeSp = fontSizeSp
+                        )
+                    }
                 }
 
                 // Figma Actions Toolbar (👍 👎 ↗ 📋 ⋮) + Token Stats

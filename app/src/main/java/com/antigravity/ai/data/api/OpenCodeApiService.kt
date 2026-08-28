@@ -133,7 +133,6 @@ class OpenCodeApiService(
                     val json = gson.fromJson(data, JsonObject::class.java) ?: return
                     val t = json.get("type")?.asString ?: return
                     if (t == "session.next.text.ended" || t == "session.error") terminated = true
-                    if (t != "session.next.text.ended" && t != "session.error") terminated = false
                     val props = json.getAsJsonObject("properties") ?: JsonObject()
                     trySend(RawEvent(t, props))
                 } catch (_: Exception) {

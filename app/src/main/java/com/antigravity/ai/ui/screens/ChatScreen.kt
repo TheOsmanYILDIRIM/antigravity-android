@@ -217,6 +217,7 @@ fun ChatScreen(
             ChatDrawer(
                 conversations = uiState.conversations,
                 currentSessionId = uiState.currentSessionId,
+                pinnedIds = uiState.pinnedConversationIds,
                 onSelectConversation = { id ->
                     viewModel.selectConversation(id)
                     scope.launch { drawerState.close() }
@@ -228,9 +229,22 @@ fun ChatScreen(
                 onDeleteConversation = { id ->
                     viewModel.deleteConversation(id)
                 },
+                onTogglePinConversation = { id ->
+                    viewModel.togglePinConversation(id)
+                },
+                onExportSingleConversation = { id ->
+                    viewModel.exportSingleConversation(context, id)
+                },
+                onExportAllConversations = {
+                    viewModel.exportAllConversations(context)
+                },
                 onOpenVault = {
                     scope.launch { drawerState.close() }
                     viewModel.setVaultManagerVisible(true)
+                },
+                onOpenSettings = {
+                    scope.launch { drawerState.close() }
+                    viewModel.setSettingsDialogVisible(true)
                 }
             )
         }

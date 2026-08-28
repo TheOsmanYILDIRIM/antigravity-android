@@ -29,6 +29,7 @@ import java.util.Locale
 data class ChatUiState(
     val messages: List<Message> = emptyList(),
     val conversations: List<ConversationMeta> = emptyList(),
+    val pinnedConversationIds: Set<String> = emptySet(),
     val currentSessionId: String? = null,
     val currentConversationId: String? = null,
     val inputText: String = "",
@@ -67,7 +68,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = application.getSharedPreferences("agy_settings", android.content.Context.MODE_PRIVATE)
     private lateinit var repository: ChatRepository
     private var eventsJob: Job? = null
-    private val _uiState = MutableStateFlow(ChatUiState(settings = loadSavedSettings()))
+    private val _uiState = MutableStateFlow(ChatUiState(
+        settings = loadSavedSettings(),
+        pinnedConversationIds = prefs.getStringSet("pinned_conversations", emptySet()) ?: emptySet()
+    ))
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     private var speechRecognizer: SpeechRecognizer? = null
@@ -303,7 +307,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             if (list.isNotEmpty() && list.last().role == "bot") {
                                 val last = list.last()
                                 val updated = last.copy(
-                                    content = last.content + "\n\n⚠️ Hata: ${event.message}*",
+                                    content = last.content + "\n\n⚠️ *Hata: ${event.message}*",
                                     state = MessageState.ERROR
                                 )
                                 list[list.size - 1] = updated
@@ -517,7 +521,101 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    // Smart Multi-Paste Detection & Slash/Mention Triggers
+    fun togglePinConversation(id: String) {
+        val current = _uiState.value.pinnedConversationIds.toMutableSet()
+        if (current.contains(id)) {
+            current.remove(id)
+        } else {
+            current.add(id)
+        }
+        prefs.edit().putStringSet("pinned_conversations", current).apply()
+        _uiState.update { it.copy(pinnedConversationIds = current) }
+    }
+
+    fun exportSingleConversation(context: android.content.Context, id: String) {
+        viewModelScope.launch {
+            repository.loadConversation(id).onSuccess { res ->
+                val session = res.session ?: return@onSuccess
+                val sb = StringBuilder()
+                sb.append("# ").append(session.title ?: "Antigravity AI Sohbeti").append("\n\n")
+                sb.append("**Sohbet ID:** `").append(session.id ?: id).append("`  \n")
+                sb.append("**Tarih:** ").append(java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(java.util.Date())).append("\n\n---\n\n")
+
+                session.messages?.forEach { msg ->
+                    val roleName = if (msg.role == "user") "👤 Kullanıcı" else "✨ Antigravity AI"
+                    sb.append("### ").append(roleName).append("\n\n")
+                    if (!msg.content.isNullOrBlank()) {
+                        sb.append(msg.content).append("\n\n")
+                    }
+                    msg.tools?.forEach { tool ->
+                        sb.append("> ⚙️ **Araç Çağrısı:** `").append(tool.name).append("` (Durum: ").append(tool.state).append(")\n")
+                    }
+                    sb.append("\n---\n\n")
+                }
+
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, session.title ?: "Sohbet Dışa Aktarımı")
+                    putExtra(Intent.EXTRA_TEXT, sb.toString())
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(Intent.createChooser(shareIntent, "Sohbeti Paylaş / Dışa Aktar").apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                })
+            }
+        }
+    }
+
+    fun exportAllConversations(context: android.content.Context) {
+        viewModelScope.launch {
+            val convs = _uiState.value.conversations
+            if (convs.isEmpty()) {
+                android.widget.Toast.makeText(context, "Dışa aktarılacak sohbet bulunamadı", android.widget.Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+
+            val sb = StringBuilder()
+            sb.append("# Antigravity AI - Tüm Sohbetler Arşivi\n\n")
+            sb.append("**Toplam Sohbet Sayısı:** ").append(convs.size).append("  \n")
+            sb.append("**Arşiv Tarihi:** ").append(java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(java.util.Date())).append("\n\n")
+            sb.append("## İçindekiler\n\n")
+            convs.forEachIndexed { index, meta ->
+                sb.append("${index + 1}. [${meta.title}](#sohbet-${meta.id})\n")
+            }
+            sb.append("\n---\n\n")
+
+            for (meta in convs) {
+                repository.loadConversation(meta.id).onSuccess { res ->
+                    val session = res.session ?: return@onSuccess
+                    sb.append("<a name=\"sohbet-${session.id}\"></a>\n\n")
+                    sb.append("## ").append(session.title ?: meta.title).append("\n\n")
+                    sb.append("**Tarih:** ").append(meta.lastMessageTime ?: "").append("  \n\n")
+
+                    session.messages?.forEach { msg ->
+                        val roleName = if (msg.role == "user") "👤 Kullanıcı" else "✨ Antigravity AI"
+                        sb.append("### ").append(roleName).append("\n\n")
+                        if (!msg.content.isNullOrBlank()) {
+                            sb.append(msg.content).append("\n\n")
+                        }
+                        sb.append("\n")
+                    }
+                    sb.append("\n---\n\n")
+                }
+            }
+
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, "Antigravity AI - Tüm Sohbetler Arşivi")
+                putExtra(Intent.EXTRA_TEXT, sb.toString())
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "Tüm Sohbetleri Paylaş / Dışa Aktar").apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            })
+        }
+    }
+
+    // Smart Multi-Paste Detection & Universal Slash/Mention Triggers (Anywhere in text)
     fun onInputTextChange(newText: String) {
         val isHugePaste = (newText.length > 150 || newText.lines().size > 3) && _uiState.value.inputText.isEmpty()
         if (isHugePaste) {
@@ -531,15 +629,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        val isSlash = newText.startsWith("/")
-        val lastWord = newText.substringAfterLast(" ")
+        val lastWord = newText.split(Regex("[\\s\n]+")).lastOrNull() ?: ""
+        val isSlash = lastWord.startsWith("/") && lastWord.length >= 1
         val isMention = lastWord.startsWith("@")
 
         _uiState.update {
             it.copy(
                 inputText = newText,
                 showSlashCommands = isSlash,
-                slashQuery = if (isSlash) newText else "",
+                slashQuery = if (isSlash) lastWord else "",
                 showMentions = isMention,
                 mentionQuery = if (isMention) lastWord else ""
             )
@@ -547,9 +645,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onSelectSlashCommand(cmd: SlashCommand) {
-        _uiState.update {
-            it.copy(
-                inputText = cmd.command + " ",
+        _uiState.update { state ->
+            val text = state.inputText
+            val lastSlashIdx = text.lastIndexOf('/')
+            val updated = if (lastSlashIdx >= 0) {
+                text.substring(0, lastSlashIdx) + cmd.command + " "
+            } else {
+                cmd.command + " "
+            }
+            state.copy(
+                inputText = updated,
                 showSlashCommands = false
             )
         }
@@ -557,8 +662,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onSelectMention(item: VaultItem) {
         _uiState.update { state ->
-            val prefix = state.inputText.substringBeforeLast("@")
-            val updated = "$prefix@${item.path} "
+            val text = state.inputText
+            val lastAtIdx = text.lastIndexOf('@')
+            val updated = if (lastAtIdx >= 0) {
+                text.substring(0, lastAtIdx) + "@${item.path} "
+            } else {
+                "$text @${item.path} "
+            }
             state.copy(
                 inputText = updated,
                 showMentions = false

@@ -377,7 +377,6 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
         val listener = object : EventSourceListener() {
             override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
                 try {
-                    if (type != "done" && type != "stopped" && type != "error") terminated = false
                     when (type) {
                         "init" -> {
                             terminated = false
@@ -388,7 +387,6 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                             }
                         }
                         "chunk" -> {
-                            terminated = false
                             val json = gson.fromJson(data, JsonObject::class.java)
                             val delta = json.get("text_delta")?.asString ?: ""
                             val full = json.get("full_content")?.asString ?: ""
