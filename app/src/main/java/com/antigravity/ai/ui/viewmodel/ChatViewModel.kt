@@ -48,6 +48,8 @@ data class ChatUiState(
     val showAuthDialog: Boolean = false,
     val isAuthenticated: Boolean = true,
     val authMethod: String = "oauth",
+    val isAuthenticating: Boolean = false,
+    val authError: String? = null,
     val showVaultManager: Boolean = false,
     val showUsageDetail: Boolean = false,
     val showSlashCommands: Boolean = false,
@@ -602,7 +604,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setAuthDialogVisible(visible: Boolean) {
-        _uiState.update { it.copy(showAuthDialog = visible) }
+        _uiState.update {
+            it.copy(
+                showAuthDialog = visible,
+                // Dialog açılınca önceki hata/yükleniyor durumunu temizle
+                authError = if (visible) null else it.authError,
+                isAuthenticating = if (visible) false else it.isAuthenticating
+            )
+        }
     }
 
     fun fetchAuthStatus() {
@@ -614,17 +623,39 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun submitAuthToken(token: String) {
+        val trimmed = token.trim()
+        if (trimmed.isBlank()) return
         viewModelScope.launch {
-            repository.submitAuthToken(token).onSuccess { res ->
-                if (res.status == "ok") {
-                    _uiState.update { it.copy(isAuthenticated = true, showAuthDialog = false) }
-                    refreshAll()
-                } else {
-                    _uiState.update { it.copy(errorMessage = res.error ?: "Token doğrulanamadı") }
+            // Başarısız olunca dialog KAPANMASIN ve token KAYBOLMASIN; sadece hata göster.
+            _uiState.update { it.copy(isAuthenticating = true, authError = null) }
+            repository.submitAuthToken(trimmed)
+                .onSuccess { res ->
+                    if (res.status == "ok") {
+                        _uiState.update {
+                            it.copy(
+                                isAuthenticated = true,
+                                showAuthDialog = false,
+                                isAuthenticating = false,
+                                authError = null
+                            )
+                        }
+                        refreshAll()
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                isAuthenticating = false,
+                                authError = res.error ?: "Token doğrulanamadı"
+                            )
+                        }
+                    }
                 }
-            }.onFailure { err ->
-                _uiState.update { it.copy(errorMessage = err.message) }
-            }
+                .onFailure { err ->
+                    val raw = err.message ?: "Bilinmeyen hata"
+                    val friendly = if (raw.contains("timed out", true) || raw.contains("timeout", true) || raw.contains("failed to connect", true)) {
+                        "Sunucuya ulaşılamadı (127.0.0.1:8080). agy-web sunucusu çalışıyor mu? ($raw)"
+                    } else raw
+                    _uiState.update { it.copy(isAuthenticating = false, authError = friendly) }
+                }
         }
     }
 

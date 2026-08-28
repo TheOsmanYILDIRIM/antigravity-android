@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.VpnKey
 import androidx.compose.material3.*
@@ -42,13 +43,48 @@ fun AuthTokenDialog(
     isAuthenticated: Boolean,
     authMethod: String,
     onDismiss: () -> Unit,
-    onSubmitToken: (String) -> Unit
+    onSubmitToken: (String) -> Unit,
+    isSubmitting: Boolean = false,
+    error: String? = null
 ) {
     var tokenText by remember { mutableStateOf("") }
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
 
     val loginUrl = "https://accounts.google.com/o/oauth2/auth?access_type=offline&client_id=1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com&code_challenge=8UeT9jf4mnW3ey1FRS1d4z3ebhrJqr-d7ImVENDWxKw&code_challenge_method=S256&prompt=consent&redirect_uri=https%3A%2F%2Fantigravity.google%2Foauth-callback&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcclog+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fexperimentsandconfigs+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Faicode+openid"
+
+    fun openLogin() {
+        try {
+            uriHandler.openUri(loginUrl)
+        } catch (e: Exception) {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("Login URL", loginUrl))
+            Toast.makeText(context, "Bağlantı kopyalandı! Tarayıcıya yapıştırın.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun looksLikeToken(text: String): Boolean {
+        val t = text.trim()
+        if (t.length < 12) return false
+        if (t.contains(" ")) return false
+        return t.startsWith("{") || t.startsWith("ya29.") || t.startsWith("4/") || t.startsWith("0A") ||
+                t.contains("access_token") || t.matches(Regex("^[A-Za-z0-9\\-_.=]+$"))
+    }
+
+    // Dialog açılınca: tarayıcıyı otomatik aç + panodaki token benzeri metni alana doldur.
+    var initialized by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!initialized) {
+            initialized = true
+            openLogin()
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = clipboard.primaryClip?.getItemAt(0)?.text?.toString()?.trim() ?: ""
+            if (clip.isNotBlank() && looksLikeToken(clip) && tokenText.isEmpty()) {
+                tokenText = clip
+                Toast.makeText(context, "Panodaki kod/token alana yapıştırıldı", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -132,15 +168,7 @@ fun AuthTokenDialog(
             Spacer(modifier = Modifier.height(6.dp))
 
             Button(
-                onClick = {
-                    try {
-                        uriHandler.openUri(loginUrl)
-                    } catch (e: Exception) {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("Login URL", loginUrl))
-                        Toast.makeText(context, "Bağlantı kopyalandı! Tarayıcıya yapıştırın.", Toast.LENGTH_LONG).show()
-                    }
-                },
+                onClick = { openLogin() },
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SurfaceVariantDark),
                 border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
@@ -172,10 +200,12 @@ fun AuthTokenDialog(
                         .clip(RoundedCornerShape(8.dp))
                         .clickable {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clipText = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+                            val clipText = clipboard.primaryClip?.getItemAt(0)?.text?.toString()?.trim() ?: ""
                             if (clipText.isNotBlank()) {
-                                tokenText = clipText.trim()
+                                tokenText = clipText
                                 Toast.makeText(context, "Panodan yapıştırıldı", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Panoda metin yok", Toast.LENGTH_SHORT).show()
                             }
                         }
                         .padding(horizontal = 6.dp, vertical = 2.dp)
@@ -192,7 +222,7 @@ fun AuthTokenDialog(
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = InputBackground,
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (error != null) Color(0xFFE5484D) else BorderSubtle),
                 modifier = Modifier.fillMaxWidth().heightIn(min = 90.dp, max = 150.dp)
             ) {
                 Box(modifier = Modifier.padding(12.dp)) {
@@ -219,26 +249,65 @@ fun AuthTokenDialog(
                 }
             }
 
+            // Inline hata mesajı (token kaybolmaz, dialog kapanmaz)
+            if (error != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF2C1E1B),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5484D).copy(alpha = 0.6f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Outlined.Lock, contentDescription = null, tint = Color(0xFFE5484D), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = error,
+                            color = Color(0xFFFFB4B4),
+                            fontSize = 11.sp,
+                            lineHeight = 16.sp
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
 
             // Submit Button
             Button(
                 onClick = {
-                    if (tokenText.isNotBlank()) {
+                    if (tokenText.isNotBlank() && !isSubmitting) {
+                        // Başarısız olunca dialog KAPANMASIN; sadece ViewModel hata gösterir.
                         onSubmitToken(tokenText.trim())
-                        onDismiss()
-                    } else {
-                        Toast.makeText(context, "Lütfen önce bir token veya kod yapıştırın", Toast.LENGTH_SHORT).show()
                     }
                 },
-                enabled = tokenText.isNotBlank(),
+                enabled = tokenText.isNotBlank() && !isSubmitting,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryIndigo),
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {
-                Icon(imageVector = Icons.Outlined.VpnKey, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Tokenı Doğrula ve Kaydet", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                if (isSubmitting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Doğrulanıyor...", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                } else {
+                    Icon(imageVector = Icons.Outlined.VpnKey, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Tokenı Doğrula ve Kaydet", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+            }
+
+            if (error != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(onClick = { openLogin() }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(imageVector = Icons.Default.Refresh, contentDescription = null, tint = GeminiBlue, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "Linke yeniden git", fontSize = 12.sp, color = GeminiBlue)
+                }
             }
         }
     }

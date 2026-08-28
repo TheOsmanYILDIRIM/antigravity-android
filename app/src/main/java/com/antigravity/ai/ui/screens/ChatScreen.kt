@@ -184,7 +184,9 @@ fun ChatScreen(
             isAuthenticated = uiState.isAuthenticated,
             authMethod = uiState.authMethod,
             onDismiss = { viewModel.setAuthDialogVisible(false) },
-            onSubmitToken = { token -> viewModel.submitAuthToken(token) }
+            onSubmitToken = { token -> viewModel.submitAuthToken(token) },
+            isSubmitting = uiState.isAuthenticating,
+            error = uiState.authError
         )
     }
 
