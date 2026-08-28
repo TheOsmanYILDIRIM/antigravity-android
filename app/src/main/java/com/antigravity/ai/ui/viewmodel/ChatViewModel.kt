@@ -318,8 +318,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 isAuthenticated = false,
                                 isGenerating = false,
                                 errorMessage = event.message,
-                                showAuthDialog = true,
-                                authError = event.message
+                                showAuthDialog = true
                             )
                         }
                         fireNotification("Antigravity AI", "Oturum yenileme gerekli: ${event.message.take(140)}")
