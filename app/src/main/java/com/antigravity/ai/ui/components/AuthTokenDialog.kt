@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -26,8 +25,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.TextStyle
@@ -50,6 +50,7 @@ fun AuthTokenDialog(
     var tokenText by remember { mutableStateOf("") }
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
+    val focusRequester = remember { FocusRequester() }
 
     val loginUrl = "https://accounts.google.com/o/oauth2/auth?access_type=offline&client_id=1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com&code_challenge=8UeT9jf4mnW3ey1FRS1d4z3ebhrJqr-d7ImVENDWxKw&code_challenge_method=S256&prompt=consent&redirect_uri=https%3A%2F%2Fantigravity.google%2Foauth-callback&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcclog+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fexperimentsandconfigs+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Faicode+openid"
 
@@ -63,6 +64,13 @@ fun AuthTokenDialog(
         }
     }
 
+    fun readClipboard(): String? = try {
+        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        cm.primaryClip?.getItemAt(0)?.text?.toString()?.trim()
+    } catch (e: Exception) {
+        null
+    }
+
     fun looksLikeToken(text: String): Boolean {
         val t = text.trim()
         if (t.length < 12) return false
@@ -71,19 +79,26 @@ fun AuthTokenDialog(
                 t.contains("access_token") || t.matches(Regex("^[A-Za-z0-9\\-_.=]+$"))
     }
 
-    // Dialog açılınca: tarayıcıyı otomatik aç + panodaki token benzeri metni alana doldur.
+    // Dialog açılınca: tarayıcıyı otomatik aç + panodaki token benzeri metni alana doldur + odağı ver.
     var initialized by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         if (!initialized) {
             initialized = true
             openLogin()
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = clipboard.primaryClip?.getItemAt(0)?.text?.toString()?.trim() ?: ""
-            if (clip.isNotBlank() && looksLikeToken(clip) && tokenText.isEmpty()) {
+            val clip = readClipboard()
+            if (!clip.isNullOrBlank() && looksLikeToken(clip) && tokenText.isEmpty()) {
                 tokenText = clip
                 Toast.makeText(context, "Panodaki kod/token alana yapıştırıldı", Toast.LENGTH_SHORT).show()
             }
+            // Alanı odakla ki yapıştırma sohbet kutusuna değil buraya gelsin
+            focusRequester.requestFocus()
         }
+    }
+
+    // Kullanıcı bir yetkilendirme KODU veya URL yapıştırdıysa uyar (agy gerçek token ister).
+    val pastedLooksLikeCode = remember(tokenText) {
+        tokenText.contains("http", true) || tokenText.contains("code=", true) ||
+                tokenText.contains("accounts.google", true) || tokenText.startsWith("4/")
     }
 
     ModalBottomSheet(
@@ -199,10 +214,9 @@ fun AuthTokenDialog(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
                         .clickable {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clipText = clipboard.primaryClip?.getItemAt(0)?.text?.toString()?.trim() ?: ""
-                            if (clipText.isNotBlank()) {
-                                tokenText = clipText
+                            val clip = readClipboard()
+                            if (!clip.isNullOrBlank()) {
+                                tokenText = clip
                                 Toast.makeText(context, "Panodan yapıştırıldı", Toast.LENGTH_SHORT).show()
                             } else {
                                 Toast.makeText(context, "Panoda metin yok", Toast.LENGTH_SHORT).show()
@@ -218,34 +232,60 @@ fun AuthTokenDialog(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Token input area
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = InputBackground,
-                border = androidx.compose.foundation.BorderStroke(1.dp, if (error != null) Color(0xFFE5484D) else BorderSubtle),
-                modifier = Modifier.fillMaxWidth().heightIn(min = 90.dp, max = 150.dp)
-            ) {
-                Box(modifier = Modifier.padding(12.dp)) {
-                    if (tokenText.isEmpty()) {
+            // Token input area (odaklanabilir, yapıştırmaya uygun TextField)
+            TextField(
+                value = tokenText,
+                onValueChange = { tokenText = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester),
+                textStyle = TextStyle(
+                    color = TextPrimary,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp
+                ),
+                label = { Text("OAuth token / kod buraya yapıştırılır", color = TextMuted, fontSize = 11.sp) },
+                placeholder = {
+                    Text(
+                        "Google sonrası açılan sayfadaki TOKEN'ı (uzun string) buraya yapıştırın...",
+                        color = TextMuted,
+                        fontSize = 11.sp
+                    )
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = InputBackground,
+                    unfocusedContainerColor = InputBackground,
+                    disabledContainerColor = InputBackground,
+                    focusedIndicatorColor = GeminiBlue,
+                    unfocusedIndicatorColor = BorderSubtle,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary,
+                    cursorColor = GeminiBlue
+                ),
+                minLines = 3,
+                maxLines = 6,
+                isError = error != null
+            )
+
+            // Kullanıcı kod/URL yapıştırdıysa uyarı
+            if (pastedLooksLikeCode && tokenText.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF2C2410),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, WarningAmber.copy(alpha = 0.6f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Outlined.Lock, contentDescription = null, tint = WarningAmber, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "OAuth yetkilendirme kodunu (4/0A...) veya OAuth token JSON'ını buraya yapıştırın...",
-                            color = TextMuted,
-                            fontSize = 12.sp,
-                            lineHeight = 18.sp
+                            text = "Bu bir yetkilendirme KODU veya URL'si görünüyor. agy gerçek bir erişim TOKEN'ı ister; lütfen antigravity.google son sayfasında gösterilen token'ı (URL değil) kopyalayın.",
+                            color = WarningAmber,
+                            fontSize = 11.sp,
+                            lineHeight = 16.sp
                         )
                     }
-                    BasicTextField(
-                        value = tokenText,
-                        onValueChange = { tokenText = it },
-                        textStyle = TextStyle(
-                            color = TextPrimary,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp,
-                            lineHeight = 18.sp
-                        ),
-                        cursorBrush = SolidColor(GeminiBlue),
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
             }
 
