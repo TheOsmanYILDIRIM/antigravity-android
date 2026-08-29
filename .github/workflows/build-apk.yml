@@ -44,19 +44,17 @@ jobs:
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.4.0
-          name: "Antigravity AI Mobile App v1.4.0 (Official Gemini UI Redesign)"
+          tag_name: v1.4.1
+          name: "Antigravity AI Mobile App v1.4.1 (Clone Edition - Çakışmasız Yan Yana Kurulum)"
           body: |
-            ### ⚡ Antigravity AI - Jetpack Compose Native Mobile App (v1.4.0)
+            ### ⚡ Antigravity AI - Jetpack Compose Native Mobile App (v1.4.1 Clone Edition)
             
-            Android (ARM64-v8a) için optimize edilmiş ve **Figma Gemini UI Screens** tasarımı baz alınarak baştan sona yeniden tasarlanmış yerel mobil asistan uygulaması.
+            Ana Antigravity uygulaması veya diğer sürümlerle çakışmadan aynı Android cihazda **yan yana bağımsız olarak kurulabilmesi** için `com.antigravity.ai.clone` paket kimliği ile derlenen sürüm.
             
-            #### 🎨 Figma Gemini UI Tasarım Yenilikleri:
-            - **'Hello, Osman' Karşılama Ekranı:** Canlı Gemini Sparkle (✦) gradyan ikonu, yatay kaydırılabilir öneri kartları (`Help me`, `Explore`, `Analyze`, `Plan`) ve hızlı yetenek çipi.
-            - **Modern Mesaj Balonları & Aksiyonlar:** Beğen 👍, Beğenme 👎, Paylaş ↗, Panoya Kopyala 📋 aksiyon araç çubuğu ve token telemetrisi.
-            - **Sleek Input Dock:** Yuvarlatılmış `#1E1F20` hap input barı, `+` dosya/resim ekleme, model hızlı geçiş hapı (`Gemini 3.7 Flash ⚡`), sesli yazma ve gönderme butonu.
-            - **Figma Gemini Yan Çekmece:** `Search for chats` arama barı, `New Chat` aksiyonu, `My Stuff (Vault)` ve aktif konuşma vurgusu.
+            #### 🚀 Yenilikler & Düzeltmeler:
+            - **Klon / Yan Yana Kurulum (Side-by-side Install):** `applicationId = "com.antigravity.ai.clone"` ve bağımsız paket kimliği.
             - **Sabit İmzalı Kalıcı Keystore:** Üst üste güncelleme garantisi.
+            - **Figma Gemini UI Redesign:** Sparkle karşılama ekranı, sleek input dock, model seçimi, çift arka uç (AGY + OpenCode) desteği.
           files: build-output/AntigravityAI-arm64-v8a.apk
           make_latest: true
         env:

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Antigravity AI</string>
+    <string name="app_name">Antigravity AI (Clone)</string>
     <string name="new_chat">Yeni Sohbet</string>
     <string name="conversations">Sohbetler</string>
     <string name="no_conversations">Henüz kayıtlı bir sohbet yok</string>
