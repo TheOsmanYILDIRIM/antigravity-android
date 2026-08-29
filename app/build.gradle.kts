@@ -9,11 +9,11 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.antigravity.ai.clone"
+        applicationId = "com.antigravity.ai"
         minSdk = 24
         targetSdk = 34
-        versionCode = 6
-        versionName = "1.4.1"
+        versionCode = 5
+        versionName = "1.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
