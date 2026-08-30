@@ -1,6 +1,7 @@
 package com.antigravity.ai.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -13,6 +14,7 @@ import androidx.lifecycle.viewModelScope
 import com.antigravity.ai.data.api.*
 import com.antigravity.ai.data.model.*
 import com.antigravity.ai.data.repository.ChatRepository
+import com.antigravity.ai.service.FloatingKeepAliveService
 import com.antigravity.ai.util.NotificationHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,6 +65,10 @@ data class ChatUiState(
     val isViewerLoading: Boolean = false,
     val activeImageViewerUrl: String? = null,
     val activeImageViewerTitle: String = "",
+    val serverHealth: ServerHealth? = null,
+    val isCheckingHealth: Boolean = false,
+    val isKeepAliveRunning: Boolean = false,
+    val keepAliveMode: String = "invisible",
     val showUsageDetail: Boolean = false,
     val showSlashCommands: Boolean = false,
     val slashQuery: String = "",
@@ -90,12 +96,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         initSpeechRecognizer()
+        val floatPrefs = application.getSharedPreferences(FloatingKeepAliveService.PREFS_NAME, Context.MODE_PRIVATE)
+        val keepAliveEnabled = floatPrefs.getBoolean(FloatingKeepAliveService.KEY_ENABLED, false)
+        val keepAliveMode = floatPrefs.getString(FloatingKeepAliveService.KEY_MODE, "invisible") ?: "invisible"
+        _uiState.update { it.copy(isKeepAliveRunning = keepAliveEnabled, keepAliveMode = keepAliveMode) }
+        if (keepAliveEnabled && FloatingKeepAliveService.canDrawOverlays(application)) {
+            FloatingKeepAliveService.startKeepAlive(application)
+        }
         viewModelScope.launch(Dispatchers.IO) {
             val name = resolveBackendName()
             repository = ChatRepository(buildBackend(name))
             _uiState.update { it.copy(activeBackend = name) }
             startEventCollection()
             refreshAll()
+            checkServerHealth()
         }
     }
 
@@ -611,6 +625,69 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val refText = "@$path"
             val updated = if (current.isEmpty()) refText else "$current $refText"
             state.copy(inputText = updated)
+        }
+    }
+
+    fun checkServerHealth() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCheckingHealth = true) }
+            val health = AgyServerManager.checkHealth()
+            _uiState.update { it.copy(serverHealth = health, isCheckingHealth = false) }
+        }
+    }
+
+    fun startAgyServer() {
+        AgyServerManager.startServer(getApplication()) { success, msg ->
+            _uiState.update { it.copy(notice = msg) }
+            viewModelScope.launch {
+                delay(1200)
+                checkServerHealth()
+                if (_uiState.value.showFileManager) {
+                    loadFsDirectory(_uiState.value.fsCurrentDir)
+                    loadFsProjects()
+                }
+            }
+        }
+    }
+
+    fun stopAgyServer() {
+        viewModelScope.launch {
+            AgyServerManager.stopServer(getApplication()) { success, msg ->
+                _uiState.update { it.copy(notice = msg) }
+                checkServerHealth()
+            }
+        }
+    }
+
+    fun restartAgyServer() {
+        AgyServerManager.restartServer(getApplication()) { success, msg ->
+            _uiState.update { it.copy(notice = msg) }
+            viewModelScope.launch {
+                delay(1500)
+                checkServerHealth()
+            }
+        }
+    }
+
+    fun toggleKeepAlive(enabled: Boolean, mode: String = "invisible") {
+        val app = getApplication<Application>()
+        val floatPrefs = app.getSharedPreferences(FloatingKeepAliveService.PREFS_NAME, Context.MODE_PRIVATE)
+        floatPrefs.edit()
+            .putBoolean(FloatingKeepAliveService.KEY_ENABLED, enabled)
+            .putString(FloatingKeepAliveService.KEY_MODE, mode)
+            .apply()
+
+        if (enabled) {
+            FloatingKeepAliveService.startKeepAlive(app)
+        } else {
+            FloatingKeepAliveService.stopKeepAlive(app)
+        }
+
+        _uiState.update {
+            it.copy(
+                isKeepAliveRunning = enabled,
+                keepAliveMode = mode
+            )
         }
     }
 

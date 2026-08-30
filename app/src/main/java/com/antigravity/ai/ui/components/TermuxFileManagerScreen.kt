@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.antigravity.ai.data.api.ServerHealth
 import com.antigravity.ai.data.model.FsItem
 import com.antigravity.ai.data.model.ProjectItem
 import com.antigravity.ai.ui.theme.*
@@ -50,7 +51,9 @@ fun TermuxFileManagerScreen(
     onOpenImage: (String, String) -> Unit,
     onAttachToChat: (String) -> Unit,
     onMentionInChat: (String) -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    serverHealth: ServerHealth? = null,
+    onStartServer: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var selectedTab by remember { mutableStateOf(0) } // 0: Dosya Gezgini, 1: Projeler
@@ -421,11 +424,54 @@ fun TermuxFileManagerScreen(
                             modifier = Modifier.fillMaxSize().padding(24.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = if (searchQuery.isNotEmpty()) "Eşleşen dosya bulunamadı" else "Bu klasör boş",
-                                color = TextMuted,
-                                fontSize = 14.sp
-                            )
+                            if (serverHealth?.isOnline == false && searchQuery.isEmpty()) {
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = SurfaceDark,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, DangerRed.copy(alpha = 0.5f)),
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(20.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PowerSettingsNew,
+                                            contentDescription = null,
+                                            tint = DangerRed,
+                                            modifier = Modifier.size(44.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Text(
+                                            text = "Termux agy-web Sunucusu Kapalı",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp,
+                                            color = TextPrimary
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = "Termux dosya ve projelerine erişebilmek için yerel sunucunun çalışması gerekir.",
+                                            fontSize = 12.sp,
+                                            color = TextSecondary,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                        )
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Button(
+                                            onClick = onStartServer,
+                                            colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
+                                            shape = RoundedCornerShape(10.dp)
+                                        ) {
+                                            Text("⚡ Sunucuyu Başlat", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                        }
+                                    }
+                                }
+                            } else {
+                                Text(
+                                    text = if (searchQuery.isNotEmpty()) "Eşleşen dosya bulunamadı" else "Bu klasör boş",
+                                    color = TextMuted,
+                                    fontSize = 14.sp
+                                )
+                            }
                         }
                     } else {
                         LazyColumn(

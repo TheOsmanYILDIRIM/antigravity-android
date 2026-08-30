@@ -80,6 +80,15 @@ fun ChatScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { /* izin verilirse bildirimler çalışır; reddedilirse NotificationHelper zaten korur */ }
 
+    // Overlay permission launcher for Floating Keep-Alive (SYSTEM_ALERT_WINDOW)
+    val overlayPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (com.antigravity.ai.service.FloatingKeepAliveService.canDrawOverlays(context)) {
+            viewModel.toggleKeepAlive(true, uiState.keepAliveMode)
+        }
+    }
+
     // Document / Image picker launcher
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -121,6 +130,27 @@ fun ChatScreen(
             onNotificationToggle = { enabled ->
                 if (enabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                     notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+            },
+            serverHealth = uiState.serverHealth,
+            isCheckingHealth = uiState.isCheckingHealth,
+            onCheckHealth = { viewModel.checkServerHealth() },
+            onStartServer = { viewModel.startAgyServer() },
+            onStopServer = { viewModel.stopAgyServer() },
+            onRestartServer = { viewModel.restartAgyServer() },
+            isKeepAliveRunning = uiState.isKeepAliveRunning,
+            keepAliveMode = uiState.keepAliveMode,
+            onToggleKeepAlive = { enabled, mode ->
+                if (enabled && !com.antigravity.ai.service.FloatingKeepAliveService.canDrawOverlays(context)) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                        val intent = android.content.Intent(
+                            android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            android.net.Uri.parse("package:${context.packageName}")
+                        )
+                        overlayPermissionLauncher.launch(intent)
+                    }
+                } else {
+                    viewModel.toggleKeepAlive(enabled, mode)
                 }
             }
         )
@@ -229,7 +259,9 @@ fun ChatScreen(
             onRefresh = {
                 viewModel.loadFsDirectory(uiState.fsCurrentDir)
                 viewModel.loadFsProjects()
-            }
+            },
+            serverHealth = uiState.serverHealth,
+            onStartServer = { viewModel.startAgyServer() }
         )
     }
 

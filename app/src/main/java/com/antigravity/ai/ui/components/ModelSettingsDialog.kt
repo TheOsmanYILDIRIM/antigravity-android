@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.antigravity.ai.data.api.ServerHealth
 import com.antigravity.ai.data.model.ChatSettings
 import com.antigravity.ai.data.model.EffortItem
 import com.antigravity.ai.data.model.ModelItem
@@ -44,7 +45,16 @@ fun ModelSettingsDialog(
     onOpenAuthDialog: () -> Unit = {},
     currentBackend: String = "agy",
     onBackendChange: (String) -> Unit = {},
-    onNotificationToggle: (Boolean) -> Unit = {}
+    onNotificationToggle: (Boolean) -> Unit = {},
+    serverHealth: ServerHealth? = null,
+    isCheckingHealth: Boolean = false,
+    onCheckHealth: () -> Unit = {},
+    onStartServer: () -> Unit = {},
+    onStopServer: () -> Unit = {},
+    onRestartServer: () -> Unit = {},
+    isKeepAliveRunning: Boolean = false,
+    keepAliveMode: String = "invisible",
+    onToggleKeepAlive: (Boolean, String) -> Unit = { _, _ -> }
 ) {
     var selectedBackend by remember { mutableStateOf(currentBackend) }
     var selectedModel by remember { mutableStateOf(currentSettings.model) }
@@ -539,6 +549,176 @@ fun ModelSettingsDialog(
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(text = "Token Gir", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // 8. TERMUX AGY-WEB SUNUCU VE DONDURMA KORUMASI (Keep-Alive & Server Manager)
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = SurfaceVariantDark,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (serverHealth?.isOnline == true) SuccessGreen.copy(alpha = 0.5f) else DangerRed.copy(alpha = 0.5f)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(if (serverHealth?.isOnline == true) SuccessGreen else DangerRed)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Termux agy-web Sunucusu",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.5.sp,
+                                color = TextPrimary
+                            )
+                        }
+
+                        Text(
+                            text = if (serverHealth?.isOnline == true) "🟢 ÇALIŞIYOR (${serverHealth.latencyMs}ms)" else "🔴 DURDURULDU",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            color = if (serverHealth?.isOnline == true) SuccessGreen else DangerRed
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = if (serverHealth?.isOnline == true) {
+                            "PID: ${serverHealth.pid} • Uptime: ${serverHealth.uptimeSeconds / 60}dk • Port: 8080"
+                        } else {
+                            "Sunucu kapalı. Dosya yöneticisi ve CLI için başlatın."
+                        },
+                        fontSize = 11.sp,
+                        color = TextMuted
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Action buttons (Start / Restart / Stop)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = onStartServer,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.weight(1f).height(34.dp)
+                        ) {
+                            Text("⚡ Başlat", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+
+                        OutlinedButton(
+                            onClick = onRestartServer,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = GeminiBlue),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, GeminiBlue),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                            modifier = Modifier.weight(1f).height(34.dp)
+                        ) {
+                            Text("🔄 Yeniden", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                        }
+
+                        OutlinedButton(
+                            onClick = onStopServer,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, DangerRed.copy(alpha = 0.6f)),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                            modifier = Modifier.weight(1f).height(34.dp)
+                        ) {
+                            Text("🛑 Durdur", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+
+                    Divider(color = BorderSubtle, modifier = Modifier.padding(vertical = 10.dp))
+
+                    // Floating Keep-Alive Switch (Arka Plan Dondurma Koruması)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "🪟 Arka Plan Dondurma Koruması (Yüzen Pencere)",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.5.sp,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "Termux ve Node.js arka planda dondurulmadan sürekli çalışır",
+                                fontSize = 10.sp,
+                                color = TextMuted
+                            )
+                        }
+
+                        Switch(
+                            checked = isKeepAliveRunning,
+                            onCheckedChange = { onToggleKeepAlive(it, keepAliveMode) },
+                            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = SuccessGreen)
+                        )
+                    }
+
+                    if (isKeepAliveRunning) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val isInv = keepAliveMode == "invisible"
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isInv) GeminiBlue.copy(alpha = 0.2f) else SurfaceDark,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, if (isInv) GeminiBlue else BorderSubtle),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { onToggleKeepAlive(true, "invisible") }
+                            ) {
+                                Text(
+                                    text = "👻 Görünmez (1x1 px)",
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isInv) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isInv) GeminiBlue else TextPrimary,
+                                    modifier = Modifier.padding(vertical = 6.dp, horizontal = 8.dp)
+                                )
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (!isInv) GeminiPurple.copy(alpha = 0.2f) else SurfaceDark,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, if (!isInv) GeminiPurple else BorderSubtle),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { onToggleKeepAlive(true, "pill") }
+                            ) {
+                                Text(
+                                    text = "⚡ Yüzen Rozet",
+                                    fontSize = 11.sp,
+                                    fontWeight = if (!isInv) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (!isInv) GeminiPurple else TextPrimary,
+                                    modifier = Modifier.padding(vertical = 6.dp, horizontal = 8.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
