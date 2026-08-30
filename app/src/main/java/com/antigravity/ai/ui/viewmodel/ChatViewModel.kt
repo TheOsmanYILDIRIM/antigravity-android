@@ -654,10 +654,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startAgyServer() {
+        try {
+            FloatingKeepAliveService.startKeepAlive(getApplication())
+        } catch (e: Exception) {}
+
         AgyServerManager.startServer(getApplication()) { success, msg ->
-            _uiState.update { it.copy(notice = msg) }
+            _uiState.update { it.copy(notice = if (success) "Termux agy-web arka planda başlatılıyor..." else msg) }
             viewModelScope.launch {
+                delay(800)
+                checkServerHealth()
                 delay(1200)
+                checkServerHealth()
+                delay(2000)
                 checkServerHealth()
                 if (_uiState.value.showFileManager) {
                     loadFsDirectory(_uiState.value.fsCurrentDir)

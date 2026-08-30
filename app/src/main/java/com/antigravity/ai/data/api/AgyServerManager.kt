@@ -67,6 +67,9 @@ object AgyServerManager {
     }
 
     fun startServer(context: Context, onLaunched: ((Boolean, String) -> Unit)? = null) {
+        var launched = false
+
+        // 1. Try Termux RUN_COMMAND IPC Service
         try {
             val intent = Intent().apply {
                 setClassName("com.termux", "com.termux.app.RunCommandService")
@@ -86,26 +89,52 @@ object AgyServerManager {
             } else {
                 context.startService(intent)
             }
-            onLaunched?.invoke(true, "Termux'a agy-web başlatma sinyali gönderildi.")
-        } catch (e: SecurityException) {
-            // Permission not granted yet or signature difference -> fallback to launch Termux app or show prompt
-            val launchIntent = context.packageManager.getLaunchIntentForPackage("com.termux.window")
-                ?: context.packageManager.getLaunchIntentForPackage("com.termux.float")
-                ?: context.packageManager.getLaunchIntentForPackage("com.termux")
+            launched = true
+        } catch (e: Exception) {}
 
-            if (launchIntent != null) {
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(launchIntent)
-                copyCommandToClipboard(context, "agy-web start")
-                onLaunched?.invoke(false, "Termux açıldı ve 'agy-web start' panoya kopyalandı.")
-            } else {
-                copyCommandToClipboard(context, "agy-web start")
-                onLaunched?.invoke(false, "Termux komutu panoya kopyalandı: agy-web start")
+        // 2. Try Termux:Float Service trigger (com.termux.window.TermuxFloatService)
+        try {
+            val floatServiceIntent = Intent().apply {
+                setClassName("com.termux.window", "com.termux.window.TermuxFloatService")
             }
-        } catch (e: Exception) {
-            copyCommandToClipboard(context, "agy-web start")
-            onLaunched?.invoke(false, "Hata: ${e.message}. Komut kopyalandı: agy-web start")
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                try {
+                    context.startForegroundService(floatServiceIntent)
+                } catch (e: Exception) {
+                    context.startService(floatServiceIntent)
+                }
+            } else {
+                context.startService(floatServiceIntent)
+            }
+            launched = true
+        } catch (e: Exception) {}
+
+        // 3. Fallback: Launch Termux/Float Activity silently if background services were restricted
+        if (!launched) {
+            try {
+                val launchIntent = context.packageManager.getLaunchIntentForPackage("com.termux.window")
+                    ?: context.packageManager.getLaunchIntentForPackage("com.termux.float")
+                    ?: context.packageManager.getLaunchIntentForPackage("com.termux")
+
+                if (launchIntent != null) {
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                    context.startActivity(launchIntent)
+                    launched = true
+
+                    // Bring Antigravity back to foreground seamlessly
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        try {
+                            val bringBack = Intent(context, com.antigravity.ai.MainActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            }
+                            context.startActivity(bringBack)
+                        } catch (e: Exception) {}
+                    }, 400)
+                }
+            } catch (e: Exception) {}
         }
+
+        onLaunched?.invoke(launched, if (launched) "Termux agy-web arka planda başlatıldı." else "Başlatma sinyali gönderildi.")
     }
 
     suspend fun stopServer(context: Context, onStopped: ((Boolean, String) -> Unit)? = null) = withContext(Dispatchers.IO) {
@@ -140,30 +169,8 @@ object AgyServerManager {
     }
 
     fun restartServer(context: Context, onRestarted: ((Boolean, String) -> Unit)? = null) {
-        try {
-            val intent = Intent().apply {
-                setClassName("com.termux", "com.termux.app.RunCommandService")
-                action = "com.termux.RUN_COMMAND"
-                putExtra("com.termux.RUN_COMMAND_PATH", "/data/data/com.termux/files/home/.termux/tasker/agy-web-restart.sh")
-                putExtra("com.termux.RUN_COMMAND_ARGUMENTS", arrayOf<String>())
-                putExtra("com.termux.RUN_COMMAND_WORKDIR", "/data/data/com.termux/files/home")
-                putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
-                putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0")
-            }
-            context.startService(intent)
-            onRestarted?.invoke(true, "Yeniden başlatma komutu gönderildi.")
-        } catch (e: Exception) {
-            copyCommandToClipboard(context, "agy-web restart")
-            onRestarted?.invoke(false, "Termux komutu kopyalandı: agy-web restart")
+        startServer(context) { success, msg ->
+            onRestarted?.invoke(success, if (success) "Yeniden başlatıldı." else msg)
         }
-    }
-
-    private fun copyCommandToClipboard(context: Context, text: String) {
-        try {
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText("Termux Command", text)
-            clipboard.setPrimaryClip(clip)
-            Toast.makeText(context, "Panoya kopyalandı: $text", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {}
     }
 }
