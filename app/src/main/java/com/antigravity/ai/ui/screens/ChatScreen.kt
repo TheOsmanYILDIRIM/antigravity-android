@@ -153,7 +153,8 @@ fun ChatScreen(
                 } else {
                     viewModel.toggleKeepAlive(enabled, mode)
                 }
-            }
+            },
+            onExportAllConversations = { viewModel.exportAllConversations(context) }
         )
     }
 
@@ -346,21 +347,8 @@ fun ChatScreen(
                     onNewChatClick = {
                         viewModel.startNewChat()
                     },
-                    onSettingsClick = {
-                        viewModel.setSettingsDialogVisible(true)
-                    },
                     onUsageClick = {
                         viewModel.setUsageDetailVisible(true)
-                    },
-                    onFileManagerClick = {
-                        viewModel.setFileManagerVisible(true)
-                    },
-                    serverHealth = uiState.serverHealth,
-                    onStartServer = { viewModel.startAgyServer() },
-                    onStopServer = { viewModel.stopAgyServer() },
-                    isKeepAliveRunning = uiState.isKeepAliveRunning,
-                    onToggleKeepAlive = {
-                        viewModel.toggleKeepAlive(!uiState.isKeepAliveRunning, uiState.keepAliveMode)
                     }
                 )
             },

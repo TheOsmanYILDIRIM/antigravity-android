@@ -37,12 +37,19 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
 
     private val gson = Gson()
     private val client = OkHttpClient.Builder()
+        .connectTimeout(8, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
+        .build()
+
+    private val sseClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(0, TimeUnit.SECONDS) // For SSE streaming
+        .readTimeout(0, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
-    private val sseFactory = EventSources.createFactory(client)
+    private val sseFactory = EventSources.createFactory(sseClient)
 
     suspend fun getConversations(): Result<ConversationsResponse> = withContext(Dispatchers.IO) {
         try {

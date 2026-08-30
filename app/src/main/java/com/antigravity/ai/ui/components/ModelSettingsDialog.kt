@@ -54,7 +54,8 @@ fun ModelSettingsDialog(
     onRestartServer: () -> Unit = {},
     isKeepAliveRunning: Boolean = false,
     keepAliveMode: String = "invisible",
-    onToggleKeepAlive: (Boolean, String) -> Unit = { _, _ -> }
+    onToggleKeepAlive: (Boolean, String) -> Unit = { _, _ -> },
+    onExportAllConversations: (() -> Unit)? = null
 ) {
     var selectedBackend by remember { mutableStateOf(currentBackend) }
     var selectedModel by remember { mutableStateOf(currentSettings.model) }
@@ -721,9 +722,41 @@ fun ModelSettingsDialog(
                         }
                     }
                 }
+
+                if (onExportAllConversations != null) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = SurfaceVariantDark,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onExportAllConversations() }
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(vertical = 12.dp, horizontal = 12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = null,
+                                tint = GeminiPurple,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Tüm Sohbetleri Dışa Aktar (Markdown Arşivi)",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
+                        }
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Kaydet Butonu
             Button(

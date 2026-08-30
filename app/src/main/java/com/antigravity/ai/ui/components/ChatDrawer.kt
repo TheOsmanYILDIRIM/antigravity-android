@@ -82,55 +82,78 @@ fun ChatDrawer(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            // 1. Search Bar (Figma: "Search for chats")
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = SurfaceVariantDark,
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+            // 1. Top Header: Search Bar + Settings Button
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = SurfaceVariantDark,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = "Ara",
+                            tint = TextMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(modifier = Modifier.weight(1f)) {
+                            if (searchQuery.isEmpty()) {
+                                Text(text = "Sohbetlerde ara...", color = TextMuted, fontSize = 13.5.sp)
+                            }
+                            androidx.compose.foundation.text.BasicTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                textStyle = androidx.compose.ui.text.TextStyle(
+                                    color = TextPrimary,
+                                    fontSize = 13.5.sp
+                                ),
+                                cursorBrush = androidx.compose.ui.graphics.SolidColor(GeminiBlue),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        if (searchQuery.isNotEmpty()) {
+                            Icon(
+                                imageVector = Icons.Outlined.Clear,
+                                contentDescription = "Temizle",
+                                tint = TextMuted,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clickable { searchQuery = "" }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Ayarlar (Settings) Button at the Top
+                IconButton(
+                    onClick = onOpenSettings,
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(SurfaceVariantDark)
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Search,
-                        contentDescription = "Ara",
-                        tint = TextMuted,
-                        modifier = Modifier.size(18.dp)
+                        imageVector = Icons.Outlined.Settings,
+                        contentDescription = "Ayarlar",
+                        tint = GeminiBlue,
+                        modifier = Modifier.size(20.dp)
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Box(modifier = Modifier.weight(1f)) {
-                        if (searchQuery.isEmpty()) {
-                            Text(text = "Search for chats", color = TextMuted, fontSize = 14.sp)
-                        }
-                        androidx.compose.foundation.text.BasicTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            textStyle = androidx.compose.ui.text.TextStyle(
-                                color = TextPrimary,
-                                fontSize = 14.sp
-                            ),
-                            cursorBrush = androidx.compose.ui.graphics.SolidColor(GeminiBlue),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    if (searchQuery.isNotEmpty()) {
-                        Icon(
-                            imageVector = Icons.Outlined.Clear,
-                            contentDescription = "Temizle",
-                            tint = TextMuted,
-                            modifier = Modifier
-                                .size(18.dp)
-                                .clickable { searchQuery = "" }
-                        )
-                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // 2. New Chat Action Button (Figma: [+ New Chat])
+            // 2. New Chat Action Button
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = Color.Transparent,
@@ -145,12 +168,12 @@ fun ChatDrawer(
                     Icon(
                         imageVector = Icons.Outlined.Edit,
                         contentDescription = "Yeni Sohbet",
-                        tint = TextPrimary,
+                        tint = GeminiBlue,
                         modifier = Modifier.size(19.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "New Chat",
+                        text = "Yeni Sohbet",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.5.sp,
                         color = TextPrimary
@@ -171,7 +194,7 @@ fun ChatDrawer(
                     Icon(
                         imageVector = Icons.Outlined.Folder,
                         contentDescription = null,
-                        tint = GeminiBlue,
+                        tint = GeminiPurple,
                         modifier = Modifier.size(19.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
@@ -190,7 +213,7 @@ fun ChatDrawer(
                 )
             }
 
-            // 3.5 Termux File Manager & Projects
+            // 4. Termux File Manager & Projects
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -203,7 +226,7 @@ fun ChatDrawer(
                     Icon(
                         imageVector = Icons.Default.FolderSpecial,
                         contentDescription = null,
-                        tint = GeminiPurple,
+                        tint = GeminiAmber,
                         modifier = Modifier.size(19.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
@@ -224,7 +247,7 @@ fun ChatDrawer(
 
             Divider(color = BorderSubtle, modifier = Modifier.padding(vertical = 8.dp))
 
-            // 4. Conversations List
+            // 5. Conversations List
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -269,7 +292,7 @@ fun ChatDrawer(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (searchQuery.isNotEmpty()) "Arama Sonuçları (${pinnedList.size + unpinnedList.size})" else "Chats",
+                            text = if (searchQuery.isNotEmpty()) "Arama Sonuçları (${pinnedList.size + unpinnedList.size})" else "Sohbetler",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextMuted
@@ -306,173 +329,69 @@ fun ChatDrawer(
                 }
             }
 
-            Divider(color = BorderSubtle, modifier = Modifier.padding(vertical = 8.dp))
-
-            // Termux Server Quick Status & Toggle Card
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = SurfaceVariantDark,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    if (serverHealth?.isOnline == true) SuccessGreen.copy(alpha = 0.5f) else DangerRed.copy(alpha = 0.5f)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(10.dp)) {
+            // 6. Minimal Server Status / Single Launch Button
+            if (serverHealth?.isOnline == true) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = SurfaceVariantDark,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
                                     .size(8.dp)
                                     .clip(CircleShape)
-                                    .background(if (serverHealth?.isOnline == true) SuccessGreen else DangerRed)
+                                    .background(SuccessGreen)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Termux agy-web",
-                                fontSize = 12.5.sp,
-                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
                                 color = TextPrimary
                             )
                         }
                         Text(
-                            text = if (serverHealth?.isOnline == true) "🟢 Online (${serverHealth.latencyMs}ms)" else "🔴 Offline",
+                            text = "🟢 Online (${serverHealth.latencyMs}ms)",
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (serverHealth?.isOnline == true) SuccessGreen else DangerRed
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Button(
-                            onClick = onStartServer,
-                            colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
-                            shape = RoundedCornerShape(6.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                            modifier = Modifier.weight(1f).height(30.dp)
-                        ) {
-                            Text("⚡ Başlat", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
-
-                        OutlinedButton(
-                            onClick = onStopServer,
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, DangerRed.copy(alpha = 0.6f)),
-                            shape = RoundedCornerShape(6.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                            modifier = Modifier.weight(1f).height(30.dp)
-                        ) {
-                            Text("🛑 Durdur", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // Bottom Actions: Export All & Settings Access
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Export All Sessions Button
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = SurfaceVariantDark,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onExportAllConversations() }
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.FileDownload,
-                            contentDescription = "Dışa Aktar",
-                            tint = GeminiPurple,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Tümünü Aktar",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
+                            fontWeight = FontWeight.Bold,
+                            color = SuccessGreen
                         )
                     }
                 }
-
-                // Ayarlar (Settings) Button
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = SurfaceVariantDark,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onOpenSettings() }
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Ayarlar",
-                            tint = GeminiBlue,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Ayarlar",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
-                        )
-                    }
-                }
-            }
-
-            if (onExitApp != null) {
-                Spacer(modifier = Modifier.height(6.dp))
+            } else {
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = DangerRed.copy(alpha = 0.12f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, DangerRed.copy(alpha = 0.35f)),
+                    color = SuccessGreen,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onExitApp() }
+                        .padding(top = 8.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onStartServer() }
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier.padding(vertical = 10.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.PowerSettingsNew,
-                            contentDescription = "Çıkış",
-                            tint = DangerRed,
+                            contentDescription = null,
+                            tint = Color.White,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Çıkış & Sunucuyu Kapat",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = DangerRed
+                            text = "⚡ Termux Sunucusunu Başlat",
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                     }
                 }

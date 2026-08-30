@@ -29,14 +29,7 @@ fun ChatTopBar(
     isGenerating: Boolean,
     onMenuClick: () -> Unit,
     onNewChatClick: () -> Unit,
-    onSettingsClick: () -> Unit,
     onUsageClick: () -> Unit,
-    onFileManagerClick: () -> Unit = {},
-    serverHealth: ServerHealth? = null,
-    onStartServer: () -> Unit = {},
-    onStopServer: () -> Unit = {},
-    isKeepAliveRunning: Boolean = false,
-    onToggleKeepAlive: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -49,142 +42,73 @@ fun ChatTopBar(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 6.dp)
+                .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
-            // Left: Hamburger Menu
+            // Left: Hamburger Menu (Opens Chats & Settings)
             IconButton(
                 onClick = onMenuClick,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(SurfaceVariantDark)
             ) {
                 Icon(
                     imageVector = Icons.Default.Menu,
                     contentDescription = "Menü",
                     tint = TextPrimary,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
+
+            Spacer(modifier = Modifier.width(10.dp))
 
             // Center: Gemini Sparkle + Antigravity Title
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .clickable { onSettingsClick() }
-                    .padding(horizontal = 6.dp, vertical = 4.dp)
+                modifier = Modifier.weight(1f)
             ) {
-                GeminiSparkleIcon(size = 18.dp)
-                Spacer(modifier = Modifier.width(6.dp))
+                GeminiSparkleIcon(size = 20.dp)
+                Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
                         text = "Antigravity",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
                         color = TextPrimary,
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "${settings.fontSizeSp.toInt()}sp • ${if (settings.thermalMode == "eco") "❄️ %50 CPU" else "⚡ Tam Hız"}",
-                        fontSize = 10.sp,
+                        text = settings.model.replace("gemini-", "Gemini ").replace("-medium", "").replace("-high", " ⚡"),
+                        fontSize = 11.sp,
                         color = TextMuted,
                         maxLines = 1
                     )
                 }
             }
 
-            // Right Group: Usage, Settings & New Chat
+            // Right Group: Usage Token Meter & New Chat
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Server Quick Power / Status Pill
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (serverHealth?.isOnline == true) SuccessGreen.copy(alpha = 0.15f) else DangerRed.copy(alpha = 0.2f),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (serverHealth?.isOnline == true) SuccessGreen.copy(alpha = 0.6f) else DangerRed.copy(alpha = 0.6f)
-                    ),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable {
-                            if (serverHealth?.isOnline == true) {
-                                onSettingsClick()
-                            } else {
-                                onStartServer()
-                            }
-                        }
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(if (serverHealth?.isOnline == true) SuccessGreen else DangerRed)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (serverHealth?.isOnline == true) "${serverHealth.latencyMs}ms" else "⚡ Başlat",
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (serverHealth?.isOnline == true) SuccessGreen else DangerRed
-                        )
-                    }
-                }
-
                 UsageWidget(
                     usage = usage,
                     onClick = onUsageClick
                 )
 
-                // Termux File Manager Button
-                IconButton(
-                    onClick = onFileManagerClick,
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(SurfaceVariantDark)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Folder,
-                        contentDescription = "Termux Dosyaları",
-                        tint = GeminiPurple,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                // Dedicated Gemini Settings Button
-                IconButton(
-                    onClick = onSettingsClick,
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(SurfaceVariantDark)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Tune,
-                        contentDescription = "Ayarlar",
-                        tint = GeminiBlue,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
                 // New Chat Button
                 IconButton(
                     onClick = onNewChatClick,
                     modifier = Modifier
-                        .size(34.dp)
+                        .size(38.dp)
                         .clip(CircleShape)
                         .background(SurfaceVariantDark)
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Add,
+                        imageVector = Icons.Outlined.Edit,
                         contentDescription = "Yeni Sohbet",
-                        tint = TextPrimary,
+                        tint = GeminiBlue,
                         modifier = Modifier.size(18.dp)
                     )
                 }
