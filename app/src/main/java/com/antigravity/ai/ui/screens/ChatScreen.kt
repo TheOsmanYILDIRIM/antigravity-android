@@ -606,6 +606,7 @@ fun ChatScreen(
         }
     }
 }
+}
 
 // Figma Gemini Home View ("Hello, Osman" & Action Cards)
 @Composable
