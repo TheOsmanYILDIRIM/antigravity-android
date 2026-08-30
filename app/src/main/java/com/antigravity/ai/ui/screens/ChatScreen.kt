@@ -570,14 +570,14 @@ fun ChatScreen(
                     }
 
                     // Floating Scroll To Bottom Button (Gemini App / Figma Style)
-                    AnimatedVisibility(
+                    androidx.compose.animation.AnimatedVisibility(
                         visible = showScrollToBottom,
-                    enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
-                    exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 }),
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(bottom = 12.dp, end = 16.dp)
-                ) {
+                        enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
+                        exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 }),
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(bottom = 12.dp, end = 16.dp)
+                    ) {
                     Surface(
                         shape = CircleShape,
                         color = SurfaceVariantDark,
