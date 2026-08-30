@@ -94,6 +94,22 @@ object AgyServerManager {
             launched = false
         }
 
+        // 2. Trigger Invisible Termux:Float Clone (Keeps Termux UID alive in 100% invisible mode)
+        try {
+            val floatIntent = Intent("com.termux.window.ACTION_START_INVISIBLE").apply {
+                setClassName("com.termux.window.clone", "com.termux.window.TermuxFloatService")
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                try {
+                    context.startForegroundService(floatIntent)
+                } catch (e: Exception) {
+                    context.startService(floatIntent)
+                }
+            } else {
+                context.startService(floatIntent)
+            }
+        } catch (e: Exception) {}
+
         onLaunched?.invoke(launched, if (launched) "Termux agy-web arka planda başlatıldı." else "Başlatma sinyali gönderildi.")
     }
 
@@ -154,6 +170,14 @@ object AgyServerManager {
                 putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0")
             }
             context.startService(stopIntent)
+        } catch (e: Exception) {}
+
+        // 3. Stop Termux:Float Clone service
+        try {
+            val floatStopIntent = Intent("com.termux.window.ACTION_STOP_SERVICE").apply {
+                setClassName("com.termux.window.clone", "com.termux.window.TermuxFloatService")
+            }
+            context.startService(floatStopIntent)
         } catch (e: Exception) {}
 
         // 4. Stop Antigravity FloatingKeepAliveService
