@@ -40,10 +40,11 @@ class ChatRepository(private val backend: ChatBackend) {
 
     suspend fun sendMessage(
         prompt: String,
+        conversationId: String? = null,
         continueChat: Boolean = true,
         settings: ChatSettings = ChatSettings(),
         attachments: List<Attachment> = emptyList()
-    ): Result<Unit> = backend.sendPrompt(prompt, continueChat, settings, attachments)
+    ): Result<Unit> = backend.sendPrompt(prompt, conversationId, continueChat, settings, attachments)
 
     suspend fun startNewChat(): Result<SessionResponse> = backend.newChat()
 

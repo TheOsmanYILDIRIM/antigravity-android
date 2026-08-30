@@ -998,9 +998,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
 
+        val activeConvId = state.currentConversationId ?: state.currentSessionId
         viewModelScope.launch {
             repository.sendMessage(
                 prompt = finalPrompt,
+                conversationId = activeConvId,
                 continueChat = true,
                 settings = state.settings,
                 attachments = userMessage.attachments

@@ -335,7 +335,7 @@ fun MessageInputBar(
                         }
                     }
 
-                    // Right Actions: Mic & Send / Stop Button with Gemini Spinner
+                    // Right Actions: Mic & Live Waveform / Send Button
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -356,7 +356,7 @@ fun MessageInputBar(
                             )
                         }
 
-                        // Send / Stop Button with Animated Rotating Spinner
+                        // Send / Stop / Live Button with Animated Rotating Spinner
                         if (isGenerating) {
                             Box(
                                 contentAlignment = Alignment.Center,
@@ -396,20 +396,46 @@ fun MessageInputBar(
                             }
                         } else {
                             val canSend = text.isNotBlank() || pastedBlocks.isNotEmpty() || attachments.isNotEmpty()
-                            IconButton(
-                                onClick = onSend,
-                                enabled = canSend,
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(if (canSend) TextPrimary else SurfaceVariantDark)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ArrowUpward,
-                                    contentDescription = "Gönder",
-                                    tint = if (canSend) BackgroundDark else TextMuted,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                            if (canSend) {
+                                IconButton(
+                                    onClick = onSend,
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(GeminiBlue)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowUpward,
+                                        contentDescription = "Gönder",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            } else {
+                                // Live Waveform Button (Figma & Stitch Gemini Live)
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color.Transparent,
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(GeminiSparkleGradient)
+                                        .clickable { onMicClick() }
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier.fillMaxSize().padding(horizontal = 7.dp)
+                                    ) {
+                                        Box(modifier = Modifier.width(2.5.dp).height(10.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))
+                                        Spacer(modifier = Modifier.width(2.5.dp))
+                                        Box(modifier = Modifier.width(2.5.dp).height(16.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))
+                                        Spacer(modifier = Modifier.width(2.5.dp))
+                                        Box(modifier = Modifier.width(2.5.dp).height(12.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))
+                                        Spacer(modifier = Modifier.width(2.5.dp))
+                                        Box(modifier = Modifier.width(2.5.dp).height(7.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))
+                                    }
+                                }
                             }
                         }
                     }

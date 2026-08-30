@@ -337,6 +337,7 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
 
     suspend fun sendPrompt(
         prompt: String,
+        conversationId: String? = null,
         continueChat: Boolean = true,
         settings: ChatSettings = ChatSettings(),
         attachments: List<Attachment> = emptyList()
@@ -344,6 +345,7 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
         try {
             val json = JsonObject().apply {
                 addProperty("prompt", prompt)
+                conversationId?.let { addProperty("conversationId", it) }
                 addProperty("continue", continueChat)
                 addProperty("model", settings.model)
                 addProperty("effort", settings.effort)

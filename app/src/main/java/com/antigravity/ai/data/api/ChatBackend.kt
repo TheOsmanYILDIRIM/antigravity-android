@@ -20,6 +20,7 @@ interface ChatBackend {
 
     suspend fun sendPrompt(
         prompt: String,
+        conversationId: String? = null,
         continueChat: Boolean = true,
         settings: ChatSettings = ChatSettings(),
         attachments: List<Attachment> = emptyList()

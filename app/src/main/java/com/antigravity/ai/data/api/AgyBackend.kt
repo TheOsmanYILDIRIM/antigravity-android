@@ -20,10 +20,11 @@ class AgyBackend(private val api: AntigravityApiService = AntigravityApiService(
 
     override suspend fun sendPrompt(
         prompt: String,
+        conversationId: String?,
         continueChat: Boolean,
         settings: ChatSettings,
         attachments: List<Attachment>
-    ): Result<Unit> = api.sendPrompt(prompt, continueChat, settings, attachments)
+    ): Result<Unit> = api.sendPrompt(prompt, conversationId, continueChat, settings, attachments)
 
     override suspend fun newChat(): Result<SessionResponse> = api.newChat()
     override suspend fun stopGeneration(): Result<Unit> = api.stopGeneration()

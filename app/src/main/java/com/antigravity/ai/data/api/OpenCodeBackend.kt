@@ -86,14 +86,19 @@ class OpenCodeBackend(
     override suspend fun fetchSession(): Result<SessionResponse> =
         Result.failure(UnsupportedOperationException("opencode'da fetchSession yok"))
 
+    private val agyApi = AntigravityApiService()
+ 
     override suspend fun sendPrompt(
         prompt: String,
+        conversationId: String?,
         continueChat: Boolean,
         settings: ChatSettings,
         attachments: List<Attachment>
     ): Result<Unit> = runCatching {
-        val sid = if (continueChat && currentSessionID != null) {
-            currentSessionID!!
+        val targetId = conversationId ?: currentSessionID
+        val sid = if (continueChat && targetId != null) {
+            currentSessionID = targetId
+            targetId
         } else {
             val created = api.createSession().getOrThrow()
             currentSessionID = created
@@ -113,6 +118,25 @@ class OpenCodeBackend(
             isGenerating = false
         )
     }
+
+    override suspend fun uploadFile(name: String, base64: String, type: String): Result<UploadResponse> =
+        agyApi.uploadFile(name, base64, type)
+
+    override suspend fun fetchVaultFiles(): Result<VaultResponse> = agyApi.getVaultFiles()
+    override suspend fun fetchVaultFileContent(relPath: String): Result<VaultFileContent> =
+        agyApi.getVaultFileContent(relPath)
+
+    override suspend fun saveVaultNote(relPath: String?, title: String?, content: String): Result<Unit> =
+        agyApi.saveVaultNote(relPath, title, content)
+
+    override suspend fun createVaultFolder(folderPath: String): Result<Unit> =
+        agyApi.createVaultFolder(folderPath)
+
+    override suspend fun deleteVaultFile(relPath: String): Result<Unit> = agyApi.deleteVaultFile(relPath)
+    override suspend fun getFsList(dir: String?): Result<FsListResponse> = agyApi.getFsList(dir)
+    override suspend fun getFsProjects(): Result<FsProjectsResponse> = agyApi.getFsProjects()
+    override suspend fun getFsContent(path: String): Result<FsContentResponse> = agyApi.getFsContent(path)
+    override suspend fun saveFsFile(path: String, content: String): Result<FsSaveResponse> = agyApi.saveFsFile(path, content)
 
     override suspend fun stopGeneration(): Result<Unit> = Result.success(Unit)
 
