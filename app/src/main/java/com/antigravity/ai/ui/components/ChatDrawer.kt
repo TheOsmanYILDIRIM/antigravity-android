@@ -52,6 +52,7 @@ fun ChatDrawer(
     serverHealth: ServerHealth? = null,
     onStartServer: () -> Unit = {},
     onStopServer: () -> Unit = {},
+    onExitApp: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -440,6 +441,38 @@ fun ChatDrawer(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TextPrimary
+                        )
+                    }
+                }
+            }
+
+            if (onExitApp != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = DangerRed.copy(alpha = 0.12f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, DangerRed.copy(alpha = 0.35f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onExitApp() }
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PowerSettingsNew,
+                            contentDescription = "Çıkış",
+                            tint = DangerRed,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Çıkış & Sunucuyu Kapat",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = DangerRed
                         )
                     }
                 }

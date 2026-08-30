@@ -47,7 +47,8 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ChatScreen(
-    viewModel: ChatViewModel = viewModel()
+    viewModel: ChatViewModel = viewModel(),
+    onExitApp: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -328,7 +329,8 @@ fun ChatScreen(
                 },
                 serverHealth = uiState.serverHealth,
                 onStartServer = { viewModel.startAgyServer() },
-                onStopServer = { viewModel.stopAgyServer() }
+                onStopServer = { viewModel.stopAgyServer() },
+                onExitApp = onExitApp
             )
         }
     ) {

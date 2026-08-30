@@ -21,9 +21,21 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = BackgroundDark
                 ) {
-                    ChatScreen()
+                    ChatScreen(
+                        onExitApp = {
+                            com.antigravity.ai.data.api.AgyServerManager.shutdownLifecycle(this@MainActivity)
+                            finishAffinity()
+                        }
+                    )
                 }
             }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (isFinishing) {
+            com.antigravity.ai.data.api.AgyServerManager.shutdownLifecycle(this)
         }
     }
 }

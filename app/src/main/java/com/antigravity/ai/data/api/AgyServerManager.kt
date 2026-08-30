@@ -168,6 +168,48 @@ object AgyServerManager {
         }
     }
 
+    fun shutdownLifecycle(context: Context) {
+        // 1. Send HTTP Shutdown
+        try {
+            val request = Request.Builder()
+                .url("http://127.0.0.1:8080/api/system/shutdown")
+                .post("{}".toRequestBody())
+                .build()
+            Thread {
+                try {
+                    client.newCall(request).execute()
+                } catch (e: Exception) {}
+            }.start()
+        } catch (e: Exception) {}
+
+        // 2. Stop Termux Float service
+        try {
+            val floatStopIntent = Intent().apply {
+                setClassName("com.termux.window", "com.termux.window.TermuxFloatService")
+            }
+            context.stopService(floatStopIntent)
+        } catch (e: Exception) {}
+
+        // 3. Run agy-web-stop.sh via Termux RunCommandService
+        try {
+            val stopIntent = Intent().apply {
+                setClassName("com.termux", "com.termux.app.RunCommandService")
+                action = "com.termux.RUN_COMMAND"
+                putExtra("com.termux.RUN_COMMAND_PATH", "/data/data/com.termux/files/home/.termux/tasker/agy-web-stop.sh")
+                putExtra("com.termux.RUN_COMMAND_ARGUMENTS", arrayOf<String>())
+                putExtra("com.termux.RUN_COMMAND_WORKDIR", "/data/data/com.termux/files/home")
+                putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
+                putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0")
+            }
+            context.startService(stopIntent)
+        } catch (e: Exception) {}
+
+        // 4. Stop Antigravity FloatingKeepAliveService
+        try {
+            com.antigravity.ai.service.FloatingKeepAliveService.stopKeepAlive(context)
+        } catch (e: Exception) {}
+    }
+
     fun restartServer(context: Context, onRestarted: ((Boolean, String) -> Unit)? = null) {
         startServer(context) { success, msg ->
             onRestarted?.invoke(success, if (success) "Yeniden başlatıldı." else msg)
