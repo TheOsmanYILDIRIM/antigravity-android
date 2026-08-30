@@ -109,7 +109,24 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(activeBackend = name) }
             startEventCollection()
             refreshAll()
-            checkServerHealth()
+            val health = AgyServerManager.checkHealth()
+            _uiState.update { it.copy(serverHealth = health) }
+            if (!health.isOnline) {
+                withContext(Dispatchers.Main) {
+                    startAgyServer()
+                }
+            }
+            startPeriodicHealthCheck()
+        }
+    }
+
+    private fun startPeriodicHealthCheck() {
+        viewModelScope.launch(Dispatchers.IO) {
+            while (true) {
+                delay(4000)
+                val health = AgyServerManager.checkHealth()
+                _uiState.update { it.copy(serverHealth = health) }
+            }
         }
     }
 

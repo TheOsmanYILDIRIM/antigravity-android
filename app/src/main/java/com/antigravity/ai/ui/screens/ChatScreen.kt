@@ -325,7 +325,10 @@ fun ChatScreen(
                 onOpenSettings = {
                     scope.launch { drawerState.close() }
                     viewModel.setSettingsDialogVisible(true)
-                }
+                },
+                serverHealth = uiState.serverHealth,
+                onStartServer = { viewModel.startAgyServer() },
+                onStopServer = { viewModel.stopAgyServer() }
             )
         }
     ) {
@@ -349,6 +352,13 @@ fun ChatScreen(
                     },
                     onFileManagerClick = {
                         viewModel.setFileManagerVisible(true)
+                    },
+                    serverHealth = uiState.serverHealth,
+                    onStartServer = { viewModel.startAgyServer() },
+                    onStopServer = { viewModel.stopAgyServer() },
+                    isKeepAliveRunning = uiState.isKeepAliveRunning,
+                    onToggleKeepAlive = {
+                        viewModel.toggleKeepAlive(!uiState.isKeepAliveRunning, uiState.keepAliveMode)
                     }
                 )
             },
@@ -462,20 +472,83 @@ fun ChatScreen(
             containerColor = BackgroundDark,
             contentWindowInsets = WindowInsets.safeDrawing
         ) { paddingValues ->
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                if (uiState.messages.isEmpty()) {
-                    FigmaGeminiHomeView(
-                        onSuggestionClick = { prompt ->
-                            viewModel.onInputTextChange(prompt)
-                            viewModel.sendMessage()
-                        },
-                        onOpenVault = { viewModel.setVaultManagerVisible(true) }
-                    )
-                } else {
+                // Offline Server Warning Banner (1-Tap Launch)
+                AnimatedVisibility(
+                    visible = uiState.serverHealth != null && !uiState.serverHealth.isOnline,
+                    enter = fadeIn() + slideInVertically(),
+                    exit = fadeOut() + slideOutVertically()
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = DangerRed.copy(alpha = 0.15f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, DangerRed.copy(alpha = 0.5f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(DangerRed)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = "Termux agy-web Kapalı",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                    Text(
+                                        text = "Dosyalar ve yerel AI için sunucuyu başlatın",
+                                        fontSize = 10.5.sp,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+
+                            Button(
+                                onClick = { viewModel.startAgyServer() },
+                                colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Text("⚡ Başlat", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    if (uiState.messages.isEmpty()) {
+                        FigmaGeminiHomeView(
+                            onSuggestionClick = { prompt ->
+                                viewModel.onInputTextChange(prompt)
+                                viewModel.sendMessage()
+                            },
+                            onOpenVault = { viewModel.setVaultManagerVisible(true) }
+                        )
+                    } else {
                     LazyColumn(
                         state = listState,
                         modifier = Modifier

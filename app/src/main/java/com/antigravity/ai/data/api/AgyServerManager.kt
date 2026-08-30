@@ -77,7 +77,15 @@ object AgyServerManager {
                 putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
                 putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0")
             }
-            context.startService(intent)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                try {
+                    context.startForegroundService(intent)
+                } catch (e: Exception) {
+                    context.startService(intent)
+                }
+            } else {
+                context.startService(intent)
+            }
             onLaunched?.invoke(true, "Termux'a agy-web başlatma sinyali gönderildi.")
         } catch (e: SecurityException) {
             // Permission not granted yet or signature difference -> fallback to launch Termux app or show prompt

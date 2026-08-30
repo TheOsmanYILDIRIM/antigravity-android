@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.antigravity.ai.data.api.ServerHealth
 import com.antigravity.ai.data.model.ConversationMeta
 import com.antigravity.ai.ui.theme.*
 
@@ -48,6 +49,9 @@ fun ChatDrawer(
     onOpenVault: () -> Unit,
     onOpenFileManager: () -> Unit = {},
     onOpenSettings: () -> Unit,
+    serverHealth: ServerHealth? = null,
+    onStartServer: () -> Unit = {},
+    onStopServer: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -302,6 +306,77 @@ fun ChatDrawer(
             }
 
             Divider(color = BorderSubtle, modifier = Modifier.padding(vertical = 8.dp))
+
+            // Termux Server Quick Status & Toggle Card
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = SurfaceVariantDark,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (serverHealth?.isOnline == true) SuccessGreen.copy(alpha = 0.5f) else DangerRed.copy(alpha = 0.5f)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(if (serverHealth?.isOnline == true) SuccessGreen else DangerRed)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Termux agy-web",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                        }
+                        Text(
+                            text = if (serverHealth?.isOnline == true) "🟢 Online (${serverHealth.latencyMs}ms)" else "🔴 Offline",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (serverHealth?.isOnline == true) SuccessGreen else DangerRed
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Button(
+                            onClick = onStartServer,
+                            colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
+                            shape = RoundedCornerShape(6.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.weight(1f).height(30.dp)
+                        ) {
+                            Text("⚡ Başlat", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+
+                        OutlinedButton(
+                            onClick = onStopServer,
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, DangerRed.copy(alpha = 0.6f)),
+                            shape = RoundedCornerShape(6.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.weight(1f).height(30.dp)
+                        ) {
+                            Text("🛑 Durdur", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Bottom Actions: Export All & Settings Access
             Row(

@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.antigravity.ai.data.api.ServerHealth
 import com.antigravity.ai.data.model.ChatSettings
 import com.antigravity.ai.data.model.UsageData
 import com.antigravity.ai.ui.theme.*
@@ -31,6 +32,11 @@ fun ChatTopBar(
     onSettingsClick: () -> Unit,
     onUsageClick: () -> Unit,
     onFileManagerClick: () -> Unit = {},
+    serverHealth: ServerHealth? = null,
+    onStartServer: () -> Unit = {},
+    onStopServer: () -> Unit = {},
+    isKeepAliveRunning: Boolean = false,
+    onToggleKeepAlive: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -92,6 +98,44 @@ fun ChatTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                // Server Quick Power / Status Pill
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (serverHealth?.isOnline == true) SuccessGreen.copy(alpha = 0.15f) else DangerRed.copy(alpha = 0.2f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (serverHealth?.isOnline == true) SuccessGreen.copy(alpha = 0.6f) else DangerRed.copy(alpha = 0.6f)
+                    ),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
+                            if (serverHealth?.isOnline == true) {
+                                onSettingsClick()
+                            } else {
+                                onStartServer()
+                            }
+                        }
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(if (serverHealth?.isOnline == true) SuccessGreen else DangerRed)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (serverHealth?.isOnline == true) "${serverHealth.latencyMs}ms" else "⚡ Başlat",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (serverHealth?.isOnline == true) SuccessGreen else DangerRed
+                        )
+                    }
+                }
+
                 UsageWidget(
                     usage = usage,
                     onClick = onUsageClick
