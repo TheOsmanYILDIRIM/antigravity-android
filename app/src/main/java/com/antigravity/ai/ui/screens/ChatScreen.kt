@@ -479,7 +479,7 @@ fun ChatScreen(
             ) {
                 // Offline Server Warning Banner (1-Tap Launch)
                 AnimatedVisibility(
-                    visible = uiState.serverHealth != null && !uiState.serverHealth.isOnline,
+                    visible = uiState.serverHealth?.isOnline == false,
                     enter = fadeIn() + slideInVertically(),
                     exit = fadeOut() + slideOutVertically()
                 ) {
@@ -549,29 +549,29 @@ fun ChatScreen(
                             onOpenVault = { viewModel.setVaultManagerVisible(true) }
                         )
                     } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp)
-                    ) {
-                        items(uiState.messages, key = { it.id }) { msg ->
-                            val isLastBot = msg == uiState.messages.lastOrNull { it.role == "bot" }
-                            MessageItem(
-                                message = msg,
-                                isLastBotMessage = isLastBot,
-                                fontSizeSp = uiState.settings.fontSizeSp,
-                                onOpenFile = { path -> viewModel.openFileInViewer(path) },
-                                onOpenImage = { url, title -> viewModel.openImageInViewer(url, title) }
-                            )
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp)
+                        ) {
+                            items(uiState.messages, key = { it.id }) { msg ->
+                                val isLastBot = msg == uiState.messages.lastOrNull { it.role == "bot" }
+                                MessageItem(
+                                    message = msg,
+                                    isLastBotMessage = isLastBot,
+                                    fontSizeSp = uiState.settings.fontSizeSp,
+                                    onOpenFile = { path -> viewModel.openFileInViewer(path) },
+                                    onOpenImage = { url, title -> viewModel.openImageInViewer(url, title) }
+                                )
+                            }
                         }
                     }
-                }
 
-                // Floating Scroll To Bottom Button (Gemini App / Figma Style)
-                AnimatedVisibility(
-                    visible = showScrollToBottom,
+                    // Floating Scroll To Bottom Button (Gemini App / Figma Style)
+                    AnimatedVisibility(
+                        visible = showScrollToBottom,
                     enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
                     exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 }),
                     modifier = Modifier
