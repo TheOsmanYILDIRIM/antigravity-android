@@ -50,8 +50,10 @@ fun MessageInputBar(
     onStop: () -> Unit,
     onMicClick: () -> Unit,
     onAttachClick: () -> Unit,
+    onOpenFileManager: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var showAttachMenu by remember { mutableStateOf(false) }
     val infiniteTransition = rememberInfiniteTransition(label = "generating_pulse")
     val rotationAngle by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -250,20 +252,57 @@ fun MessageInputBar(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // + Attachment
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .background(SurfaceVariantDark)
-                                .clickable { onAttachClick() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Ekle",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(18.dp)
-                            )
+                        Box(contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(SurfaceVariantDark)
+                                    .clickable { showAttachMenu = true },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Ekle",
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showAttachMenu,
+                                onDismissRequest = { showAttachMenu = false },
+                                modifier = Modifier
+                                    .background(SurfaceDark)
+                                    .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                            ) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.FolderSpecial, contentDescription = null, tint = GeminiPurple, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Text("Termux Dosyaları & Projeler", color = TextPrimary, fontSize = 13.5.sp)
+                                        }
+                                    },
+                                    onClick = {
+                                        showAttachMenu = false
+                                        onOpenFileManager()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.PhotoLibrary, contentDescription = null, tint = GeminiBlue, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Text("Cihaz Galerisi / Dosya Seç", color = TextPrimary, fontSize = 13.5.sp)
+                                        }
+                                    },
+                                    onClick = {
+                                        showAttachMenu = false
+                                        onAttachClick()
+                                    }
+                                )
+                            }
                         }
 
                         // Model Selector Pill (Figma "Fast" / Model chip)

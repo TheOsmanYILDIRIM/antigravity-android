@@ -40,7 +40,9 @@ import com.antigravity.ai.ui.theme.*
 fun MessageItem(
     message: Message,
     isLastBotMessage: Boolean = false,
-    fontSizeSp: Float = 13.5f
+    fontSizeSp: Float = 13.5f,
+    onOpenFile: (String) -> Unit = {},
+    onOpenImage: (String, String) -> Unit = { _, _ -> }
 ) {
     val isUser = message.role == "user"
     val context = LocalContext.current
@@ -77,7 +79,7 @@ fun MessageItem(
                     ) {
                         message.attachments.forEach { att ->
                             if (att.type == "image") {
-                                val imageModel = att.localUri ?: (if (att.relPath != null) "http://127.0.0.1:8080/${att.relPath}" else att.path)
+                                val imageModel = att.localUri ?: (if (att.relPath != null) "http://127.0.0.1:8080/${att.relPath}" else (att.path ?: ""))
                                 AsyncImage(
                                     model = imageModel,
                                     contentDescription = att.name,
@@ -87,12 +89,21 @@ fun MessageItem(
                                         .heightIn(min = 120.dp, max = 220.dp)
                                         .clip(RoundedCornerShape(12.dp))
                                         .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                                        .clickable {
+                                            onOpenImage(imageModel, att.name)
+                                        }
                                 )
                             } else {
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = SurfaceDark,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle)
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            val target = att.path ?: att.relPath ?: att.name
+                                            onOpenFile(target)
+                                        }
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -225,7 +236,9 @@ fun MessageItem(
                     SelectionContainer {
                         MarkdownRenderer(
                             markdown = message.content,
-                            fontSizeSp = fontSizeSp
+                            fontSizeSp = fontSizeSp,
+                            onOpenFile = onOpenFile,
+                            onOpenImage = onOpenImage
                         )
                     }
                 }

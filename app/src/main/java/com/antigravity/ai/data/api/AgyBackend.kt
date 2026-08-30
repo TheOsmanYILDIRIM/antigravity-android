@@ -42,6 +42,10 @@ class AgyBackend(private val api: AntigravityApiService = AntigravityApiService(
         api.createVaultFolder(folderPath)
 
     override suspend fun deleteVaultFile(relPath: String): Result<Unit> = api.deleteVaultFile(relPath)
+    override suspend fun getFsList(dir: String?): Result<FsListResponse> = api.getFsList(dir)
+    override suspend fun getFsProjects(): Result<FsProjectsResponse> = api.getFsProjects()
+    override suspend fun getFsContent(path: String): Result<FsContentResponse> = api.getFsContent(path)
+    override suspend fun saveFsFile(path: String, content: String): Result<FsSaveResponse> = api.saveFsFile(path, content)
     override suspend fun fetchSession(): Result<SessionResponse> = api.getSession()
     override suspend fun fetchAuthStatus(): Result<AuthStatusResponse> = api.getAuthStatus()
 }

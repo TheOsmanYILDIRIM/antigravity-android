@@ -32,6 +32,10 @@ class ChatRepository(private val backend: ChatBackend) {
 
     suspend fun createVaultFolder(folderPath: String): Result<Unit> = backend.createVaultFolder(folderPath)
     suspend fun deleteVaultFile(relPath: String): Result<Unit> = backend.deleteVaultFile(relPath)
+    suspend fun fetchFsList(dir: String? = null): Result<FsListResponse> = backend.getFsList(dir)
+    suspend fun fetchFsProjects(): Result<FsProjectsResponse> = backend.getFsProjects()
+    suspend fun fetchFsContent(path: String): Result<FsContentResponse> = backend.getFsContent(path)
+    suspend fun saveFsFile(path: String, content: String): Result<FsSaveResponse> = backend.saveFsFile(path, content)
     suspend fun fetchSession(): Result<SessionResponse> = backend.fetchSession()
 
     suspend fun sendMessage(

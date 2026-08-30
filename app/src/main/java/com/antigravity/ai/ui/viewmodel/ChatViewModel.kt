@@ -51,6 +51,18 @@ data class ChatUiState(
     val isAuthenticated: Boolean = true,
     val authMethod: String = "oauth",
     val showVaultManager: Boolean = false,
+    val showFileManager: Boolean = false,
+    val fsCurrentDir: String = "/data/data/com.termux/files/home",
+    val fsParentDir: String? = null,
+    val fsHomeDir: String = "/data/data/com.termux/files/home",
+    val fsItems: List<FsItem> = emptyList(),
+    val fsProjects: List<ProjectItem> = emptyList(),
+    val isFsLoading: Boolean = false,
+    val activeViewerFilePath: String? = null,
+    val activeViewerFileContent: FsContentResponse? = null,
+    val isViewerLoading: Boolean = false,
+    val activeImageViewerUrl: String? = null,
+    val activeImageViewerTitle: String = "",
     val showUsageDetail: Boolean = false,
     val showSlashCommands: Boolean = false,
     val slashQuery: String = "",
@@ -491,6 +503,114 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 _uiState.update { it.copy(isUploadingAttachment = false) }
             }
+        }
+    }
+
+    fun setFileManagerVisible(visible: Boolean) {
+        _uiState.update { it.copy(showFileManager = visible) }
+        if (visible) {
+            loadFsDirectory(_uiState.value.fsCurrentDir)
+            loadFsProjects()
+        }
+    }
+
+    fun loadFsDirectory(dir: String? = null) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isFsLoading = true) }
+            repository.fetchFsList(dir).onSuccess { res ->
+                _uiState.update {
+                    it.copy(
+                        fsCurrentDir = res.currentDir,
+                        fsParentDir = res.parentDir,
+                        fsHomeDir = res.homeDir,
+                        fsItems = res.items ?: emptyList(),
+                        fsProjects = if (!res.projects.isNullOrEmpty()) res.projects else it.fsProjects,
+                        isFsLoading = false
+                    )
+                }
+            }.onFailure {
+                _uiState.update { it.copy(isFsLoading = false) }
+            }
+        }
+    }
+
+    fun loadFsProjects() {
+        viewModelScope.launch {
+            repository.fetchFsProjects().onSuccess { res ->
+                _uiState.update { it.copy(fsProjects = res.projects ?: emptyList()) }
+            }
+        }
+    }
+
+    fun openFileInViewer(path: String) {
+        if (path.isBlank()) return
+        val ext = path.substringAfterLast(".").lowercase()
+        val isImg = ext in listOf("png", "jpg", "jpeg", "webp", "gif", "svg")
+        if (isImg) {
+            openImageInViewer(path, path.substringAfterLast("/"))
+            return
+        }
+
+        _uiState.update {
+            it.copy(
+                activeViewerFilePath = path,
+                activeViewerFileContent = null,
+                isViewerLoading = true
+            )
+        }
+        viewModelScope.launch {
+            repository.fetchFsContent(path).onSuccess { res ->
+                _uiState.update { it.copy(activeViewerFileContent = res, isViewerLoading = false) }
+            }.onFailure {
+                _uiState.update { it.copy(isViewerLoading = false) }
+            }
+        }
+    }
+
+    fun openImageInViewer(url: String, title: String = "") {
+        _uiState.update {
+            it.copy(
+                activeImageViewerUrl = url,
+                activeImageViewerTitle = title.ifEmpty { url.substringAfterLast("/") }
+            )
+        }
+    }
+
+    fun closeFileViewer() {
+        _uiState.update { it.copy(activeViewerFilePath = null, activeViewerFileContent = null) }
+    }
+
+    fun closeImageViewer() {
+        _uiState.update { it.copy(activeImageViewerUrl = null, activeImageViewerTitle = "") }
+    }
+
+    fun saveFsFileContent(path: String, content: String) {
+        viewModelScope.launch {
+            repository.saveFsFile(path, content).onSuccess {
+                loadFsDirectory(_uiState.value.fsCurrentDir)
+                openFileInViewer(path)
+            }
+        }
+    }
+
+    fun attachFsPathToChat(path: String) {
+        val fileName = path.substringAfterLast("/")
+        val ext = path.substringAfterLast(".").lowercase()
+        val isImg = ext in listOf("png", "jpg", "jpeg", "webp", "gif", "svg")
+        val attachment = Attachment(
+            name = fileName,
+            path = path,
+            type = if (isImg) "image" else "file"
+        )
+        _uiState.update { it.copy(attachments = it.attachments + attachment) }
+    }
+
+    fun mentionFsPathInChat(path: String) {
+        _uiState.update { state ->
+            val current = state.inputText
+            val refText = "@$path"
+            val updated = if (current.isEmpty()) refText else "$current $refText"
+            state.copy(inputText = updated)
         }
     }
 

@@ -13,8 +13,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -22,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.*
@@ -31,6 +35,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.antigravity.ai.data.model.resolveMediaUrl
 import com.antigravity.ai.ui.theme.*
 
 sealed class MarkdownBlock {
@@ -40,6 +46,7 @@ sealed class MarkdownBlock {
     data class BlockQuote(val text: String) : MarkdownBlock()
     data class BulletItem(val text: String, val indentLevel: Int = 0) : MarkdownBlock()
     data class NumberedItem(val number: String, val text: String) : MarkdownBlock()
+    data class Image(val alt: String, val url: String) : MarkdownBlock()
     object Divider : MarkdownBlock()
     data class Paragraph(val text: String) : MarkdownBlock()
 }
@@ -48,6 +55,8 @@ sealed class MarkdownBlock {
 fun MarkdownRenderer(
     markdown: String,
     fontSizeSp: Float = 13.5f,
+    onOpenFile: ((String) -> Unit)? = null,
+    onOpenImage: ((String, String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val blocks = parseMarkdownBlocks(markdown)
@@ -229,6 +238,79 @@ fun MarkdownRenderer(
                     }
                 }
 
+                is MarkdownBlock.Image -> {
+                    val resolvedUrl = resolveMediaUrl(block.url)
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = SurfaceDark,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable {
+                                if (onOpenImage != null) {
+                                    onOpenImage(block.url, block.alt)
+                                } else {
+                                    handleLinkClick(block.url, context, uriHandler, onOpenFile, onOpenImage)
+                                }
+                            }
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 140.dp, max = 280.dp)
+                                    .background(SurfaceVariantDark),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AsyncImage(
+                                    model = resolvedUrl,
+                                    contentDescription = block.alt.ifEmpty { "Görsel" },
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 140.dp, max = 280.dp)
+                                )
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Image,
+                                        contentDescription = null,
+                                        tint = GeminiBlue,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = block.alt.ifEmpty { block.url.substringAfterLast("/") },
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = TextPrimary,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                }
+                                Text(
+                                    text = "Büyüt ↗",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = GeminiBlue
+                                )
+                            }
+                        }
+                    }
+                }
+
                 is MarkdownBlock.Divider -> {
                     Divider(
                         color = BorderSubtle,
@@ -242,7 +324,7 @@ fun MarkdownRenderer(
                         rawText = block.text,
                         fontSizeSp = fontSizeSp,
                         textColor = TextPrimary,
-                        onLinkClick = { url -> handleLinkClick(url, context, uriHandler) }
+                        onLinkClick = { url -> handleLinkClick(url, context, uriHandler, onOpenFile, onOpenImage) }
                     )
                 }
             }
@@ -250,21 +332,46 @@ fun MarkdownRenderer(
     }
 }
 
-private fun handleLinkClick(url: String, context: Context, uriHandler: androidx.compose.ui.platform.UriHandler) {
+private fun handleLinkClick(
+    url: String,
+    context: Context,
+    uriHandler: androidx.compose.ui.platform.UriHandler,
+    onOpenFile: ((String) -> Unit)? = null,
+    onOpenImage: ((String, String) -> Unit)? = null
+) {
+    val cleanUrl = url.trim()
+    val lower = cleanUrl.lowercase()
+    val isImage = lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") ||
+            lower.endsWith(".webp") || lower.endsWith(".gif") || lower.endsWith(".svg")
+
+    if (isImage && onOpenImage != null) {
+        onOpenImage(cleanUrl, cleanUrl.substringAfterLast("/"))
+        return
+    }
+
+    if ((cleanUrl.startsWith("/") || cleanUrl.startsWith("file://") || cleanUrl.startsWith("~")) && onOpenFile != null) {
+        onOpenFile(cleanUrl)
+        return
+    }
+
     try {
-        if (url.startsWith("http://") || url.startsWith("https://")) {
-            uriHandler.openUri(url)
+        if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
+            uriHandler.openUri(cleanUrl)
         } else {
             // Local file link or custom scheme
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val cleanPath = url.replace("file://", "")
-            clipboard.setPrimaryClip(ClipData.newPlainText("File Path", cleanPath))
-            Toast.makeText(context, "Yol kopyalandı: $cleanPath", Toast.LENGTH_SHORT).show()
+            val cleanPath = cleanUrl.replace("file://", "")
+            if (onOpenFile != null) {
+                onOpenFile(cleanPath)
+            } else {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("File Path", cleanPath))
+                Toast.makeText(context, "Yol kopyalandı: $cleanPath", Toast.LENGTH_SHORT).show()
+            }
         }
     } catch (e: Exception) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("Link", url))
-        Toast.makeText(context, "Panoya kopyalandı: $url", Toast.LENGTH_SHORT).show()
+        clipboard.setPrimaryClip(ClipData.newPlainText("Link", cleanUrl))
+        Toast.makeText(context, "Panoya kopyalandı: $cleanUrl", Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -427,6 +534,16 @@ fun parseMarkdownBlocks(markdown: String): List<MarkdownBlock> {
         // 2. Horizontal divider
         if (trimmed == "---" || trimmed == "***" || trimmed == "___") {
             blocks.add(MarkdownBlock.Divider)
+            i++
+            continue
+        }
+
+        // 2.5 Image block (![alt](url))
+        val imgMatch = Regex("^!\\[([^\\]]*)\\]\\(([^\\)]+)\\)").find(trimmed)
+        if (imgMatch != null) {
+            val alt = imgMatch.groupValues[1]
+            val url = imgMatch.groupValues[2]
+            blocks.add(MarkdownBlock.Image(alt, url))
             i++
             continue
         }

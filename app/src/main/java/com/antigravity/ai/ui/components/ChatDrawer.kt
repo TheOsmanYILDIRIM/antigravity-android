@@ -46,6 +46,7 @@ fun ChatDrawer(
     onExportSingleConversation: (String) -> Unit,
     onExportAllConversations: () -> Unit,
     onOpenVault: () -> Unit,
+    onOpenFileManager: () -> Unit = {},
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -171,6 +172,38 @@ fun ChatDrawer(
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "My Stuff (Vault)",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.5.sp,
+                        color = TextPrimary
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = TextMuted,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            // 3.5 Termux File Manager & Projects
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenFileManager() }
+                    .padding(vertical = 8.dp, horizontal = 6.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.FolderSpecial,
+                        contentDescription = null,
+                        tint = GeminiPurple,
+                        modifier = Modifier.size(19.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Termux Dosyaları & Projeler",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.5.sp,
                         color = TextPrimary

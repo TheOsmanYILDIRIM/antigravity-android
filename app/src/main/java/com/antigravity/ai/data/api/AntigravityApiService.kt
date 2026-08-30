@@ -254,6 +254,70 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
         }
     }
 
+    suspend fun getFsList(dir: String? = null): Result<FsListResponse> = withContext(Dispatchers.IO) {
+        try {
+            val url = if (dir.isNullOrBlank()) "$baseUrl/api/fs/list" else {
+                val encoded = java.net.URLEncoder.encode(dir, "UTF-8")
+                "$baseUrl/api/fs/list?dir=$encoded"
+            }
+            val request = Request.Builder().url(url).get().build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext Result.failure(IOException("HTTP ${response.code}"))
+                val body = response.body?.string() ?: "{}"
+                Result.success(gson.fromJson(body, FsListResponse::class.java))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getFsProjects(): Result<FsProjectsResponse> = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url("$baseUrl/api/fs/projects").get().build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext Result.failure(IOException("HTTP ${response.code}"))
+                val body = response.body?.string() ?: "{}"
+                Result.success(gson.fromJson(body, FsProjectsResponse::class.java))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getFsContent(path: String): Result<FsContentResponse> = withContext(Dispatchers.IO) {
+        try {
+            val encoded = java.net.URLEncoder.encode(path, "UTF-8")
+            val request = Request.Builder().url("$baseUrl/api/fs/content?path=$encoded").get().build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext Result.failure(IOException("HTTP ${response.code}"))
+                val body = response.body?.string() ?: "{}"
+                Result.success(gson.fromJson(body, FsContentResponse::class.java))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun saveFsFile(path: String, content: String): Result<FsSaveResponse> = withContext(Dispatchers.IO) {
+        try {
+            val json = JsonObject().apply {
+                addProperty("path", path)
+                addProperty("content", content)
+            }
+            val request = Request.Builder()
+                .url("$baseUrl/api/fs/save")
+                .post(json.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext Result.failure(IOException("HTTP ${response.code}"))
+                val body = response.body?.string() ?: "{}"
+                Result.success(gson.fromJson(body, FsSaveResponse::class.java))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getSession(): Result<SessionResponse> = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()

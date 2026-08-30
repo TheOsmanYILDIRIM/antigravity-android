@@ -172,6 +172,108 @@ data class VaultFileContent(
     val content: String?
 )
 
+data class FsItem(
+    @SerializedName("name")
+    val name: String,
+    @SerializedName("path")
+    val path: String,
+    @SerializedName("isDirectory")
+    val isDirectory: Boolean = false,
+    @SerializedName("size")
+    val size: Long? = null,
+    @SerializedName("updatedAt")
+    val updatedAt: String? = null,
+    @SerializedName("extension")
+    val extension: String? = null,
+    @SerializedName("isProject")
+    val isProject: Boolean = false,
+    @SerializedName("projectType")
+    val projectType: String? = null,
+    @SerializedName("itemCount")
+    val itemCount: Int? = null
+)
+
+data class ProjectItem(
+    @SerializedName("name")
+    val name: String,
+    @SerializedName("path")
+    val path: String,
+    @SerializedName("type")
+    val type: String, // Android, Node.js, Next.js, React, Python, Rust, Go, Git
+    @SerializedName("description")
+    val description: String? = null,
+    @SerializedName("gitBranch")
+    val gitBranch: String? = null,
+    @SerializedName("lastModified")
+    val lastModified: String? = null
+)
+
+data class FsListResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("currentDir")
+    val currentDir: String,
+    @SerializedName("parentDir")
+    val parentDir: String?,
+    @SerializedName("homeDir")
+    val homeDir: String,
+    @SerializedName("items")
+    val items: List<FsItem>?,
+    @SerializedName("projects")
+    val projects: List<ProjectItem>?
+)
+
+data class FsProjectsResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("count")
+    val count: Int = 0,
+    @SerializedName("projects")
+    val projects: List<ProjectItem>?
+)
+
+data class FsContentResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("path")
+    val path: String,
+    @SerializedName("content")
+    val content: String? = null,
+    @SerializedName("size")
+    val size: Long = 0,
+    @SerializedName("lineCount")
+    val lineCount: Int = 0,
+    @SerializedName("isBinary")
+    val isBinary: Boolean = false,
+    @SerializedName("extension")
+    val extension: String? = null
+)
+
+data class FsSaveResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("message")
+    val message: String? = null,
+    @SerializedName("path")
+    val path: String? = null,
+    @SerializedName("size")
+    val size: Long? = null
+)
+
+fun resolveMediaUrl(rawPath: String, baseUrl: String = "http://127.0.0.1:8080"): String {
+    if (rawPath.isBlank()) return ""
+    if (rawPath.startsWith("http://") || rawPath.startsWith("https://") || rawPath.startsWith("content://")) {
+        return rawPath
+    }
+    val clean = if (rawPath.startsWith("file://")) rawPath.substring(7) else rawPath
+    return try {
+        val encoded = java.net.URLEncoder.encode(clean, "UTF-8")
+        "$baseUrl/api/files/raw?path=$encoded"
+    } catch (e: Exception) {
+        "$baseUrl/api/files/raw?path=$clean"
+    }
+}
+
 data class SkillItem(
     @SerializedName("name")
     val name: String,

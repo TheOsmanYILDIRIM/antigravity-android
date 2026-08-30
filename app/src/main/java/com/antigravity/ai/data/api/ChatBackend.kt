@@ -63,6 +63,18 @@ interface ChatBackend {
     suspend fun deleteVaultFile(relPath: String): Result<Unit> =
         Result.failure(UnsupportedOperationException("vault desteklenmiyor"))
 
+    suspend fun getFsList(dir: String? = null): Result<FsListResponse> =
+        Result.failure(UnsupportedOperationException("fs desteklenmiyor"))
+
+    suspend fun getFsProjects(): Result<FsProjectsResponse> =
+        Result.failure(UnsupportedOperationException("fs projeleri desteklenmiyor"))
+
+    suspend fun getFsContent(path: String): Result<FsContentResponse> =
+        Result.failure(UnsupportedOperationException("fs içerik desteklenmiyor"))
+
+    suspend fun saveFsFile(path: String, content: String): Result<FsSaveResponse> =
+        Result.failure(UnsupportedOperationException("fs kayıt desteklenmiyor"))
+
     suspend fun fetchSession(): Result<SessionResponse> = Result.success(SessionResponse("ok", null, false))
 
     suspend fun fetchAuthStatus(): Result<AuthStatusResponse> =

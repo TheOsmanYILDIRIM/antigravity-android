@@ -32,6 +32,7 @@ fun ChatTopBar(
     onNewChatClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onUsageClick: () -> Unit,
+    onFileManagerClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -97,6 +98,22 @@ fun ChatTopBar(
                     usage = usage,
                     onClick = onUsageClick
                 )
+
+                // Termux File Manager Button
+                IconButton(
+                    onClick = onFileManagerClick,
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(SurfaceVariantDark)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Folder,
+                        contentDescription = "Termux Dosyaları",
+                        tint = GeminiPurple,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
 
                 // Dedicated Gemini Settings Button
                 IconButton(

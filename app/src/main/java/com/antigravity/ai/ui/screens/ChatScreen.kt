@@ -211,6 +211,50 @@ fun ChatScreen(
         )
     }
 
+    // Termux File Manager & Project Explorer Screen
+    if (uiState.showFileManager) {
+        TermuxFileManagerScreen(
+            currentDir = uiState.fsCurrentDir,
+            parentDir = uiState.fsParentDir,
+            homeDir = uiState.fsHomeDir,
+            items = uiState.fsItems,
+            projects = uiState.fsProjects,
+            isLoading = uiState.isFsLoading,
+            onDismiss = { viewModel.setFileManagerVisible(false) },
+            onNavigateToDir = { dir -> viewModel.loadFsDirectory(dir) },
+            onOpenFile = { path -> viewModel.openFileInViewer(path) },
+            onOpenImage = { url, title -> viewModel.openImageInViewer(url, title) },
+            onAttachToChat = { path -> viewModel.attachFsPathToChat(path) },
+            onMentionInChat = { path -> viewModel.mentionFsPathInChat(path) },
+            onRefresh = {
+                viewModel.loadFsDirectory(uiState.fsCurrentDir)
+                viewModel.loadFsProjects()
+            }
+        )
+    }
+
+    // In-App File Viewer & Editor Dialog
+    if (uiState.activeViewerFilePath != null) {
+        FileViewerDialog(
+            filePath = uiState.activeViewerFilePath!!,
+            contentResponse = uiState.activeViewerFileContent,
+            isLoading = uiState.isViewerLoading,
+            onDismiss = { viewModel.closeFileViewer() },
+            onSaveFile = { path, content -> viewModel.saveFsFileContent(path, content) },
+            onAttachToChat = { path -> viewModel.attachFsPathToChat(path) },
+            onMentionInChat = { path -> viewModel.mentionFsPathInChat(path) }
+        )
+    }
+
+    // Fullscreen In-App Image Viewer Dialog
+    if (uiState.activeImageViewerUrl != null) {
+        ImageViewerDialog(
+            imageUrl = uiState.activeImageViewerUrl!!,
+            title = uiState.activeImageViewerTitle,
+            onDismiss = { viewModel.closeImageViewer() }
+        )
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -242,6 +286,10 @@ fun ChatScreen(
                     scope.launch { drawerState.close() }
                     viewModel.setVaultManagerVisible(true)
                 },
+                onOpenFileManager = {
+                    scope.launch { drawerState.close() }
+                    viewModel.setFileManagerVisible(true)
+                },
                 onOpenSettings = {
                     scope.launch { drawerState.close() }
                     viewModel.setSettingsDialogVisible(true)
@@ -266,6 +314,9 @@ fun ChatScreen(
                     },
                     onUsageClick = {
                         viewModel.setUsageDetailVisible(true)
+                    },
+                    onFileManagerClick = {
+                        viewModel.setFileManagerVisible(true)
                     }
                 )
             },
@@ -369,6 +420,9 @@ fun ChatScreen(
                         },
                         onAttachClick = {
                             filePickerLauncher.launch("*/*")
+                        },
+                        onOpenFileManager = {
+                            viewModel.setFileManagerVisible(true)
                         }
                     )
                 }
@@ -402,7 +456,9 @@ fun ChatScreen(
                             MessageItem(
                                 message = msg,
                                 isLastBotMessage = isLastBot,
-                                fontSizeSp = uiState.settings.fontSizeSp
+                                fontSizeSp = uiState.settings.fontSizeSp,
+                                onOpenFile = { path -> viewModel.openFileInViewer(path) },
+                                onOpenImage = { url, title -> viewModel.openImageInViewer(url, title) }
                             )
                         }
                     }
