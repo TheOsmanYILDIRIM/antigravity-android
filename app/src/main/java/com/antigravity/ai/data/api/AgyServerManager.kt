@@ -69,7 +69,7 @@ object AgyServerManager {
     fun startServer(context: Context, onLaunched: ((Boolean, String) -> Unit)? = null) {
         var launched = false
 
-        // 1. Try Termux RUN_COMMAND IPC Service
+        // Pure Background Termux RUN_COMMAND IPC Service (Zero UI intrusion, No popup windows)
         try {
             val intent = Intent().apply {
                 setClassName("com.termux", "com.termux.app.RunCommandService")
@@ -90,48 +90,8 @@ object AgyServerManager {
                 context.startService(intent)
             }
             launched = true
-        } catch (e: Exception) {}
-
-        // 2. Try Termux:Float Service trigger (com.termux.window.TermuxFloatService)
-        try {
-            val floatServiceIntent = Intent().apply {
-                setClassName("com.termux.window", "com.termux.window.TermuxFloatService")
-            }
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                try {
-                    context.startForegroundService(floatServiceIntent)
-                } catch (e: Exception) {
-                    context.startService(floatServiceIntent)
-                }
-            } else {
-                context.startService(floatServiceIntent)
-            }
-            launched = true
-        } catch (e: Exception) {}
-
-        // 3. Fallback: Launch Termux/Float Activity silently if background services were restricted
-        if (!launched) {
-            try {
-                val launchIntent = context.packageManager.getLaunchIntentForPackage("com.termux.window")
-                    ?: context.packageManager.getLaunchIntentForPackage("com.termux.float")
-                    ?: context.packageManager.getLaunchIntentForPackage("com.termux")
-
-                if (launchIntent != null) {
-                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
-                    context.startActivity(launchIntent)
-                    launched = true
-
-                    // Bring Antigravity back to foreground seamlessly
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        try {
-                            val bringBack = Intent(context, com.antigravity.ai.MainActivity::class.java).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                            }
-                            context.startActivity(bringBack)
-                        } catch (e: Exception) {}
-                    }, 400)
-                }
-            } catch (e: Exception) {}
+        } catch (e: Exception) {
+            launched = false
         }
 
         onLaunched?.invoke(launched, if (launched) "Termux agy-web arka planda başlatıldı." else "Başlatma sinyali gönderildi.")
@@ -182,15 +142,7 @@ object AgyServerManager {
             }.start()
         } catch (e: Exception) {}
 
-        // 2. Stop Termux Float service
-        try {
-            val floatStopIntent = Intent().apply {
-                setClassName("com.termux.window", "com.termux.window.TermuxFloatService")
-            }
-            context.stopService(floatStopIntent)
-        } catch (e: Exception) {}
-
-        // 3. Run agy-web-stop.sh via Termux RunCommandService
+        // 2. Run agy-web-stop.sh via Termux RunCommandService
         try {
             val stopIntent = Intent().apply {
                 setClassName("com.termux", "com.termux.app.RunCommandService")
