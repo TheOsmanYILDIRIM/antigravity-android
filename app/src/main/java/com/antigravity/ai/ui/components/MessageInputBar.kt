@@ -55,6 +55,7 @@ fun MessageInputBar(
     onOpenTemplateManager: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var showAttachMenu by remember { mutableStateOf(false) }
     val infiniteTransition = rememberInfiniteTransition(label = "generating_pulse")
     val rotationAngle by infiniteTransition.animateFloat(
@@ -321,7 +322,7 @@ fun MessageInputBar(
                                     },
                                     onClick = {
                                         showAttachMenu = false
-                                        val tpls = com.antigravity.ai.data.model.TemplateManager.getTemplates(context = androidx.compose.ui.platform.AndroidUiDispatcher.Main.let { null } ?: androidx.compose.ui.platform.LocalContext.current)
+                                        val tpls = com.antigravity.ai.data.model.TemplateManager.getTemplates(context)
                                         val target = tpls.firstOrNull { it.id.contains("standard") } ?: com.antigravity.ai.data.model.TemplateManager.DEFAULT_TEMPLATES[0]
                                         onOpenTemplateFill(target)
                                     }
@@ -339,7 +340,7 @@ fun MessageInputBar(
                                     },
                                     onClick = {
                                         showAttachMenu = false
-                                        val tpls = com.antigravity.ai.data.model.TemplateManager.getTemplates(context = androidx.compose.ui.platform.AndroidUiDispatcher.Main.let { null } ?: androidx.compose.ui.platform.LocalContext.current)
+                                        val tpls = com.antigravity.ai.data.model.TemplateManager.getTemplates(context)
                                         val target = tpls.firstOrNull { it.id.contains("detailed") } ?: com.antigravity.ai.data.model.TemplateManager.DEFAULT_TEMPLATES[1]
                                         onOpenTemplateFill(target)
                                     }

@@ -9,17 +9,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.outlined.FileDownload
-import androidx.compose.material.icons.outlined.FormatSize
-import androidx.compose.material.icons.outlined.LocalFireDepartment
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Psychology
-import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.SmartToy
-import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -755,6 +747,9 @@ fun ModelSettingsDialog(
                                 color = TextPrimary
                             )
                         }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(14.dp))
                 Surface(
                     shape = RoundedCornerShape(12.dp),
@@ -796,7 +791,7 @@ fun ModelSettingsDialog(
                             }
                         }
                         Icon(
-                            imageVector = Icons.Default.ChevronRight,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null,
                             tint = TextMuted,
                             modifier = Modifier.size(18.dp)
