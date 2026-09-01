@@ -34,8 +34,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (isFinishing) {
-            com.antigravity.ai.data.api.AgyServerManager.shutdownLifecycle(this)
-        }
+        // Termux agy-web arka plan oturumunun kesilmesini önlemek için
+        // sunucu kapatma işlemi sadece açık kullanıcı isteğiyle yapılır.
     }
 }
