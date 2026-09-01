@@ -51,6 +51,8 @@ fun MessageInputBar(
     onMicClick: () -> Unit,
     onAttachClick: () -> Unit,
     onOpenFileManager: () -> Unit = {},
+    onOpenTemplateFill: (com.antigravity.ai.data.model.PromptTemplate) -> Unit = {},
+    onOpenTemplateManager: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showAttachMenu by remember { mutableStateOf(false) }
@@ -313,18 +315,15 @@ fun MessageInputBar(
                                             Spacer(modifier = Modifier.width(10.dp))
                                             Column {
                                                 Text("Şablon: Hedef & Sınırlar", color = TextPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                                                Text("Kısa ve odaklı görev şablonu", color = TextMuted, fontSize = 11.sp)
+                                                Text("Değişkenleri doldurarak uygula", color = TextMuted, fontSize = 11.sp)
                                             }
                                         }
                                     },
                                     onClick = {
                                         showAttachMenu = false
-                                        val template1 = """Hedef: [ne olursa iş bitmiş sayılır]
-Elindekiler: [ham malzemeyi özetlemeden buraya yapıştır]
-Sınırlar: [dokunma listesi; neyi asla yapmasın]
-Gerisi sende. Ortalama iş yerine iddialı kararın riskini al."""
-                                        val newText = if (text.isBlank()) template1 else "$text\n\n$template1"
-                                        onTextChange(newText)
+                                        val tpls = com.antigravity.ai.data.model.TemplateManager.getTemplates(context = androidx.compose.ui.platform.AndroidUiDispatcher.Main.let { null } ?: androidx.compose.ui.platform.LocalContext.current)
+                                        val target = tpls.firstOrNull { it.id.contains("standard") } ?: com.antigravity.ai.data.model.TemplateManager.DEFAULT_TEMPLATES[0]
+                                        onOpenTemplateFill(target)
                                     }
                                 )
                                 DropdownMenuItem(
@@ -340,16 +339,26 @@ Gerisi sende. Ortalama iş yerine iddialı kararın riskini al."""
                                     },
                                     onClick = {
                                         showAttachMenu = false
-                                        val template2 = """Hedef: [tek cümle, sonuç dili: ne olursa iş bitmiş sayılır]
-Elindekiler: [ham malzeme: mail, log, veri, örnek; özetleme, olduğu gibi yapıştır]
-Sınırlar:
-- [neye dokunamaz]
-- [neyi kullanamaz]
-- [neyi asla yapamaz; istemediklerini de isimlendir]
-Ölçü: [neyin iyi olduğunu nasıl anlayacağız; sayı verebiliyorsan ver]
-Serbestlik: Gerisi sende. Nasıl yapacağını sen seç; ortalama iş yerine iddialı kararın riskini al. Talimatta hata görürsen uygulamadan önce söyle."""
-                                        val newText = if (text.isBlank()) template2 else "$text\n\n$template2"
-                                        onTextChange(newText)
+                                        val tpls = com.antigravity.ai.data.model.TemplateManager.getTemplates(context = androidx.compose.ui.platform.AndroidUiDispatcher.Main.let { null } ?: androidx.compose.ui.platform.LocalContext.current)
+                                        val target = tpls.firstOrNull { it.id.contains("detailed") } ?: com.antigravity.ai.data.model.TemplateManager.DEFAULT_TEMPLATES[1]
+                                        onOpenTemplateFill(target)
+                                    }
+                                )
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = 4.dp),
+                                    color = BorderSubtle
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Tune, contentDescription = null, tint = GeminiPurple, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Text("Tüm Şablonları Yönet & Ekle...", color = TextPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.Medium)
+                                        }
+                                    },
+                                    onClick = {
+                                        showAttachMenu = false
+                                        onOpenTemplateManager()
                                     }
                                 )
                             }

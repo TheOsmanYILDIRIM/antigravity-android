@@ -57,6 +57,7 @@ fun ModelSettingsDialog(
     isKeepAliveRunning: Boolean = false,
     keepAliveMode: String = "invisible",
     onToggleKeepAlive: (Boolean, String) -> Unit = { _, _ -> },
+    onOpenTemplateManager: () -> Unit = {},
     onExportAllConversations: (() -> Unit)? = null
 ) {
     var selectedBackend by remember { mutableStateOf(currentBackend) }
@@ -754,6 +755,52 @@ fun ModelSettingsDialog(
                                 color = TextPrimary
                             )
                         }
+                Spacer(modifier = Modifier.height(14.dp))
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = SurfaceVariantDark,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
+                            onDismiss()
+                            onOpenTemplateManager()
+                        }
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.padding(14.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = null,
+                                tint = GeminiPurple,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Şablon ve Prompt Yöneticisi",
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = "Doldurulabilir şablonları yönetin ve yeni şablon ekleyin",
+                                    fontSize = 10.5.sp,
+                                    color = TextMuted
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = TextMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }

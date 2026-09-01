@@ -55,6 +55,8 @@ fun ChatScreen(
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val context = LocalContext.current
+    var templateToFill by remember { mutableStateOf<com.antigravity.ai.data.model.PromptTemplate?>(null) }
+    var showTemplateManager by remember { mutableStateOf(false) }
 
     val showScrollToBottom by remember {
         derivedStateOf {
@@ -141,20 +143,23 @@ fun ChatScreen(
             onRestartServer = { viewModel.restartAgyServer() },
             isKeepAliveRunning = uiState.isKeepAliveRunning,
             keepAliveMode = uiState.keepAliveMode,
-            onToggleKeepAlive = { enabled, mode ->
-                if (enabled && !com.antigravity.ai.service.FloatingKeepAliveService.canDrawOverlays(context)) {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                        val intent = android.content.Intent(
-                            android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                            android.net.Uri.parse("package:${context.packageName}")
-                        )
-                        overlayPermissionLauncher.launch(intent)
-                    }
+            onToggleKeepAlive = { enable, mode ->
+                if (enable && !com.antigravity.ai.service.FloatingKeepAliveService.canDrawOverlays(context)) {
+                    val intent = android.content.Intent(
+                        android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        android.net.Uri.parse("package:${context.packageName}")
+                    )
+                    overlayPermissionLauncher.launch(intent)
                 } else {
-                    viewModel.toggleKeepAlive(enabled, mode)
+                    viewModel.toggleKeepAlive(enable, mode)
                 }
             },
-            onExportAllConversations = { viewModel.exportAllConversations(context) }
+            onOpenTemplateManager = {
+                showTemplateManager = true
+            },
+            onExportAllConversations = {
+                viewModel.exportAllConversations(context)
+            }
         )
     }
 
@@ -264,6 +269,34 @@ fun ChatScreen(
             },
             serverHealth = uiState.serverHealth,
             onStartServer = { viewModel.startAgyServer() }
+        )
+    }
+
+    // Dynamic Fillable Prompt Template Dialog
+    if (templateToFill != null) {
+        com.antigravity.ai.ui.components.TemplateFillDialog(
+            template = templateToFill!!,
+            onDismiss = { templateToFill = null },
+            onApplyTemplate = { filledText ->
+                val current = uiState.inputText
+                val updated = if (current.isBlank()) filledText else "$current\n\n$filledText"
+                viewModel.onInputTextChange(updated)
+            },
+            onSendImmediately = { filledText ->
+                viewModel.onInputTextChange(filledText)
+                viewModel.sendMessage()
+            }
+        )
+    }
+
+    // Prompt & Template Manager / Creator Dialog
+    if (showTemplateManager) {
+        com.antigravity.ai.ui.components.TemplateManagerDialog(
+            onDismiss = { showTemplateManager = false },
+            onSelectTemplateToFill = { tpl ->
+                showTemplateManager = false
+                templateToFill = tpl
+            }
         )
     }
 
@@ -455,6 +488,12 @@ fun ChatScreen(
                         },
                         onOpenFileManager = {
                             viewModel.setFileManagerVisible(true)
+                        },
+                        onOpenTemplateFill = { tpl ->
+                            templateToFill = tpl
+                        },
+                        onOpenTemplateManager = {
+                            showTemplateManager = true
                         }
                     )
                 }

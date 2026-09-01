@@ -395,3 +395,20 @@ data class SlashCommand(
     val example: String,
     val isSkill: Boolean = false
 )
+
+data class TemplateField(
+    val key: String,
+    val label: String,
+    val hint: String = "",
+    val defaultValue: String = "",
+    val isMultiline: Boolean = true
+)
+
+data class PromptTemplate(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val title: String,
+    val description: String = "",
+    val format: String,
+    val fields: List<TemplateField> = emptyList(),
+    val isDefault: Boolean = false
+)
