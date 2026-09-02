@@ -4,9 +4,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -34,6 +36,7 @@ import com.antigravity.ai.data.model.Attachment
 import com.antigravity.ai.data.model.PastedBlock
 import com.antigravity.ai.ui.theme.*
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageInputBar(
     text: String,
@@ -57,6 +60,7 @@ fun MessageInputBar(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var showAttachMenu by remember { mutableStateOf(false) }
+    var showTemplateMenu by remember { mutableStateOf(false) }
     val infiniteTransition = rememberInfiniteTransition(label = "generating_pulse")
     val rotationAngle by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -254,24 +258,28 @@ fun MessageInputBar(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // + Attachment
+                        // + Attachment / Long-click Template Action
                         Box(contentAlignment = Alignment.Center) {
                             Box(
                                 modifier = Modifier
                                     .size(34.dp)
                                     .clip(CircleShape)
                                     .background(SurfaceVariantDark)
-                                    .clickable { showAttachMenu = true },
+                                    .combinedClickable(
+                                        onClick = { showAttachMenu = true },
+                                        onLongClick = { showTemplateMenu = true }
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Add,
-                                    contentDescription = "Ekle",
+                                    contentDescription = "Ekle (Basılı Tut: Şablonlar)",
                                     tint = TextSecondary,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
 
+                            // 1. Kısa Tıklama Menüsü (SADECE Dosya & Projeler & Galeri)
                             DropdownMenu(
                                 expanded = showAttachMenu,
                                 onDismissRequest = { showAttachMenu = false },
@@ -305,60 +313,78 @@ fun MessageInputBar(
                                         onAttachClick()
                                     }
                                 )
+                            }
+
+                            // 2. Basılı Tutunca Açılan ŞABLONLAR & PROMPTLAR Menüsü
+                            DropdownMenu(
+                                expanded = showTemplateMenu,
+                                onDismissRequest = { showTemplateMenu = false },
+                                modifier = Modifier
+                                    .background(SurfaceDark)
+                                    .border(1.dp, BorderSubtle, RoundedCornerShape(14.dp))
+                            ) {
+                                // Başlık
+                                Surface(
+                                    color = SurfaceVariantDark,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Bolt, contentDescription = null, tint = WarningAmber, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "HIZLI ŞABLONLAR & PROMPTLAR",
+                                            color = WarningAmber,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+
+                                val allTemplates = com.antigravity.ai.data.model.TemplateManager.getTemplates(context)
+                                allTemplates.forEach { tpl ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    imageVector = if (tpl.id.contains("standard")) Icons.Default.Bolt else Icons.Default.Assignment,
+                                                    contentDescription = null,
+                                                    tint = if (tpl.id.contains("standard")) WarningAmber else GeminiBlue,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                                Column {
+                                                    Text(tpl.title, color = TextPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                                                    if (tpl.description.isNotBlank()) {
+                                                        Text(tpl.description, color = TextMuted, fontSize = 11.sp)
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        onClick = {
+                                            showTemplateMenu = false
+                                            onOpenTemplateFill(tpl)
+                                        }
+                                    )
+                                }
+
                                 HorizontalDivider(
                                     modifier = Modifier.padding(vertical = 4.dp),
                                     color = BorderSubtle
                                 )
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(Icons.Default.Bolt, contentDescription = null, tint = WarningAmber, modifier = Modifier.size(18.dp))
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Column {
-                                                Text("Şablon: Hedef & Sınırlar", color = TextPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                                                Text("Değişkenleri doldurarak uygula", color = TextMuted, fontSize = 11.sp)
-                                            }
-                                        }
-                                    },
-                                    onClick = {
-                                        showAttachMenu = false
-                                        val tpls = com.antigravity.ai.data.model.TemplateManager.getTemplates(context)
-                                        val target = tpls.firstOrNull { it.id.contains("standard") } ?: com.antigravity.ai.data.model.TemplateManager.DEFAULT_TEMPLATES[0]
-                                        onOpenTemplateFill(target)
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(Icons.Default.Assignment, contentDescription = null, tint = GeminiBlue, modifier = Modifier.size(18.dp))
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Column {
-                                                Text("Şablon: Detaylı & Ölçülü Görev", color = TextPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                                                Text("Ölçü, serbestlik ve katı sınırlar", color = TextMuted, fontSize = 11.sp)
-                                            }
-                                        }
-                                    },
-                                    onClick = {
-                                        showAttachMenu = false
-                                        val tpls = com.antigravity.ai.data.model.TemplateManager.getTemplates(context)
-                                        val target = tpls.firstOrNull { it.id.contains("detailed") } ?: com.antigravity.ai.data.model.TemplateManager.DEFAULT_TEMPLATES[1]
-                                        onOpenTemplateFill(target)
-                                    }
-                                )
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = 4.dp),
-                                    color = BorderSubtle
-                                )
+
                                 DropdownMenuItem(
                                     text = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(Icons.Default.Tune, contentDescription = null, tint = GeminiPurple, modifier = Modifier.size(18.dp))
                                             Spacer(modifier = Modifier.width(10.dp))
-                                            Text("Tüm Şablonları Yönet & Ekle...", color = TextPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.Medium)
+                                            Text("Tüm Şablonları Yönet & Yeni Ekle...", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                                         }
                                     },
                                     onClick = {
-                                        showAttachMenu = false
+                                        showTemplateMenu = false
                                         onOpenTemplateManager()
                                     }
                                 )

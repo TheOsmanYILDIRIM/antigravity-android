@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -46,7 +47,7 @@ fun TemplateManagerDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
-                .fillMaxHeight(0.88f)
+                .fillMaxHeight(0.90f)
                 .clip(RoundedCornerShape(24.dp))
                 .border(1.dp, BorderSubtle, RoundedCornerShape(24.dp)),
             color = SurfaceDark
@@ -169,6 +170,12 @@ fun TemplateManagerDialog(
                                                 fontSize = 12.sp
                                             )
                                         }
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = "${tpl.fields.size} Değişken Alanı: ${tpl.fields.joinToString(", ") { "{${it.key}}" }}",
+                                            color = GeminiPurple.copy(alpha = 0.9f),
+                                            fontSize = 11.sp
+                                        )
                                     }
 
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -237,7 +244,38 @@ fun TemplateEditorView(
 ) {
     var title by remember { mutableStateOf(template?.title ?: "") }
     var description by remember { mutableStateOf(template?.description ?: "") }
-    var format by remember { mutableStateOf(template?.format ?: "Hedef: {hedef}\nElindekiler: {elindekiler}\nSınırlar: {sinirlar}") }
+    var format by remember { mutableStateOf(template?.format ?: "Hedef: {hedef}\nElindekiler: {elindekiler}\nSınırlar: {sinirlar}\nGerisi sende.") }
+
+    // Değişken açıklamalarını ve etiketlerini saklayan harita
+    val fieldConfigs = remember {
+        mutableStateMapOf<String, TemplateField>().apply {
+            template?.fields?.forEach { f ->
+                put(f.key, f)
+            }
+        }
+    }
+
+    // Format içindeki {degisken} anahtarlarını ayrıştır
+    val detectedKeys by remember(format) {
+        derivedStateOf {
+            val regex = Regex("\\{([a-zA-Z0-9_]+)\\}")
+            regex.findAll(format).map { it.groupValues[1] }.distinct().toList()
+        }
+    }
+
+    // Yeni tespit edilen anahtarları fieldConfigs haritasına ekle
+    LaunchedEffect(detectedKeys) {
+        detectedKeys.forEach { k ->
+            if (!fieldConfigs.containsKey(k)) {
+                fieldConfigs[k] = TemplateField(
+                    key = k,
+                    label = k.replaceFirstChar { it.uppercase() },
+                    hint = "$k alanına yazılacak veri veya talimat",
+                    isMultiline = true
+                )
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -307,15 +345,15 @@ fun TemplateEditorView(
         }
 
         Column {
-            Text("Şablon Formatı ({değişken} şeklinde alanlar ekleyin)", color = GeminiBlue, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text("Şablon Formatı ({değişken} şeklinde alanlar yazın)", color = GeminiBlue, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(4.dp))
             OutlinedTextField(
                 value = format,
                 onValueChange = { format = it },
-                placeholder = { Text("Hedef: {hedef}\nSınırlar: {sinirlar}", color = TextMuted, fontSize = 13.sp) },
+                placeholder = { Text("Hedef: {hedef}\nElindekiler: {elindekiler}\nSınırlar: {sinirlar}", color = TextMuted, fontSize = 13.sp) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 120.dp, max = 250.dp),
+                    .heightIn(min = 100.dp, max = 200.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = InputBackground,
@@ -328,10 +366,104 @@ fun TemplateEditorView(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "İpucu: Süslü parantez {alan_adi} içine yazdığınız her kelime otomatik olarak doldurulabilir bir kutucuğa dönüşür.",
+                text = "💡 Süslü parantez içine yazdığınız her {kelime} aşağıda özelleştirilebilir açıklama ve ipucu kutularına dönüşür.",
                 color = TextMuted,
-                fontSize = 11.sp
+                fontSize = 11.5.sp
             )
+        }
+
+        // Değişken Açıklamaları ve İpuçları Alanı
+        if (detectedKeys.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "📌 DEĞİŞKEN AÇIKLAMALARI VE İPUÇLARI (${detectedKeys.size} Alan)",
+                color = WarningAmber,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                detectedKeys.forEach { key ->
+                    val currentField = fieldConfigs[key] ?: TemplateField(key = key, label = key, hint = "")
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = SurfaceVariantDark,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = GeminiBlue.copy(alpha = 0.2f)
+                                ) {
+                                    Text(
+                                        text = "{$key}",
+                                        color = GeminiBlue,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Alanı İçin Açıklamalar",
+                                    color = TextPrimary,
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text("Kullanıcıya Görünecek Başlık (Label):", color = TextSecondary, fontSize = 11.5.sp)
+                            Spacer(modifier = Modifier.height(2.dp))
+                            OutlinedTextField(
+                                value = currentField.label,
+                                onValueChange = { newLabel ->
+                                    fieldConfigs[key] = currentField.copy(label = newLabel)
+                                },
+                                placeholder = { Text("Örn: Hedef (Sonuç Dili)", color = TextMuted, fontSize = 12.sp) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = InputBackground,
+                                    unfocusedContainerColor = InputBackground,
+                                    focusedBorderColor = GeminiBlue,
+                                    unfocusedBorderColor = BorderSubtle,
+                                    focusedTextColor = TextPrimary,
+                                    unfocusedTextColor = TextPrimary
+                                ),
+                                textStyle = LocalTextStyle.current.copy(fontSize = 12.5.sp)
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text("Kullanıcıya Görünecek İpucu / Ne Yazılacak Açıklaması (Hint):", color = TextSecondary, fontSize = 11.5.sp)
+                            Spacer(modifier = Modifier.height(2.dp))
+                            OutlinedTextField(
+                                value = currentField.hint,
+                                onValueChange = { newHint ->
+                                    fieldConfigs[key] = currentField.copy(hint = newHint)
+                                },
+                                placeholder = { Text("Örn: Tek cümle, sonuç dili: ne olursa iş bitmiş sayılır? Özetleme, olduğu gibi yapıştır.", color = TextMuted, fontSize = 12.sp) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = InputBackground,
+                                    unfocusedContainerColor = InputBackground,
+                                    focusedBorderColor = GeminiBlue,
+                                    unfocusedBorderColor = BorderSubtle,
+                                    focusedTextColor = TextPrimary,
+                                    unfocusedTextColor = TextPrimary
+                                ),
+                                textStyle = LocalTextStyle.current.copy(fontSize = 12.5.sp)
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -355,11 +487,8 @@ fun TemplateEditorView(
             Button(
                 onClick = {
                     if (title.isNotBlank() && format.isNotBlank()) {
-                        // Extract placeholder keys from format {key}
-                        val regex = Regex("\\{([a-zA-Z0-9_]+)\\}")
-                        val matches = regex.findAll(format).map { it.groupValues[1] }.distinct().toList()
-                        val fields = matches.map { k ->
-                            TemplateField(
+                        val fields = detectedKeys.map { k ->
+                            fieldConfigs[k] ?: TemplateField(
                                 key = k,
                                 label = k.replaceFirstChar { it.uppercase() },
                                 hint = "$k alanını doldurun",
