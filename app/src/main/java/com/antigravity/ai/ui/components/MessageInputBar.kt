@@ -28,6 +28,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -54,11 +56,13 @@ fun MessageInputBar(
     onMicClick: () -> Unit,
     onAttachClick: () -> Unit,
     onOpenFileManager: () -> Unit = {},
+    onAddPastedBlock: (String) -> Unit = {},
     onOpenTemplateFill: (com.antigravity.ai.data.model.PromptTemplate) -> Unit = {},
     onOpenTemplateManager: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     var showAttachMenu by remember { mutableStateOf(false) }
     var showTemplateMenu by remember { mutableStateOf(false) }
     val infiniteTransition = rememberInfiniteTransition(label = "generating_pulse")
@@ -161,7 +165,7 @@ fun MessageInputBar(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "${block.lineCount} satır metin",
+                                        text = "Yapıştırılmış Metin (${block.lineCount} satır)",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = TextPrimary
@@ -311,6 +315,22 @@ fun MessageInputBar(
                                     onClick = {
                                         showAttachMenu = false
                                         onAttachClick()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.ContentPaste, contentDescription = null, tint = GeminiBlue, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Text("Panodan Metin / Kod Bloğu Ekle", color = TextPrimary, fontSize = 13.5.sp)
+                                        }
+                                    },
+                                    onClick = {
+                                        showAttachMenu = false
+                                        val clip = clipboardManager.getText()?.text?.toString()?.trim()
+                                        if (!clip.isNullOrBlank()) {
+                                            onAddPastedBlock(clip)
+                                        }
                                     }
                                 )
                             }

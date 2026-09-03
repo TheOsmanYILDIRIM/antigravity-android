@@ -10,6 +10,7 @@ data class Message(
     val tools: MutableList<ToolCall> = mutableListOf(),
     var usage: UsageStats? = null,
     val attachments: List<Attachment> = emptyList(),
+    val pastedBlocks: List<PastedBlock> = emptyList(),
     val timestamp: Long = System.currentTimeMillis(),
     var state: MessageState = MessageState.DONE
 )

@@ -497,6 +497,7 @@ fun ChatScreen(
                         onOpenFileManager = {
                             viewModel.setFileManagerVisible(true)
                         },
+                        onAddPastedBlock = viewModel::addPastedBlock,
                         onOpenTemplateFill = { tpl ->
                             templateToFill = tpl
                         },

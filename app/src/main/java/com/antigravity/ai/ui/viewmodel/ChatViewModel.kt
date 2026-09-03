@@ -740,12 +740,29 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun mapSessionMessage(sessionMsg: SessionMessage): Message {
+        val raw = sessionMsg.content ?: ""
+        var displayContent = raw
+        val extractedBlocks = mutableListOf<PastedBlock>()
+
+        if (sessionMsg.role == "user" && raw.contains("### Ek Metin / Kod Parçası")) {
+            val regex = Regex("### Ek Metin / Kod Parçası #\\d+:\\s*```[a-zA-Z]*\\n([\\s\\S]*?)\\n```")
+            val matches = regex.findAll(raw).toList()
+            if (matches.isNotEmpty()) {
+                matches.forEach { m ->
+                    val blockContent = m.groupValues[1]
+                    extractedBlocks.add(PastedBlock(content = blockContent))
+                }
+                displayContent = regex.replace(raw, "").trim()
+            }
+        }
+
         return Message(
             role = sessionMsg.role,
-            content = sessionMsg.content ?: "",
+            content = displayContent,
             tools = sessionMsg.tools?.toMutableList() ?: mutableListOf(),
             usage = sessionMsg.usage,
             attachments = sessionMsg.attachments ?: emptyList(),
+            pastedBlocks = extractedBlocks,
             state = if (sessionMsg.state == "generating") MessageState.GENERATING else MessageState.DONE
         )
     }
@@ -844,18 +861,42 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun addPastedBlock(content: String) {
+        val trimmed = content.trim()
+        if (trimmed.isNotBlank()) {
+            val newBlock = PastedBlock(content = trimmed)
+            _uiState.update {
+                it.copy(pastedBlocks = it.pastedBlocks + newBlock)
+            }
+        }
+    }
+
     // Smart Multi-Paste Detection & Universal Slash/Mention Triggers (Anywhere in text)
     fun onInputTextChange(newText: String) {
-        val isHugePaste = (newText.length > 150 || newText.lines().size > 3) && _uiState.value.inputText.isEmpty()
-        if (isHugePaste) {
-            val newBlock = PastedBlock(content = newText)
-            _uiState.update {
-                it.copy(
-                    inputText = "",
-                    pastedBlocks = it.pastedBlocks + newBlock
-                )
+        val currentText = _uiState.value.inputText
+        val addedLength = newText.length - currentText.length
+        val addedLines = newText.lines().size - currentText.lines().size
+
+        // Otomatik yapıştırma algılama (80 karakterden uzun veya 2'den fazla satır eklenirse)
+        if (addedLength > 80 || addedLines >= 2) {
+            val pastedChunk = when {
+                currentText.isEmpty() -> newText
+                newText.startsWith(currentText) -> newText.substring(currentText.length)
+                newText.endsWith(currentText) -> newText.substring(0, newText.length - currentText.length)
+                else -> newText
             }
-            return
+
+            if (pastedChunk.trim().length > 70 || pastedChunk.lines().size > 2) {
+                val remainingText = if (newText.startsWith(currentText)) currentText else ""
+                val newBlock = PastedBlock(content = pastedChunk.trim())
+                _uiState.update {
+                    it.copy(
+                        inputText = remainingText,
+                        pastedBlocks = it.pastedBlocks + newBlock
+                    )
+                }
+                return
+            }
         }
 
         val lastWord = newText.split(Regex("[\\s\n]+")).lastOrNull() ?: ""
@@ -1045,10 +1086,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun sendMessage() {
         val state = _uiState.value
-        var finalPrompt = state.inputText.trim()
+        val userTypedText = state.inputText.trim()
+        val blocks = state.pastedBlocks
+        var finalPrompt = userTypedText
 
-        if (state.pastedBlocks.isNotEmpty()) {
-            val blocksText = state.pastedBlocks.mapIndexed { idx, b ->
+        if (blocks.isNotEmpty()) {
+            val blocksText = blocks.mapIndexed { idx, b ->
                 "### Ek Metin / Kod Parçası #${idx + 1}:\n```\n${b.content.trim()}\n```"
             }.joinToString("\n\n")
 
@@ -1060,7 +1103,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         val userMessage = Message(
             role = "user",
-            content = finalPrompt,
+            content = userTypedText,
+            pastedBlocks = blocks,
             attachments = state.attachments
         )
         val botPlaceholder = Message(

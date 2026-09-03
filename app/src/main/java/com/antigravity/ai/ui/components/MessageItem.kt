@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.antigravity.ai.data.model.Message
 import com.antigravity.ai.data.model.MessageState
+import com.antigravity.ai.data.model.PastedBlock
 import com.antigravity.ai.ui.theme.*
 
 @Composable
@@ -46,6 +47,7 @@ fun MessageItem(
 ) {
     val isUser = message.role == "user"
     val context = LocalContext.current
+    var showMenu by remember { mutableStateOf(false) }
 
     if (isUser) {
         // User Message (Figma: Right-aligned #282A2C bubble with action toolbar)
@@ -57,7 +59,7 @@ fun MessageItem(
         ) {
             Column(
                 modifier = Modifier
-                    .widthIn(max = 320.dp)
+                    .widthIn(min = 60.dp, max = 340.dp)
                     .clip(
                         RoundedCornerShape(
                             topStart = 20.dp,
@@ -67,7 +69,7 @@ fun MessageItem(
                         )
                     )
                     .background(UserBubbleColor)
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 // Attachments Preview (Images & Docs)
                 if (message.attachments.isNotEmpty()) {
@@ -130,14 +132,52 @@ fun MessageItem(
                     }
                 }
 
-                // Selectable text for User Message
-                SelectionContainer {
-                    Text(
-                        text = message.content,
-                        fontSize = fontSizeSp.sp,
-                        lineHeight = (fontSizeSp * 1.45f).sp,
-                        color = TextPrimary
-                    )
+                // Yapıştırılmış Metin Blokları (Kullanıcı İsteği: Chat ekranında daralmış/genişletilebilir ayrı blok)
+                val allPastedBlocks = remember(message.pastedBlocks, message.content) {
+                    if (message.pastedBlocks.isNotEmpty()) {
+                        message.pastedBlocks
+                    } else if (message.content.contains("### Ek Metin / Kod Parçası")) {
+                        val regex = Regex("### Ek Metin / Kod Parçası #\\d+:\\s*```[a-zA-Z]*\\n([\\s\\S]*?)\\n```")
+                        regex.findAll(message.content).map { m ->
+                            PastedBlock(content = m.groupValues[1])
+                        }.toList()
+                    } else {
+                        emptyList()
+                    }
+                }
+
+                val userTextDisplay = remember(message.content, message.pastedBlocks) {
+                    if (message.content.contains("### Ek Metin / Kod Parçası")) {
+                        val regex = Regex("### Ek Metin / Kod Parçası #\\d+:\\s*```[a-zA-Z]*\\n([\\s\\S]*?)\\n```")
+                        regex.replace(message.content, "").trim()
+                    } else {
+                        message.content
+                    }
+                }
+
+                if (allPastedBlocks.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = if (userTextDisplay.isNotBlank()) 8.dp else 0.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        allPastedBlocks.forEach { block ->
+                            CollapsiblePastedBlock(block = block)
+                        }
+                    }
+                }
+
+                // Selectable text for User Message (varsa)
+                if (userTextDisplay.isNotBlank()) {
+                    SelectionContainer {
+                        Text(
+                            text = userTextDisplay,
+                            fontSize = fontSizeSp.sp,
+                            lineHeight = (fontSizeSp * 1.45f).sp,
+                            color = TextPrimary
+                        )
+                    }
                 }
             }
 
@@ -200,18 +240,13 @@ fun MessageItem(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.fillMaxWidth()) {
-                // Tool calls (if any)
+                // Tool calls (Toplu Üst Kod/Komut Bloğu - Dikeyde dar ve daraltılıp açılabilir)
                 if (message.tools.isNotEmpty()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        message.tools.forEach { tool ->
-                            ToolCard(tool = tool)
-                        }
-                    }
+                    ToolCallsContainer(
+                        tools = message.tools,
+                        isGenerating = message.state == MessageState.GENERATING,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
                 }
 
                 // Message content with Full Markdown Renderer wrapped in SelectionContainer
