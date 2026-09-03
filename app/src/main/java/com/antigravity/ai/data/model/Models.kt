@@ -340,6 +340,24 @@ data class AuthStatusResponse(
     val authMethod: String = "none"
 )
 
+data class AgLoginResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("authUrl")
+    val authUrl: String? = null,
+    @SerializedName("error")
+    val error: String? = null
+)
+
+data class AgLoginCodeResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("message")
+    val message: String? = null,
+    @SerializedName("error")
+    val error: String? = null
+)
+
 data class ChatSettings(
     val model: String = "gemini-3.7-flash-medium",
     val effort: String = "default", // default, low, medium, high

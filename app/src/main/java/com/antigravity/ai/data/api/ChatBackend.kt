@@ -80,6 +80,12 @@ interface ChatBackend {
 
     suspend fun fetchAuthStatus(): Result<AuthStatusResponse> =
         Result.success(AuthStatusResponse("ok", true, "none"))
+
+    suspend fun startAgLogin(): Result<AgLoginResponse> =
+        Result.failure(UnsupportedOperationException("login desteklenmiyor"))
+
+    suspend fun submitAuthCode(code: String): Result<AgLoginCodeResponse> =
+        Result.failure(UnsupportedOperationException("login code desteklenmiyor"))
 }
 
 /** opencode tarafından sorulan izin isteği (StreamEvent.PermissionRequested ile taşınır). */

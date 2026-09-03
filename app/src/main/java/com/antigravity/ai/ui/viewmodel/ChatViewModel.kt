@@ -52,6 +52,10 @@ data class ChatUiState(
     val showAuthDialog: Boolean = false,
     val isAuthenticated: Boolean = true,
     val authMethod: String = "oauth",
+    val isAgyAuthLoading: Boolean = false,
+    val agyAuthError: String? = null,
+    val isAgyWaitingCode: Boolean = false,
+    val agyAuthUrl: String? = null,
     val showVaultManager: Boolean = false,
     val showFileManager: Boolean = false,
     val fsCurrentDir: String = "/data/data/com.termux/files/home",
@@ -365,7 +369,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 isAuthenticated = false,
                                 isGenerating = false,
                                 errorMessage = event.message,
-                                showAuthDialog = true
+                                showAuthDialog = true,
+                                agyAuthUrl = event.authUrl,
+                                isAgyWaitingCode = !event.authUrl.isNullOrBlank(),
+                                agyAuthError = null
                             )
                         }
                         fireNotification("Antigravity AI", "Oturum yenileme gerekli: ${event.message.take(140)}")
@@ -947,7 +954,84 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setAuthDialogVisible(visible: Boolean) {
         _uiState.update {
-            it.copy(showAuthDialog = visible)
+            it.copy(
+                showAuthDialog = visible,
+                agyAuthError = if (visible) null else it.agyAuthError,
+                isAgyAuthLoading = if (visible) false else it.isAgyAuthLoading,
+                isAgyWaitingCode = if (visible) it.isAgyWaitingCode else false,
+                agyAuthUrl = if (visible) it.agyAuthUrl else null
+            )
+        }
+    }
+
+    fun startAgyLogin(openUri: (String) -> Unit) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isAgyAuthLoading = true, agyAuthError = null) }
+            repository.startAgLogin()
+                .onSuccess { res ->
+                    if (res.status == "ok" && !res.authUrl.isNullOrBlank()) {
+                        _uiState.update {
+                            it.copy(
+                                isAgyAuthLoading = false,
+                                agyAuthUrl = res.authUrl,
+                                isAgyWaitingCode = true
+                            )
+                        }
+                        openUri(res.authUrl)
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                isAgyAuthLoading = false,
+                                agyAuthError = res.error ?: "Giriş başlatılamadı. agy-web sunucusu güncel mi?"
+                            )
+                        }
+                    }
+                }
+                .onFailure { err ->
+                    val raw = err.message ?: "Bilinmeyen hata"
+                    val friendly = if (raw.contains("timed out", true) || raw.contains("timeout", true) || raw.contains("failed to connect", true)) {
+                        "Sunucuya ulaşılamadı (127.0.0.1:8080). agy-web sunucusu çalışıyor mu?"
+                    } else raw
+                    _uiState.update { it.copy(isAgyAuthLoading = false, agyAuthError = friendly) }
+                }
+        }
+    }
+
+    fun submitAgyCode(code: String) {
+        val trimmed = code.trim()
+        if (trimmed.isBlank()) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isAgyAuthLoading = true, agyAuthError = null) }
+            repository.submitAuthCode(trimmed)
+                .onSuccess { res ->
+                    if (res.status == "ok") {
+                        _uiState.update {
+                            it.copy(
+                                isAuthenticated = true,
+                                showAuthDialog = false,
+                                isAgyAuthLoading = false,
+                                isAgyWaitingCode = false,
+                                agyAuthError = null,
+                                agyAuthUrl = null
+                            )
+                        }
+                        refreshAll()
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                isAgyAuthLoading = false,
+                                agyAuthError = res.error ?: "Kod doğrulanamadı."
+                            )
+                        }
+                    }
+                }
+                .onFailure { err ->
+                    val raw = err.message ?: "Bilinmeyen hata"
+                    val friendly = if (raw.contains("timed out", true) || raw.contains("timeout", true) || raw.contains("failed to connect", true)) {
+                        "Sunucuya ulaşılamadı (127.0.0.1:8080). agy-web sunucusu çalışıyor mu?"
+                    } else raw
+                    _uiState.update { it.copy(isAgyAuthLoading = false, agyAuthError = friendly) }
+                }
         }
     }
 

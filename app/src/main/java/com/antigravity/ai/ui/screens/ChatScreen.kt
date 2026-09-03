@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -218,9 +219,16 @@ fun ChatScreen(
 
     // Auth & Token Input Sheet
     if (uiState.showAuthDialog) {
+        val uriHandler = LocalUriHandler.current
         AuthTokenDialog(
             isAuthenticated = uiState.isAuthenticated,
-            onDismiss = { viewModel.setAuthDialogVisible(false) }
+            onDismiss = { viewModel.setAuthDialogVisible(false) },
+            onStartAgyLogin = { viewModel.startAgyLogin { url -> uriHandler.openUri(url) } },
+            onAgyCodeSubmit = { code -> viewModel.submitAgyCode(code) },
+            isAgyAuthLoading = uiState.isAgyAuthLoading,
+            agyAuthError = uiState.agyAuthError,
+            isAgyWaitingCode = uiState.isAgyWaitingCode,
+            agyAuthUrl = uiState.agyAuthUrl
         )
     }
 
