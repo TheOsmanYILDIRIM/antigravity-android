@@ -553,7 +553,10 @@ fun ChatScreen(
                     }
                 }
             }
-        }
+        } // Box
+        } // Column
+    } // Scaffold
+} // ModalNavigationDrawer
 
         // Back Press Handlers
         BackHandler(enabled = uiState.showFileManager) {
