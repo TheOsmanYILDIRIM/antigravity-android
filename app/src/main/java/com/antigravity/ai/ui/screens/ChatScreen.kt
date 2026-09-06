@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -240,97 +241,8 @@ fun ChatScreen(
         )
     }
 
-    // Obsidian-Style AGY Vault Library & Note Editor Screen
-    if (uiState.showVaultManager) {
-        VaultManagerScreen(
-            vaultFiles = uiState.vaultFiles,
-            activeFileContent = uiState.activeVaultFileContent,
-            activeFilePath = uiState.activeVaultFilePath,
-            onDismiss = { viewModel.setVaultManagerVisible(false) },
-            onLoadFileContent = { path -> viewModel.loadVaultFileContent(path) },
-            onSaveNote = { relPath, title, content -> viewModel.saveVaultNote(relPath, title, content) },
-            onCreateFolder = { folderPath -> viewModel.createVaultFolder(folderPath) },
-            onDeleteFile = { path -> viewModel.deleteVaultFile(path) },
-            onReferenceFile = { item -> viewModel.referenceFile(item) },
-            onReferenceParagraph = { fileName, paragraph -> viewModel.referenceParagraph(fileName, paragraph) }
-        )
-    }
-
-    // Termux File Manager & Project Explorer Screen
-    if (uiState.showFileManager) {
-        TermuxFileManagerScreen(
-            currentDir = uiState.fsCurrentDir,
-            parentDir = uiState.fsParentDir,
-            homeDir = uiState.fsHomeDir,
-            items = uiState.fsItems,
-            projects = uiState.fsProjects,
-            isLoading = uiState.isFsLoading,
-            onDismiss = { viewModel.setFileManagerVisible(false) },
-            onNavigateToDir = { dir -> viewModel.loadFsDirectory(dir) },
-            onOpenFile = { path -> viewModel.openFileInViewer(path) },
-            onOpenImage = { url, title -> viewModel.openImageInViewer(url, title) },
-            onAttachToChat = { path -> viewModel.attachFsPathToChat(path) },
-            onMentionInChat = { path -> viewModel.mentionFsPathInChat(path) },
-            onRefresh = {
-                viewModel.loadFsDirectory(uiState.fsCurrentDir)
-                viewModel.loadFsProjects()
-            },
-            serverHealth = uiState.serverHealth,
-            onStartServer = { viewModel.startAgyServer() }
-        )
-    }
-
-    // Dynamic Fillable Prompt Template Dialog
-    if (templateToFill != null) {
-        com.antigravity.ai.ui.components.TemplateFillDialog(
-            template = templateToFill!!,
-            onDismiss = { templateToFill = null },
-            onApplyTemplate = { filledText ->
-                val current = uiState.inputText
-                val updated = if (current.isBlank()) filledText else "$current\n\n$filledText"
-                viewModel.onInputTextChange(updated)
-            },
-            onSendImmediately = { filledText ->
-                viewModel.onInputTextChange(filledText)
-                viewModel.sendMessage()
-            }
-        )
-    }
-
-    // Prompt & Template Manager / Creator Dialog
-    if (showTemplateManager) {
-        com.antigravity.ai.ui.components.TemplateManagerDialog(
-            onDismiss = { showTemplateManager = false },
-            onSelectTemplateToFill = { tpl ->
-                showTemplateManager = false
-                templateToFill = tpl
-            }
-        )
-    }
-
-    // In-App File Viewer & Editor Dialog
-    if (uiState.activeViewerFilePath != null) {
-        FileViewerDialog(
-            filePath = uiState.activeViewerFilePath!!,
-            contentResponse = uiState.activeViewerFileContent,
-            isLoading = uiState.isViewerLoading,
-            onDismiss = { viewModel.closeFileViewer() },
-            onSaveFile = { path, content -> viewModel.saveFsFileContent(path, content) },
-            onAttachToChat = { path -> viewModel.attachFsPathToChat(path) },
-            onMentionInChat = { path -> viewModel.mentionFsPathInChat(path) }
-        )
-    }
-
-    // Fullscreen In-App Image Viewer Dialog
-    if (uiState.activeImageViewerUrl != null) {
-        ImageViewerDialog(
-            imageUrl = uiState.activeImageViewerUrl!!,
-            title = uiState.activeImageViewerTitle,
-            onDismiss = { viewModel.closeImageViewer() }
-        )
-    }
-
-    ModalNavigationDrawer(
+    Box(modifier = Modifier.fillMaxSize()) {
+        ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ChatDrawer(
@@ -642,8 +554,108 @@ fun ChatScreen(
                 }
             }
         }
+
+        // Back Press Handlers
+        BackHandler(enabled = uiState.showFileManager) {
+            viewModel.setFileManagerVisible(false)
+        }
+        BackHandler(enabled = uiState.showVaultManager) {
+            viewModel.setVaultManagerVisible(false)
+        }
+        BackHandler(enabled = drawerState.isOpen) {
+            scope.launch { drawerState.close() }
+        }
+
+        // Obsidian-Style AGY Vault Library & Note Editor Screen
+        if (uiState.showVaultManager) {
+            VaultManagerScreen(
+                vaultFiles = uiState.vaultFiles,
+                activeFileContent = uiState.activeVaultFileContent,
+                activeFilePath = uiState.activeVaultFilePath,
+                onDismiss = { viewModel.setVaultManagerVisible(false) },
+                onLoadFileContent = { path -> viewModel.loadVaultFileContent(path) },
+                onSaveNote = { relPath, title, content -> viewModel.saveVaultNote(relPath, title, content) },
+                onCreateFolder = { folderPath -> viewModel.createVaultFolder(folderPath) },
+                onDeleteFile = { path -> viewModel.deleteVaultFile(path) },
+                onReferenceFile = { item -> viewModel.referenceFile(item) },
+                onReferenceParagraph = { fileName, paragraph -> viewModel.referenceParagraph(fileName, paragraph) }
+            )
+        }
+
+        // Termux File Manager & Project Explorer Screen
+        if (uiState.showFileManager) {
+            TermuxFileManagerScreen(
+                currentDir = uiState.fsCurrentDir,
+                parentDir = uiState.fsParentDir,
+                homeDir = uiState.fsHomeDir,
+                items = uiState.fsItems,
+                projects = uiState.fsProjects,
+                isLoading = uiState.isFsLoading,
+                onDismiss = { viewModel.setFileManagerVisible(false) },
+                onNavigateToDir = { dir -> viewModel.loadFsDirectory(dir) },
+                onOpenFile = { path -> viewModel.openFileInViewer(path) },
+                onOpenImage = { url, title -> viewModel.openImageInViewer(url, title) },
+                onAttachToChat = { path -> viewModel.attachFsPathToChat(path) },
+                onMentionInChat = { path -> viewModel.mentionFsPathInChat(path) },
+                onRefresh = {
+                    viewModel.loadFsDirectory(uiState.fsCurrentDir)
+                    viewModel.loadFsProjects()
+                },
+                serverHealth = uiState.serverHealth,
+                onStartServer = { viewModel.startAgyServer() }
+            )
+        }
+
+        // Dynamic Fillable Prompt Template Dialog
+        if (templateToFill != null) {
+            com.antigravity.ai.ui.components.TemplateFillDialog(
+                template = templateToFill!!,
+                onDismiss = { templateToFill = null },
+                onApplyTemplate = { filledText ->
+                    val current = uiState.inputText
+                    val updated = if (current.isBlank()) filledText else "$current\n\n$filledText"
+                    viewModel.onInputTextChange(updated)
+                },
+                onSendImmediately = { filledText ->
+                    viewModel.onInputTextChange(filledText)
+                    viewModel.sendMessage()
+                }
+            )
+        }
+
+        // Prompt & Template Manager / Creator Dialog
+        if (showTemplateManager) {
+            com.antigravity.ai.ui.components.TemplateManagerDialog(
+                onDismiss = { showTemplateManager = false },
+                onSelectTemplateToFill = { tpl ->
+                    showTemplateManager = false
+                    templateToFill = tpl
+                }
+            )
+        }
+
+        // In-App File Viewer & Editor Dialog
+        if (uiState.activeViewerFilePath != null) {
+            FileViewerDialog(
+                filePath = uiState.activeViewerFilePath!!,
+                contentResponse = uiState.activeViewerFileContent,
+                isLoading = uiState.isViewerLoading,
+                onDismiss = { viewModel.closeFileViewer() },
+                onSaveFile = { path, content -> viewModel.saveFsFileContent(path, content) },
+                onAttachToChat = { path -> viewModel.attachFsPathToChat(path) },
+                onMentionInChat = { path -> viewModel.mentionFsPathInChat(path) }
+            )
+        }
+
+        // Fullscreen In-App Image Viewer Dialog
+        if (uiState.activeImageViewerUrl != null) {
+            ImageViewerDialog(
+                imageUrl = uiState.activeImageViewerUrl!!,
+                title = uiState.activeImageViewerTitle,
+                onDismiss = { viewModel.closeImageViewer() }
+            )
+        }
     }
-}
 }
 
 // Figma Gemini Home View ("Hello, Osman" & Action Cards)

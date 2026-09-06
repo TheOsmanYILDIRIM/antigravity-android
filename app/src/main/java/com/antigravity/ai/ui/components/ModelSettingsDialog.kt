@@ -62,13 +62,20 @@ fun ModelSettingsDialog(
     var notificationsEnabled by remember { mutableStateOf(currentSettings.notificationsEnabled) }
 
     val modelsList = if (availableModels.isNotEmpty()) availableModels else listOf(
-        ModelItem("gemini-3.7-flash-medium", "Gemini 3.7 Flash (Medium)", "Dengeli ve hızlı standart model"),
-        ModelItem("gemini-3.7-flash-high", "Gemini 3.7 Flash (High)", "Yüksek akıl yürütme ve analitik"),
+        ModelItem("gemini-3.8-flash-high", "Gemini 3.8 Flash (High)", "Yüksek akıl yürütme & hızlı yanıt"),
+        ModelItem("gemini-3.8-flash-medium", "Gemini 3.8 Flash (Medium)", "Dengeli standart model"),
+        ModelItem("gemini-3.8-flash-low", "Gemini 3.8 Flash (Low)", "Minimum düşünme gecikmesi"),
+        ModelItem("gemini-3.7-flash-high", "Gemini 3.7 Flash (High)", "Yüksek akıl yürütme & hızlı yanıt"),
+        ModelItem("gemini-3.7-flash-medium", "Gemini 3.7 Flash (Medium)", "Dengeli standart model"),
         ModelItem("gemini-3.7-flash-low", "Gemini 3.7 Flash (Low)", "Minimum düşünme gecikmesi"),
         ModelItem("gemini-3.6-flash-high", "Gemini 3.6 Flash (High)", "Hızlı analitik model"),
-        ModelItem("gemini-3.1-pro-high", "Gemini 3.1 Pro (High)", "Derin mimari ve kodlama"),
-        ModelItem("claude-sonnet-4-6", "Claude Sonnet 4.6 (Thinking)", "Gelişmiş analitik düşünme"),
-        ModelItem("claude-opus-4-6-thinking", "Claude Opus 4.6 (Thinking)", "Maksimum kapasiteli model")
+        ModelItem("gemini-3.6-flash-medium", "Gemini 3.6 Flash (Medium)", "Dengeli genel model"),
+        ModelItem("gemini-3.6-flash-low", "Gemini 3.6 Flash (Low)", "Hızlı genel model"),
+        ModelItem("gemini-3.1-pro-high", "Gemini 3.1 Pro (High)", "Derin mimari ve kodlama modeli"),
+        ModelItem("gemini-3.1-pro-low", "Gemini 3.1 Pro (Low)", "Hızlı kodlama modeli"),
+        ModelItem("claude-sonnet-4-6", "Claude Sonnet 4.6 (Thinking)", "Gelişmiş analitik akıl yürütme"),
+        ModelItem("claude-opus-4-6-thinking", "Claude Opus 4.6 (Thinking)", "En yüksek kapasiteli düşünme modeli"),
+        ModelItem("gpt-oss-120b-medium", "GPT-OSS 120B (Medium)", "Açık kaynak 120B ağırlık")
     )
 
     val effortsList = if (availableEfforts.isNotEmpty()) availableEfforts else listOf(
