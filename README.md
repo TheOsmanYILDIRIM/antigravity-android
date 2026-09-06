@@ -46,6 +46,26 @@ Uygulama **aynı APK** içinde iki arka ucu da destekler; ayarlar panelinden (`�
 - Mimari: `data/api/ChatBackend` arayüzü + `AgyBackend` / `OpenCodeBackend` adapter'ları. Her iki backend, olaylarını ortak `StreamEvent` modeline çevirir; UI/ViewModel hangi arka ucun çalıştığından habersizdir.
 - `OPENCODE_SERVER_PASSWORD` ile korunan sunucular için `OpenCodeApiService(baseUrl, password)` kullanılır.
 
+---
+
+## 🌐 Termux Sunucusu & Dosya Sistemi Köprüsü (Termux Server)
+
+Android sandbox güvenlik mimarisi nedeniyle Android uygulamaları Termux'un özel dosya dizinine doğrudan erişemez. Bu uygulamanın **Termux Dosyaları**, **Vault Gezgini** ve **Gerçek Model Listesi** özelliklerini kullanabilmek için eşlik eden Termux sunucusu çalışmalıdır:
+
+👉 **[TheOsmanYILDIRIM/antigravity-termux-server](https://github.com/TheOsmanYILDIRIM/antigravity-termux-server)**
+
+### Hızlı Termux Kurulumu:
+```bash
+git clone https://github.com/TheOsmanYILDIRIM/antigravity-termux-server.git ~/antigravity-termux-server
+cd ~/antigravity-termux-server && ./install.sh
+agy-web start
+```
+
+Sunucu arka planda `127.0.0.1:8080` portunda çalışır ve Android istemcisine dosya sistemi API'si (`/api/fs/*`), canlı model havuzu (`/api/models`) ve otonom CI/CD gözlemcisi (`agy-ci-watch`) sağlar.
+
+---
+
 ## 🚀 GitHub Actions ile Otomatik APK Derleme
 
 Her commit ve tag oluşturulduğunda GitHub Actions iş akışı (`build-apk.yml`) otomatik olarak tetiklenir ve ARM64-v8a uyumlu debug/release APK dosyasını derleyip GitHub Releases bölümünde yayınlar.
+
