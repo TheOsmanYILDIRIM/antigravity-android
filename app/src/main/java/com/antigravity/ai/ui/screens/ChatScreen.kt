@@ -552,8 +552,7 @@ fun ChatScreen(
                         }
                     }
                 }
-            }
-        } // Box
+            } // Box
         } // Column
     } // Scaffold
 } // ModalNavigationDrawer
