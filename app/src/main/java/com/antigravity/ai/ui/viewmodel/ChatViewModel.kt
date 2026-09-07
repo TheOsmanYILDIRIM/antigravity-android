@@ -126,10 +126,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun startPeriodicHealthCheck() {
         viewModelScope.launch(Dispatchers.IO) {
+            var wasOnline = _uiState.value.serverHealth?.isOnline == true
             while (true) {
-                delay(4000)
+                delay(2500)
                 val health = AgyServerManager.checkHealth()
+                val becameOnline = !wasOnline && health.isOnline
+                val shouldReload = becameOnline || (health.isOnline && _uiState.value.conversations.isEmpty())
+                wasOnline = health.isOnline
                 _uiState.update { it.copy(serverHealth = health) }
+                if (shouldReload) {
+                    startEventCollection()
+                    refreshAll()
+                }
             }
         }
     }
@@ -526,9 +534,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             type = res.type,
                             size = res.size
                         )
+                        val newAttachments = _uiState.value.attachments + attachment
+                        val tag = getAttachmentTag(attachment, newAttachments)
                         _uiState.update {
+                            val currentInput = it.inputText
+                            val updatedInput = insertTagIntoText(currentInput, tag)
                             it.copy(
-                                attachments = it.attachments + attachment,
+                                attachments = newAttachments,
+                                inputText = updatedInput,
                                 isUploadingAttachment = false
                             )
                         }
@@ -640,7 +653,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             path = path,
             type = if (isImg) "image" else "file"
         )
-        _uiState.update { it.copy(attachments = it.attachments + attachment) }
+        val newAttachments = _uiState.value.attachments + attachment
+        val tag = getAttachmentTag(attachment, newAttachments)
+        _uiState.update {
+            val currentInput = it.inputText
+            val updatedInput = insertTagIntoText(currentInput, tag)
+            it.copy(
+                attachments = newAttachments,
+                inputText = updatedInput
+            )
+        }
     }
 
     fun mentionFsPathInChat(path: String) {
@@ -656,7 +678,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.update { it.copy(isCheckingHealth = true) }
             val health = AgyServerManager.checkHealth()
+            val wasOnline = _uiState.value.serverHealth?.isOnline == true
+            val shouldReload = (!wasOnline && health.isOnline) || (health.isOnline && _uiState.value.conversations.isEmpty())
             _uiState.update { it.copy(serverHealth = health, isCheckingHealth = false) }
+            if (shouldReload) {
+                startEventCollection()
+                refreshAll()
+            }
         }
     }
 
@@ -668,15 +696,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         AgyServerManager.startServer(getApplication()) { success, msg ->
             _uiState.update { it.copy(notice = if (success) "Termux agy-web arka planda başlatılıyor..." else msg) }
             viewModelScope.launch {
-                delay(800)
-                checkServerHealth()
-                delay(1200)
-                checkServerHealth()
-                delay(2000)
-                checkServerHealth()
-                if (_uiState.value.showFileManager) {
-                    loadFsDirectory(_uiState.value.fsCurrentDir)
-                    loadFsProjects()
+                for (step in listOf(800L, 1200L, 1500L, 2000L, 2500L)) {
+                    delay(step)
+                    val health = AgyServerManager.checkHealth()
+                    _uiState.update { it.copy(serverHealth = health) }
+                    if (health.isOnline) {
+                        startEventCollection()
+                        refreshAll()
+                        if (_uiState.value.showFileManager) {
+                            loadFsDirectory(_uiState.value.fsCurrentDir)
+                            loadFsProjects()
+                        }
+                        break
+                    }
                 }
             }
         }
@@ -865,8 +897,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val trimmed = content.trim()
         if (trimmed.isNotBlank()) {
             val newBlock = PastedBlock(content = trimmed)
+            val newBlocks = _uiState.value.pastedBlocks + newBlock
+            val tag = "[metin-${newBlocks.size}]"
             _uiState.update {
-                it.copy(pastedBlocks = it.pastedBlocks + newBlock)
+                val currentInput = it.inputText
+                val updatedInput = insertTagIntoText(currentInput, tag)
+                it.copy(
+                    pastedBlocks = newBlocks,
+                    inputText = updatedInput
+                )
             }
         }
     }
@@ -879,20 +918,38 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         // Otomatik yapıştırma algılama (80 karakterden uzun veya 2'den fazla satır eklenirse)
         if (addedLength > 80 || addedLines >= 2) {
-            val pastedChunk = when {
-                currentText.isEmpty() -> newText
-                newText.startsWith(currentText) -> newText.substring(currentText.length)
-                newText.endsWith(currentText) -> newText.substring(0, newText.length - currentText.length)
-                else -> newText
+            var commonPrefixLen = 0
+            while (commonPrefixLen < currentText.length &&
+                commonPrefixLen < newText.length &&
+                currentText[commonPrefixLen] == newText[commonPrefixLen]
+            ) {
+                commonPrefixLen++
             }
 
+            var commonSuffixLen = 0
+            while (commonSuffixLen < (currentText.length - commonPrefixLen) &&
+                commonSuffixLen < (newText.length - commonPrefixLen) &&
+                currentText[currentText.length - 1 - commonSuffixLen] == newText[newText.length - 1 - commonSuffixLen]
+            ) {
+                commonSuffixLen++
+            }
+
+            val prefix = currentText.substring(0, commonPrefixLen)
+            val suffix = currentText.substring(currentText.length - commonSuffixLen)
+            val pastedChunk = newText.substring(commonPrefixLen, newText.length - commonSuffixLen)
+
             if (pastedChunk.trim().length > 70 || pastedChunk.lines().size > 2) {
-                val remainingText = if (newText.startsWith(currentText)) currentText else ""
                 val newBlock = PastedBlock(content = pastedChunk.trim())
+                val newBlocks = _uiState.value.pastedBlocks + newBlock
+                val tag = "[metin-${newBlocks.size}]"
+                val cleanPrefix = if (prefix.isNotEmpty() && !prefix.endsWith(" ")) "$prefix " else prefix
+                val cleanSuffix = if (suffix.isNotEmpty() && !suffix.startsWith(" ")) " $suffix" else suffix
+                val updatedInput = "$cleanPrefix$tag$cleanSuffix".trim()
+
                 _uiState.update {
                     it.copy(
-                        inputText = remainingText,
-                        pastedBlocks = it.pastedBlocks + newBlock
+                        inputText = if (updatedInput.endsWith(tag)) "$updatedInput " else updatedInput,
+                        pastedBlocks = newBlocks
                     )
                 }
                 return
@@ -965,15 +1022,50 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun removePastedBlock(block: PastedBlock) {
-        _uiState.update { it.copy(pastedBlocks = it.pastedBlocks.filter { b -> b.id != block.id }) }
+        _uiState.update { state ->
+            val idx = state.pastedBlocks.indexOfFirst { it.id == block.id }
+            val updatedBlocks = state.pastedBlocks.filter { it.id != block.id }
+            var updatedText = state.inputText
+            if (idx >= 0) {
+                val num = idx + 1
+                val tagRegex = Regex("\\[(metin|text|kod|ek|snippet|block)[-_]?$num\\]\\s*", RegexOption.IGNORE_CASE)
+                updatedText = tagRegex.replace(updatedText, "").trim()
+            }
+            state.copy(
+                pastedBlocks = updatedBlocks,
+                inputText = updatedText
+            )
+        }
     }
 
     fun addAttachment(attachment: Attachment) {
-        _uiState.update { it.copy(attachments = it.attachments + attachment) }
+        val newAttachments = _uiState.value.attachments + attachment
+        val tag = getAttachmentTag(attachment, newAttachments)
+        _uiState.update {
+            val currentInput = it.inputText
+            val updatedInput = insertTagIntoText(currentInput, tag)
+            it.copy(
+                attachments = newAttachments,
+                inputText = updatedInput
+            )
+        }
     }
 
     fun removeAttachment(attachment: Attachment) {
-        _uiState.update { it.copy(attachments = it.attachments.filter { a -> a != attachment }) }
+        _uiState.update { state ->
+            val idx = state.attachments.indexOf(attachment)
+            val updatedAttachments = state.attachments.filter { it != attachment }
+            var updatedText = state.inputText
+            if (idx >= 0) {
+                val num = idx + 1
+                val tagRegex = Regex("\\[(image|resim|görsel|dosya|file|doc|ek)[-_]?$num\\]\\s*", RegexOption.IGNORE_CASE)
+                updatedText = tagRegex.replace(updatedText, "").trim()
+            }
+            state.copy(
+                attachments = updatedAttachments,
+                inputText = updatedText
+            )
+        }
     }
 
     fun updateSettings(newSettings: ChatSettings) {
@@ -1084,28 +1176,90 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun getAttachmentTag(att: Attachment, allAttachments: List<Attachment>): String {
+        val isImg = att.type == "image" || att.name.endsWith(".png", true) || att.name.endsWith(".jpg", true) || att.name.endsWith(".jpeg", true) || att.name.endsWith(".webp", true) || att.name.endsWith(".gif", true)
+        val num = allAttachments.indexOf(att).let { if (it >= 0) it + 1 else allAttachments.size }
+        return if (isImg) "[image-$num]" else "[dosya-$num]"
+    }
+
+    private fun insertTagIntoText(text: String, tag: String): String {
+        return if (text.isBlank()) {
+            "$tag "
+        } else if (text.endsWith(" ")) {
+            "$text$tag "
+        } else {
+            "$text $tag "
+        }
+    }
+
     fun sendMessage() {
         val state = _uiState.value
         val userTypedText = state.inputText.trim()
         val blocks = state.pastedBlocks
-        var finalPrompt = userTypedText
+        val attachments = state.attachments
 
-        if (blocks.isNotEmpty()) {
-            val blocksText = blocks.mapIndexed { idx, b ->
-                "### Ek Metin / Kod Parçası #${idx + 1}:\n```\n${b.content.trim()}\n```"
-            }.joinToString("\n\n")
+        if (userTypedText.isEmpty() && blocks.isEmpty() && attachments.isEmpty()) return
+        if (state.isGenerating) return
 
-            finalPrompt = if (finalPrompt.isEmpty()) blocksText else "$finalPrompt\n\n$blocksText"
+        // 1. Metin bloklarını inline olarak yerleştir veya ekle
+        var processedPrompt = userTypedText
+        val unplacedBlocks = mutableListOf<Pair<Int, PastedBlock>>()
+
+        blocks.forEachIndexed { idx, block ->
+            val num = idx + 1
+            val blockTagRegex = Regex("\\[(metin|text|kod|ek|snippet|block)[-_]?$num\\]", RegexOption.IGNORE_CASE)
+            val inlineReplacement = "\n\n[Ek Metin #$num:\n```\n${block.content.trim()}\n```]\n\n"
+
+            if (blockTagRegex.containsMatchIn(processedPrompt)) {
+                processedPrompt = blockTagRegex.replace(blockTagRegex, inlineReplacement)
+            } else {
+                unplacedBlocks.add(Pair(num, block))
+            }
         }
 
-        if (finalPrompt.isEmpty() && state.attachments.isEmpty()) return
-        if (state.isGenerating) return
+        // Metin içinde bahsedilmemiş bloklar varsa en sona ekle
+        if (unplacedBlocks.isNotEmpty()) {
+            val appendedBlocks = unplacedBlocks.joinToString("\n\n") { (num, b) ->
+                "### Ek Metin / Kod Parçası #$num:\n```\n${b.content.trim()}\n```"
+            }
+            processedPrompt = if (processedPrompt.isBlank()) appendedBlocks else "$processedPrompt\n\n$appendedBlocks"
+        }
+
+        // 2. Attachments (Görsel ve dosyaları) inline olarak yerleştir veya ekle
+        val unplacedAttachments = mutableListOf<Pair<Int, Attachment>>()
+
+        attachments.forEachIndexed { idx, att ->
+            val num = idx + 1
+            val safePath = att.path ?: "/data/data/com.termux/files/home/uploads/${att.name}"
+            val attTagRegex = Regex("\\[(image|resim|görsel|dosya|file|doc|ek)[-_]?$num\\]", RegexOption.IGNORE_CASE)
+            val isImg = att.type == "image" || att.name.endsWith(".png", true) || att.name.endsWith(".jpg", true) || att.name.endsWith(".jpeg", true) || att.name.endsWith(".webp", true) || att.name.endsWith(".gif", true)
+            val label = if (isImg) "Ek Görsel #$num" else "Ek Dosya #$num"
+            val inlineRef = "[$label (${att.name}): $safePath]"
+
+            if (attTagRegex.containsMatchIn(processedPrompt)) {
+                processedPrompt = attTagRegex.replace(attTagRegex, inlineRef)
+            } else {
+                unplacedAttachments.add(Pair(num, att))
+            }
+        }
+
+        // Metin içinde bahsedilmemiş diğer ekler varsa en sona ekle
+        if (unplacedAttachments.isNotEmpty()) {
+            val fileRefs = unplacedAttachments.joinToString("\n") { (num, a) ->
+                val safePath = a.path ?: "/data/data/com.termux/files/home/uploads/${a.name}"
+                "[Eklenen Dosya/Resim: $safePath] (Adı: ${a.name})"
+            }
+            val attachmentNotice = "\n\nKullanıcının mesaja eklediği diğer dosya ve görseller:\n$fileRefs\nLütfen ekteki bu dosya/görselleri de inceleyerek yanıt verin."
+            processedPrompt = if (processedPrompt.isBlank()) fileRefs else "$processedPrompt$attachmentNotice"
+        }
+
+        val finalPrompt = processedPrompt.trim()
 
         val userMessage = Message(
             role = "user",
-            content = userTypedText,
+            content = userTypedText.ifBlank { finalPrompt },
             pastedBlocks = blocks,
-            attachments = state.attachments
+            attachments = attachments
         )
         val botPlaceholder = Message(
             role = "bot",

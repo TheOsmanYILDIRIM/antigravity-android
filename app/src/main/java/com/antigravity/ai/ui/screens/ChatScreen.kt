@@ -118,6 +118,27 @@ fun ChatScreen(
         }
     }
 
+    // Auto-refresh conversations when drawer opens
+    LaunchedEffect(drawerState.isOpen) {
+        if (drawerState.isOpen) {
+            viewModel.fetchConversations()
+        }
+    }
+
+    // Auto-check server health and refresh when user resumes the app
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.checkServerHealth()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     // Model & Settings Bottom Sheet
     if (uiState.showSettingsDialog) {
         ModelSettingsDialog(
@@ -282,6 +303,7 @@ fun ChatScreen(
                     viewModel.setSettingsDialogVisible(true)
                 },
                 serverHealth = uiState.serverHealth,
+                onRefresh = { viewModel.refreshAll() },
                 onStartServer = { viewModel.startAgyServer() },
                 onStopServer = { viewModel.stopAgyServer() },
                 onExitApp = onExitApp

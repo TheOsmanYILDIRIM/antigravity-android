@@ -79,13 +79,14 @@ fun MessageItem(
                             .padding(bottom = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        message.attachments.forEach { att ->
-                            if (att.type == "image") {
+                        message.attachments.forEachIndexed { idx, att ->
+                            val num = idx + 1
+                            val isImg = att.type == "image" || att.name.endsWith(".png", true) || att.name.endsWith(".jpg", true) || att.name.endsWith(".jpeg", true) || att.name.endsWith(".webp", true) || att.name.endsWith(".gif", true)
+                            val tagLabel = if (isImg) "[image-$num]" else "[dosya-$num]"
+
+                            if (isImg) {
                                 val imageModel = att.localUri ?: (if (att.relPath != null) "http://127.0.0.1:8080/${att.relPath}" else (att.path ?: ""))
-                                AsyncImage(
-                                    model = imageModel,
-                                    contentDescription = att.name,
-                                    contentScale = ContentScale.Crop,
+                                Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .heightIn(min = 120.dp, max = 220.dp)
@@ -94,7 +95,28 @@ fun MessageItem(
                                         .clickable {
                                             onOpenImage(imageModel, att.name)
                                         }
-                                )
+                                ) {
+                                    AsyncImage(
+                                        model = imageModel,
+                                        contentDescription = att.name,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                    // Badge overlay showing tag
+                                    Surface(
+                                        color = Color.Black.copy(alpha = 0.65f),
+                                        shape = RoundedCornerShape(bottomEnd = 8.dp),
+                                        modifier = Modifier.align(Alignment.TopStart)
+                                    ) {
+                                        Text(
+                                            text = tagLabel,
+                                            color = Color.White,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
                             } else {
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
@@ -119,7 +141,7 @@ fun MessageItem(
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = att.name,
+                                            text = "$tagLabel ${att.name}",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Medium,
                                             color = TextPrimary,

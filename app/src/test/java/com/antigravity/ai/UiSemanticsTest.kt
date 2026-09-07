@@ -95,4 +95,32 @@ class UiSemanticsTest {
         composeTestRule.onNodeWithText("Explore").assertIsDisplayed()
         composeTestRule.onRoot().assertExists()
     }
+
+    // 4. [image-X] ve [metin-X] etiketlerinin metin içinde inline çözümlenmesi testi
+    @Test
+    fun inline_image_and_text_tag_resolution() {
+        val prompt = "[image-2] incele ve [image-3] ile karşılaştır"
+        val attachments = listOf(
+            Pair("screen1.png", "/uploads/screen1.png"),
+            Pair("screen2.png", "/uploads/screen2.png"),
+            Pair("screen3.png", "/uploads/screen3.png")
+        )
+
+        var processed = prompt
+        val unplaced = mutableListOf<String>()
+
+        attachments.forEachIndexed { idx, (name, path) ->
+            val num = idx + 1
+            val regex = Regex("\\[(image|resim)[-_]?$num\\]", RegexOption.IGNORE_CASE)
+            val inlineRef = "[Ek Görsel #$num ($name): $path]"
+            if (regex.containsMatchIn(processed)) {
+                processed = regex.replace(regex, inlineRef)
+            } else {
+                unplaced.add(name)
+            }
+        }
+
+        assertEquals("[Ek Görsel #2 (screen2.png): /uploads/screen2.png] incele ve [Ek Görsel #3 (screen3.png): /uploads/screen3.png] ile karşılaştır", processed)
+        assertEquals(listOf("screen1.png"), unplaced)
+    }
 }

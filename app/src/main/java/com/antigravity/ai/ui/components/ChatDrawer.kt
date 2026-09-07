@@ -50,6 +50,7 @@ fun ChatDrawer(
     onOpenFileManager: () -> Unit = {},
     onOpenSettings: () -> Unit,
     serverHealth: ServerHealth? = null,
+    onRefresh: () -> Unit = {},
     onStartServer: () -> Unit = {},
     onStopServer: () -> Unit = {},
     onExitApp: (() -> Unit)? = null,
@@ -297,6 +298,17 @@ fun ChatDrawer(
                             fontWeight = FontWeight.Bold,
                             color = TextMuted
                         )
+                        IconButton(
+                            onClick = onRefresh,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Sohbetleri Yenile",
+                                tint = GeminiBlue,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
 

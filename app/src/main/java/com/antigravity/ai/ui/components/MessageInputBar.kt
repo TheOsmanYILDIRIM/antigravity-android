@@ -147,7 +147,8 @@ fun MessageInputBar(
                             .padding(bottom = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        pastedBlocks.forEach { block ->
+                        pastedBlocks.forEachIndexed { idx, block ->
+                            val num = idx + 1
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 color = SurfaceVariantDark,
@@ -165,7 +166,7 @@ fun MessageInputBar(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "Yapıştırılmış Metin (${block.lineCount} satır)",
+                                        text = "[metin-$num] (${block.lineCount} satır)",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = TextPrimary
@@ -183,7 +184,10 @@ fun MessageInputBar(
                             }
                         }
 
-                        attachments.forEach { att ->
+                        attachments.forEachIndexed { idx, att ->
+                            val num = idx + 1
+                            val isImg = att.type == "image" || att.name.endsWith(".png", true) || att.name.endsWith(".jpg", true) || att.name.endsWith(".jpeg", true) || att.name.endsWith(".webp", true) || att.name.endsWith(".gif", true)
+                            val tagLabel = if (isImg) "[image-$num]" else "[dosya-$num]"
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 color = SurfaceVariantDark,
@@ -194,14 +198,14 @@ fun MessageInputBar(
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                 ) {
                                     Icon(
-                                        imageVector = if (att.type == "vault") Icons.Default.Storage else Icons.Default.Attachment,
+                                        imageVector = if (att.type == "vault") Icons.Default.Storage else (if (isImg) Icons.Default.Image else Icons.Default.Attachment),
                                         contentDescription = null,
-                                        tint = if (att.type == "vault") GeminiPurple else PrimaryIndigo,
+                                        tint = if (att.type == "vault") GeminiPurple else if (isImg) GeminiAmber else PrimaryIndigo,
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = att.name,
+                                        text = "$tagLabel ${att.name}",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = TextPrimary,
