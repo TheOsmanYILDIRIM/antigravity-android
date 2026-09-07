@@ -114,7 +114,7 @@ class UiSemanticsTest {
             val regex = Regex("\\[(image|resim)[-_]?$num\\]", RegexOption.IGNORE_CASE)
             val inlineRef = "[Ek Görsel #$num ($name): $path]"
             if (regex.containsMatchIn(processed)) {
-                processed = regex.replace(regex, inlineRef)
+                processed = regex.replace(processed) { inlineRef }
             } else {
                 unplaced.add(name)
             }
