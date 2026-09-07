@@ -1211,7 +1211,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val inlineReplacement = "\n\n[Ek Metin #$num:\n```\n${block.content.trim()}\n```]\n\n"
 
             if (blockTagRegex.containsMatchIn(processedPrompt)) {
-                processedPrompt = blockTagRegex.replace(blockTagRegex, inlineReplacement)
+                processedPrompt = blockTagRegex.replace(processedPrompt, inlineReplacement)
             } else {
                 unplacedBlocks.add(Pair(num, block))
             }
@@ -1237,7 +1237,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val inlineRef = "[$label (${att.name}): $safePath]"
 
             if (attTagRegex.containsMatchIn(processedPrompt)) {
-                processedPrompt = attTagRegex.replace(attTagRegex, inlineRef)
+                processedPrompt = attTagRegex.replace(processedPrompt, inlineRef)
             } else {
                 unplacedAttachments.add(Pair(num, att))
             }
