@@ -40,6 +40,7 @@ fun ChatDrawer(
     conversations: List<ConversationMeta>,
     currentSessionId: String?,
     pinnedIds: Set<String> = emptySet(),
+    generatingIds: Set<String> = emptySet(),
     onSelectConversation: (String) -> Unit,
     onNewChat: () -> Unit,
     onDeleteConversation: (String) -> Unit,
@@ -269,10 +270,12 @@ fun ChatDrawer(
 
                     items(pinnedList, key = { "pinned_${it.id}" }) { conv ->
                         val isSelected = conv.id == currentSessionId
+                        val isGenerating = conv.isGenerating || generatingIds.contains(conv.id)
                         ConversationRowItem(
                             conv = conv,
                             isSelected = isSelected,
                             isPinned = true,
+                            isGenerating = isGenerating,
                             onSelect = { onSelectConversation(conv.id) },
                             onLongPress = { contextMenuConv = conv }
                         )
@@ -331,10 +334,12 @@ fun ChatDrawer(
 
                 items(unpinnedList, key = { it.id }) { conv ->
                     val isSelected = conv.id == currentSessionId
+                    val isGenerating = conv.isGenerating || generatingIds.contains(conv.id)
                     ConversationRowItem(
                         conv = conv,
                         isSelected = isSelected,
                         isPinned = false,
+                        isGenerating = isGenerating,
                         onSelect = { onSelectConversation(conv.id) },
                         onLongPress = { contextMenuConv = conv }
                     )
@@ -540,6 +545,7 @@ private fun ConversationRowItem(
     conv: ConversationMeta,
     isSelected: Boolean,
     isPinned: Boolean,
+    isGenerating: Boolean = false,
     onSelect: () -> Unit,
     onLongPress: () -> Unit
 ) {
@@ -576,5 +582,32 @@ private fun ConversationRowItem(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
+
+        if (isGenerating) {
+            Spacer(modifier = Modifier.width(6.dp))
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = GeminiBlue.copy(alpha = 0.15f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, GeminiBlue.copy(alpha = 0.4f))
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(9.dp),
+                        strokeWidth = 1.5.dp,
+                        color = GeminiBlue
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Üretiliyor",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = GeminiBlue
+                    )
+                }
+            }
+        }
     }
 }

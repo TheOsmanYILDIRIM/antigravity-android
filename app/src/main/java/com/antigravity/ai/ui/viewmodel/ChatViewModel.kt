@@ -47,6 +47,7 @@ data class ChatUiState(
     val activeVaultFilePath: String? = null,
     val isUploadingAttachment: Boolean = false,
     val isGenerating: Boolean = false,
+    val generatingConversationIds: Set<String> = emptySet(),
     val isListening: Boolean = false,
     val showSettingsDialog: Boolean = false,
     val showAuthDialog: Boolean = false,
@@ -275,6 +276,27 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                         fetchConversations()
                     }
+                    is StreamEvent.GeneratingStatus -> {
+                        _uiState.update { state ->
+                            val currentActiveId = state.currentConversationId ?: state.currentSessionId
+                            val updatedSet = state.generatingConversationIds.toMutableSet()
+                            if (event.isGenerating) {
+                                event.conversationId?.let { updatedSet.add(it) }
+                                val isCurrentGenerating = event.conversationId == null || event.conversationId == currentActiveId
+                                state.copy(
+                                    generatingConversationIds = updatedSet,
+                                    isGenerating = if (isCurrentGenerating) true else state.isGenerating
+                                )
+                            } else {
+                                event.conversationId?.let { updatedSet.remove(it) }
+                                val isCurrentDone = event.conversationId == null || event.conversationId == currentActiveId
+                                state.copy(
+                                    generatingConversationIds = updatedSet,
+                                    isGenerating = if (isCurrentDone) false else state.isGenerating
+                                )
+                            }
+                        }
+                    }
                     is StreamEvent.Chunk -> {
                         _uiState.update { state ->
                             val list = state.messages.toMutableList()
@@ -318,7 +340,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 )
                                 list[list.size - 1] = updated
                             }
-                            state.copy(messages = list, isGenerating = false)
+                            val currentActiveId = state.currentConversationId ?: state.currentSessionId
+                            val updatedSet = state.generatingConversationIds.toMutableSet()
+                            currentActiveId?.let { updatedSet.remove(it) }
+                            state.copy(messages = list, isGenerating = false, generatingConversationIds = updatedSet)
                         }
                         fireNotification("Antigravity AI", "Yanıt hazır — sıra sende")
                         fetchConversations()
@@ -331,7 +356,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 val last = list.last()
                                 list[list.size - 1] = last.copy(state = MessageState.DONE)
                             }
-                            state.copy(messages = list, isGenerating = false)
+                            val currentActiveId = state.currentConversationId ?: state.currentSessionId
+                            val updatedSet = state.generatingConversationIds.toMutableSet()
+                            currentActiveId?.let { updatedSet.remove(it) }
+                            state.copy(messages = list, isGenerating = false, generatingConversationIds = updatedSet)
                         }
                         fireNotification("Antigravity AI", "Üretim durduruldu")
                     }
@@ -367,7 +395,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 )
                                 list[list.size - 1] = updated
                             }
-                            state.copy(messages = list, isGenerating = false, errorMessage = event.message, notice = null)
+                            val currentActiveId = state.currentConversationId ?: state.currentSessionId
+                            val updatedSet = state.generatingConversationIds.toMutableSet()
+                            currentActiveId?.let { updatedSet.remove(it) }
+                            state.copy(messages = list, isGenerating = false, generatingConversationIds = updatedSet, errorMessage = event.message, notice = null)
                         }
                         fireNotification("Antigravity AI", "Üretim hatası: ${event.message.take(140)}")
                     }
@@ -396,10 +427,17 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun fetchConversations() {
         viewModelScope.launch {
             repository.fetchConversations().onSuccess { res ->
-                _uiState.update {
-                    it.copy(
+                val serverGeneratingIds = (res.conversations ?: emptyList())
+                    .filter { it.isGenerating }
+                    .map { it.id }
+                    .toSet()
+
+                _uiState.update { state ->
+                    val combinedGenerating = (state.generatingConversationIds + serverGeneratingIds).toSet()
+                    state.copy(
                         conversations = res.conversations ?: emptyList(),
-                        currentSessionId = res.currentSessionId ?: it.currentSessionId
+                        currentSessionId = res.currentSessionId ?: state.currentSessionId,
+                        generatingConversationIds = combinedGenerating
                     )
                 }
             }

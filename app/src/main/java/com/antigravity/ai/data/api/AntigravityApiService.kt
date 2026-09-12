@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit
 
 sealed class StreamEvent {
     data class Init(val conversationId: String) : StreamEvent()
+    data class GeneratingStatus(val conversationId: String?, val isGenerating: Boolean) : StreamEvent()
     data class Chunk(val textDelta: String, val fullContent: String) : StreamEvent()
     data class ToolUpdate(val tool: ToolCall) : StreamEvent()
     data class Done(val botMessage: SessionMessage?) : StreamEvent()
@@ -358,6 +359,8 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                 addProperty("effort", settings.effort)
                 addProperty("mode", settings.mode)
                 addProperty("useVault", settings.useVault)
+                addProperty("client", "antigravity-android")
+                addProperty("appVersion", "1.1.0")
 
                 if (attachments.isNotEmpty()) {
                     val attArray = JsonArray()
@@ -491,6 +494,17 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                             if (convId.isNotEmpty()) {
                                 trySend(StreamEvent.Init(convId))
                             }
+                        }
+                        "generating_start" -> {
+                            terminated = false
+                            val json = gson.fromJson(data, JsonObject::class.java)
+                            val convId = json.get("conversationId")?.asString
+                            trySend(StreamEvent.GeneratingStatus(convId, true))
+                        }
+                        "generating_done" -> {
+                            val json = gson.fromJson(data, JsonObject::class.java)
+                            val convId = json.get("conversationId")?.asString
+                            trySend(StreamEvent.GeneratingStatus(convId, false))
                         }
                         "chunk" -> {
                             val json = gson.fromJson(data, JsonObject::class.java)

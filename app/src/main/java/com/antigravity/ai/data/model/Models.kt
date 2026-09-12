@@ -130,7 +130,9 @@ data class ConversationMeta(
     @SerializedName("lastMessageTime")
     val lastMessageTime: String? = null,
     @SerializedName("messageCount")
-    val messageCount: Int = 0
+    val messageCount: Int = 0,
+    @SerializedName("isGenerating")
+    val isGenerating: Boolean = false
 )
 
 data class ConversationsResponse(
@@ -138,6 +140,10 @@ data class ConversationsResponse(
     val status: String,
     @SerializedName("currentSessionId")
     val currentSessionId: String?,
+    @SerializedName("activeGeneratingId")
+    val activeGeneratingId: String? = null,
+    @SerializedName("isGenerating")
+    val isGenerating: Boolean = false,
     @SerializedName("conversations")
     val conversations: List<ConversationMeta>?
 )

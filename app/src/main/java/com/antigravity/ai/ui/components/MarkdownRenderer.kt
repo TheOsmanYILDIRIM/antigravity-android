@@ -7,7 +7,9 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
@@ -47,6 +49,7 @@ sealed class MarkdownBlock {
     data class BulletItem(val text: String, val indentLevel: Int = 0) : MarkdownBlock()
     data class NumberedItem(val number: String, val text: String) : MarkdownBlock()
     data class Image(val alt: String, val url: String) : MarkdownBlock()
+    data class Table(val headers: List<String>, val rows: List<List<String>>) : MarkdownBlock()
     object Divider : MarkdownBlock()
     data class Paragraph(val text: String) : MarkdownBlock()
 }
@@ -154,7 +157,7 @@ fun MarkdownRenderer(
                                     fontSizeSp = fontSizeSp,
                                     textColor = TextPrimary,
                                     onLinkClick = { url ->
-                                        handleLinkClick(url, context, uriHandler)
+                                        handleLinkClick(url, context, uriHandler, onOpenFile, onOpenImage)
                                     }
                                 )
                             }
@@ -185,7 +188,7 @@ fun MarkdownRenderer(
                             fontSizeSp = fontSizeSp,
                             textColor = TextSecondary,
                             isItalic = true,
-                            onLinkClick = { url -> handleLinkClick(url, context, uriHandler) }
+                            onLinkClick = { url -> handleLinkClick(url, context, uriHandler, onOpenFile, onOpenImage) }
                         )
                     }
                 }
@@ -209,7 +212,7 @@ fun MarkdownRenderer(
                             rawText = block.text,
                             fontSizeSp = fontSizeSp,
                             textColor = TextPrimary,
-                            onLinkClick = { url -> handleLinkClick(url, context, uriHandler) }
+                            onLinkClick = { url -> handleLinkClick(url, context, uriHandler, onOpenFile, onOpenImage) }
                         )
                     }
                 }
@@ -233,7 +236,7 @@ fun MarkdownRenderer(
                             rawText = block.text,
                             fontSizeSp = fontSizeSp,
                             textColor = TextPrimary,
-                            onLinkClick = { url -> handleLinkClick(url, context, uriHandler) }
+                            onLinkClick = { url -> handleLinkClick(url, context, uriHandler, onOpenFile, onOpenImage) }
                         )
                     }
                 }
@@ -311,6 +314,73 @@ fun MarkdownRenderer(
                     }
                 }
 
+                is MarkdownBlock.Table -> {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = SurfaceDark,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(8.dp)
+                        ) {
+                            // Header Row
+                            Row(
+                                modifier = Modifier
+                                    .background(SurfaceVariantDark, RoundedCornerShape(8.dp))
+                                    .padding(vertical = 8.dp, horizontal = 6.dp)
+                            ) {
+                                block.headers.forEach { h ->
+                                    Text(
+                                        text = h,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = (fontSizeSp * 0.95f).sp,
+                                        color = PrimaryIndigo,
+                                        modifier = Modifier
+                                            .widthIn(min = 90.dp, max = 220.dp)
+                                            .padding(horizontal = 6.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // Rows
+                            block.rows.forEachIndexed { rIdx, row ->
+                                val rowBg = if (rIdx % 2 == 1) SurfaceVariantDark.copy(alpha = 0.45f) else Color.Transparent
+                                Row(
+                                    modifier = Modifier
+                                        .background(rowBg, RoundedCornerShape(6.dp))
+                                        .padding(vertical = 6.dp, horizontal = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    row.forEachIndexed { cIdx, cell ->
+                                        Box(
+                                            modifier = Modifier
+                                                .widthIn(min = 90.dp, max = 220.dp)
+                                                .padding(horizontal = 6.dp)
+                                        ) {
+                                            RenderInlineFormattedText(
+                                                rawText = cell,
+                                                fontSizeSp = (fontSizeSp * 0.92f),
+                                                textColor = TextPrimary,
+                                                onLinkClick = { url ->
+                                                    handleLinkClick(url, context, uriHandler, onOpenFile, onOpenImage)
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 is MarkdownBlock.Divider -> {
                     Divider(
                         color = BorderSubtle,
@@ -342,7 +412,7 @@ private fun handleLinkClick(
     val cleanUrl = url.trim()
     val lower = cleanUrl.lowercase()
     val isImage = lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") ||
-            lower.endsWith(".webp") || lower.endsWith(".gif") || lower.endsWith(".svg")
+            lower.endsWith(".webp") || lower.endsWith(".gif") || lower.endsWith(".svg") || lower.endsWith(".bmp")
 
     if (isImage && onOpenImage != null) {
         onOpenImage(cleanUrl, cleanUrl.substringAfterLast("/"))
@@ -350,7 +420,8 @@ private fun handleLinkClick(
     }
 
     if ((cleanUrl.startsWith("/") || cleanUrl.startsWith("file://") || cleanUrl.startsWith("~")) && onOpenFile != null) {
-        onOpenFile(cleanUrl)
+        val path = cleanUrl.replace("file://", "")
+        onOpenFile(path)
         return
     }
 
@@ -358,7 +429,6 @@ private fun handleLinkClick(
         if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
             uriHandler.openUri(cleanUrl)
         } else {
-            // Local file link or custom scheme
             val cleanPath = cleanUrl.replace("file://", "")
             if (onOpenFile != null) {
                 onOpenFile(cleanPath)
@@ -413,12 +483,6 @@ fun buildAnnotatedMarkdown(
     baseItalic: Boolean = false
 ): AnnotatedString {
     return buildAnnotatedString {
-        // Regex for inline elements:
-        // 1. Links: [text](url)
-        // 2. Inline Code: `code`
-        // 3. Bold-Italic: ***text*** or ___text___
-        // 4. Bold: **text** or __text__
-        // 5. Italic: *text* or _text_
         val pattern = Regex("(\\[([^\\]]+)\\]\\(([^\\)]+)\\))|(`([^`]+)`)|(\\*\\*\\*([^*]+)\\*\\*\\*)|(\\*\\*([^*]+)\\*\\*)|(\\*([^*]+)\\*)")
 
         var currentIndex = 0
@@ -436,11 +500,19 @@ fun buildAnnotatedMarkdown(
                 match.groups[1] != null -> {
                     val linkText = match.groups[2]?.value ?: ""
                     val linkUrl = match.groups[3]?.value ?: ""
-                    val start = length
+                    val isFilePath = linkUrl.startsWith("file://") || linkUrl.startsWith("/") || linkUrl.startsWith("~")
+                    val isImg = linkUrl.endsWith(".png", true) || linkUrl.endsWith(".jpg", true) || linkUrl.endsWith(".jpeg", true) || linkUrl.endsWith(".webp", true)
+                    
+                    val linkColor = when {
+                        isImg -> GeminiBlue
+                        isFilePath -> PrimaryIndigo
+                        else -> PrimaryIndigo
+                    }
+
                     pushStringAnnotation(tag = "URL", annotation = linkUrl)
                     withStyle(
                         SpanStyle(
-                            color = PrimaryIndigo,
+                            color = linkColor,
                             fontWeight = FontWeight.SemiBold,
                             textDecoration = TextDecoration.Underline
                         )
@@ -450,14 +522,14 @@ fun buildAnnotatedMarkdown(
                     pop()
                 }
 
-                // Inline code: `code`
+                // Inline Code: `code`
                 match.groups[4] != null -> {
                     val codeContent = match.groups[5]?.value ?: ""
                     withStyle(
                         SpanStyle(
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Medium,
-                            color = Color(0xFF93B4FC), // Gemini icy cyan/blue
+                            color = Color(0xFF93B4FC),
                             background = Color(0xFF282A2C),
                             fontSize = (fontSizeSp * 0.92f).sp
                         )
@@ -538,7 +610,23 @@ fun parseMarkdownBlocks(markdown: String): List<MarkdownBlock> {
             continue
         }
 
-        // 2.5 Image block (![alt](url))
+        // 2.5 Markdown Table (| H1 | H2 |)
+        if (trimmed.startsWith("|") && trimmed.endsWith("|") && i + 1 < lines.size && lines[i + 1].trim().startsWith("|") && lines[i + 1].contains("---")) {
+            val headers = trimmed.split("|").map { it.trim() }.filter { it.isNotEmpty() }
+            i += 2 // skip header and separator line
+            val rows = mutableListOf<List<String>>()
+            while (i < lines.size && lines[i].trim().startsWith("|") && lines[i].trim().endsWith("|")) {
+                val rowCells = lines[i].trim().split("|").map { it.trim() }.filterIndexed { idx, _ -> idx != 0 && idx != lines[i].trim().split("|").lastIndex }
+                rows.add(rowCells)
+                i++
+            }
+            if (headers.isNotEmpty()) {
+                blocks.add(MarkdownBlock.Table(headers, rows))
+                continue
+            }
+        }
+
+        // 2.6 Standalone Image block (![alt](url))
         val imgMatch = Regex("^!\\[([^\\]]*)\\]\\(([^\\)]+)\\)").find(trimmed)
         if (imgMatch != null) {
             val alt = imgMatch.groupValues[1]
@@ -600,7 +688,7 @@ fun parseMarkdownBlocks(markdown: String): List<MarkdownBlock> {
             continue
         }
 
-        // 8. Normal Paragraph
+        // 8. Normal Paragraph (also checking for embedded images)
         if (trimmed.isNotEmpty()) {
             val pBuilder = StringBuilder(trimmed)
             i++
@@ -611,12 +699,32 @@ fun parseMarkdownBlocks(markdown: String): List<MarkdownBlock> {
                 !lines[i].trim().startsWith("- ") &&
                 !lines[i].trim().startsWith("* ") &&
                 !Regex("^([0-9]+)\\.\\s+").containsMatchIn(lines[i].trim()) &&
+                !lines[i].trim().startsWith("|") &&
                 lines[i].trim() != "---"
             ) {
                 pBuilder.append("\n").append(lines[i].trim())
                 i++
             }
-            blocks.add(MarkdownBlock.Paragraph(pBuilder.toString()))
+
+            val fullPara = pBuilder.toString()
+            val embeddedImgMatch = Regex("!\\[([^\\]]*)\\]\\(([^\\)]+)\\)").findAll(fullPara).toList()
+            if (embeddedImgMatch.isNotEmpty()) {
+                var lastIdx = 0
+                for (m in embeddedImgMatch) {
+                    val before = fullPara.substring(lastIdx, m.range.first).trim()
+                    if (before.isNotEmpty()) {
+                        blocks.add(MarkdownBlock.Paragraph(before))
+                    }
+                    blocks.add(MarkdownBlock.Image(m.groupValues[1], m.groupValues[2]))
+                    lastIdx = m.range.last + 1
+                }
+                val after = fullPara.substring(lastIdx).trim()
+                if (after.isNotEmpty()) {
+                    blocks.add(MarkdownBlock.Paragraph(after))
+                }
+            } else {
+                blocks.add(MarkdownBlock.Paragraph(fullPara))
+            }
             continue
         }
 

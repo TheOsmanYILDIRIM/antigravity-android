@@ -273,6 +273,7 @@ fun ChatScreen(
                 conversations = uiState.conversations,
                 currentSessionId = uiState.currentSessionId,
                 pinnedIds = uiState.pinnedConversationIds,
+                generatingIds = uiState.generatingConversationIds,
                 onSelectConversation = { id ->
                     viewModel.selectConversation(id)
                     scope.launch { drawerState.close() }
