@@ -268,10 +268,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             repository.observeStreamEvents().collect { event ->
                 when (event) {
                     is StreamEvent.Init -> {
-                        _uiState.update {
-                            it.copy(
-                                currentSessionId = event.conversationId,
-                                currentConversationId = event.conversationId
+                        _uiState.update { state ->
+                            val updatedSet = state.generatingConversationIds.toMutableSet()
+                            updatedSet.add(event.conversationId)
+                            val isCurrentlyNew = state.currentConversationId == null
+                            state.copy(
+                                currentSessionId = if (isCurrentlyNew) event.conversationId else state.currentSessionId,
+                                currentConversationId = if (isCurrentlyNew) event.conversationId else state.currentConversationId,
+                                generatingConversationIds = updatedSet,
+                                isGenerating = if (isCurrentlyNew) true else state.isGenerating
                             )
                         }
                         fetchConversations()
@@ -299,51 +304,76 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is StreamEvent.Chunk -> {
                         _uiState.update { state ->
-                            val list = state.messages.toMutableList()
-                            if (list.isNotEmpty() && list.last().role == "bot") {
-                                val last = list.last().copy(
-                                    content = event.fullContent,
-                                    state = MessageState.GENERATING
-                                )
-                                list[list.size - 1] = last
+                            val currentActiveId = state.currentConversationId ?: state.currentSessionId
+                            val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
+                            if (!isMatching) {
+                                state
+                            } else {
+                                val list = state.messages.toMutableList()
+                                if (list.isNotEmpty() && list.last().role == "bot") {
+                                    val last = list.last().copy(
+                                        content = event.fullContent,
+                                        state = MessageState.GENERATING
+                                    )
+                                    list[list.size - 1] = last
+                                }
+                                state.copy(messages = list, isGenerating = true)
                             }
-                            state.copy(messages = list, isGenerating = true)
                         }
                     }
                     is StreamEvent.ToolUpdate -> {
                         _uiState.update { state ->
-                            val list = state.messages.toMutableList()
-                            if (list.isNotEmpty() && list.last().role == "bot") {
-                                val botMsg = list.last()
-                                val tools = botMsg.tools.toMutableList()
-                                val idx = tools.indexOfFirst { it.stepIndex == event.tool.stepIndex }
-                                if (idx >= 0) {
-                                    tools[idx] = event.tool
-                                } else {
-                                    tools.add(event.tool)
+                            val currentActiveId = state.currentConversationId ?: state.currentSessionId
+                            val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
+                            if (!isMatching) {
+                                state
+                            } else {
+                                val list = state.messages.toMutableList()
+                                if (list.isNotEmpty() && list.last().role == "bot") {
+                                    val botMsg = list.last()
+                                    val tools = botMsg.tools.toMutableList()
+                                    val idx = tools.indexOfFirst { it.stepIndex == event.tool.stepIndex }
+                                    if (idx >= 0) {
+                                        tools[idx] = event.tool
+                                    } else {
+                                        tools.add(event.tool)
+                                    }
+                                    list[list.size - 1] = botMsg.copy(tools = tools)
                                 }
-                                list[list.size - 1] = botMsg.copy(tools = tools)
+                                state.copy(messages = list)
                             }
-                            state.copy(messages = list)
                         }
                     }
                     is StreamEvent.Done -> {
                         _uiState.update { state ->
-                            val list = state.messages.toMutableList()
-                            if (list.isNotEmpty() && list.last().role == "bot") {
-                                val last = list.last()
-                                val updated = last.copy(
-                                    content = event.botMessage?.content ?: last.content,
-                                    tools = (event.botMessage?.tools ?: last.tools).toMutableList(),
-                                    usage = event.botMessage?.usage ?: last.usage,
-                                    state = MessageState.DONE
-                                )
-                                list[list.size - 1] = updated
-                            }
                             val currentActiveId = state.currentConversationId ?: state.currentSessionId
+                            val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
                             val updatedSet = state.generatingConversationIds.toMutableSet()
-                            currentActiveId?.let { updatedSet.remove(it) }
-                            state.copy(messages = list, isGenerating = false, generatingConversationIds = updatedSet)
+                            event.conversationId?.let { updatedSet.remove(it) } ?: currentActiveId?.let { updatedSet.remove(it) }
+
+                            val list = if (isMatching) {
+                                val mList = state.messages.toMutableList()
+                                if (mList.isNotEmpty() && mList.last().role == "bot") {
+                                    val last = mList.last()
+                                    val updated = last.copy(
+                                        content = event.botMessage?.content ?: last.content,
+                                        tools = (event.botMessage?.tools ?: last.tools).toMutableList(),
+                                        usage = event.botMessage?.usage ?: last.usage,
+                                        state = MessageState.DONE
+                                    )
+                                    mList[mList.size - 1] = updated
+                                }
+                                mList
+                            } else {
+                                state.messages
+                            }
+
+                            val isStillGenerating = currentActiveId != null && updatedSet.contains(currentActiveId)
+                            state.copy(
+                                messages = list,
+                                isGenerating = isStillGenerating,
+                                generatingConversationIds = updatedSet
+                            )
                         }
                         fireNotification("Antigravity AI", "Yanıt hazır — sıra sende")
                         fetchConversations()
@@ -351,31 +381,50 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is StreamEvent.Stopped -> {
                         _uiState.update { state ->
-                            val list = state.messages.toMutableList()
-                            if (list.isNotEmpty() && list.last().role == "bot") {
-                                val last = list.last()
-                                list[list.size - 1] = last.copy(state = MessageState.DONE)
-                            }
                             val currentActiveId = state.currentConversationId ?: state.currentSessionId
+                            val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
                             val updatedSet = state.generatingConversationIds.toMutableSet()
-                            currentActiveId?.let { updatedSet.remove(it) }
-                            state.copy(messages = list, isGenerating = false, generatingConversationIds = updatedSet)
+                            event.conversationId?.let { updatedSet.remove(it) } ?: currentActiveId?.let { updatedSet.remove(it) }
+
+                            val list = if (isMatching) {
+                                val mList = state.messages.toMutableList()
+                                if (mList.isNotEmpty() && mList.last().role == "bot") {
+                                    val last = mList.last()
+                                    mList[mList.size - 1] = last.copy(state = MessageState.DONE)
+                                }
+                                mList
+                            } else {
+                                state.messages
+                            }
+
+                            val isStillGenerating = currentActiveId != null && updatedSet.contains(currentActiveId)
+                            state.copy(
+                                messages = list,
+                                isGenerating = isStillGenerating,
+                                generatingConversationIds = updatedSet
+                            )
                         }
                         fireNotification("Antigravity AI", "Üretim durduruldu")
                     }
                     is StreamEvent.SessionLoaded -> {
-                        val serverMessages = event.session.messages?.map { mapSessionMessage(it) } ?: emptyList()
-                        _uiState.update {
-                            it.copy(
-                                messages = serverMessages,
-                                currentSessionId = event.session.id,
-                                currentConversationId = event.session.conversationId,
-                                isGenerating = event.session.isGenerating
-                            )
+                        val currentActiveId = _uiState.value.currentConversationId ?: _uiState.value.currentSessionId
+                        val loadedConvId = event.session.conversationId ?: event.session.id
+                        if (currentActiveId == null || currentActiveId == loadedConvId) {
+                            val serverMessages = event.session.messages?.map { mapSessionMessage(it) } ?: emptyList()
+                            _uiState.update {
+                                it.copy(
+                                    messages = serverMessages,
+                                    currentSessionId = event.session.id,
+                                    currentConversationId = event.session.conversationId,
+                                    isGenerating = event.session.isGenerating
+                                )
+                            }
                         }
                     }
                     is StreamEvent.SessionReset -> {
-                        _uiState.update { it.copy(messages = emptyList(), isGenerating = false) }
+                        if (_uiState.value.currentConversationId == null) {
+                            _uiState.update { it.copy(messages = emptyList(), isGenerating = false) }
+                        }
                         fetchConversations()
                     }
                     is StreamEvent.PermissionRequested -> {
@@ -386,19 +435,34 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is StreamEvent.Error -> {
                         _uiState.update { state ->
-                            val list = state.messages.toMutableList()
-                            if (list.isNotEmpty() && list.last().role == "bot") {
-                                val last = list.last()
-                                val updated = last.copy(
-                                    content = last.content + "\n\n⚠️ *Hata: ${event.message}*",
-                                    state = MessageState.ERROR
-                                )
-                                list[list.size - 1] = updated
-                            }
                             val currentActiveId = state.currentConversationId ?: state.currentSessionId
+                            val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
                             val updatedSet = state.generatingConversationIds.toMutableSet()
-                            currentActiveId?.let { updatedSet.remove(it) }
-                            state.copy(messages = list, isGenerating = false, generatingConversationIds = updatedSet, errorMessage = event.message, notice = null)
+                            event.conversationId?.let { updatedSet.remove(it) } ?: currentActiveId?.let { updatedSet.remove(it) }
+
+                            val list = if (isMatching) {
+                                val mList = state.messages.toMutableList()
+                                if (mList.isNotEmpty() && mList.last().role == "bot") {
+                                    val last = mList.last()
+                                    val updated = last.copy(
+                                        content = last.content + "\n\n⚠️ *Hata: ${event.message}*",
+                                        state = MessageState.ERROR
+                                    )
+                                    mList[mList.size - 1] = updated
+                                }
+                                mList
+                            } else {
+                                state.messages
+                            }
+
+                            val isStillGenerating = currentActiveId != null && updatedSet.contains(currentActiveId)
+                            state.copy(
+                                messages = list,
+                                isGenerating = isStillGenerating,
+                                generatingConversationIds = updatedSet,
+                                errorMessage = if (isMatching) event.message else state.errorMessage,
+                                notice = null
+                            )
                         }
                         fireNotification("Antigravity AI", "Üretim hatası: ${event.message.take(140)}")
                     }
@@ -417,7 +481,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         fireNotification("Antigravity AI", "Oturum yenileme gerekli: ${event.message.take(140)}")
                     }
                     is StreamEvent.Stderr -> {
-                        _uiState.update { it.copy(notice = event.text) }
+                        val currentActiveId = _uiState.value.currentConversationId ?: _uiState.value.currentSessionId
+                        val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
+                        if (isMatching) {
+                            _uiState.update { it.copy(notice = event.text) }
+                        }
                     }
                 }
             }
@@ -474,15 +542,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun selectConversation(id: String) {
+        if (id.isBlank()) return
         viewModelScope.launch {
             repository.loadConversation(id).onSuccess { res ->
                 val serverMessages = res.session?.messages?.map { mapSessionMessage(it) } ?: emptyList()
+                val convId = res.session?.conversationId ?: res.session?.id ?: id
+                val isConvGenerating = _uiState.value.generatingConversationIds.contains(convId) || res.isGenerating
                 _uiState.update {
                     it.copy(
                         messages = serverMessages,
-                        currentSessionId = res.session?.id,
-                        currentConversationId = res.session?.conversationId,
-                        isGenerating = res.isGenerating
+                        currentSessionId = res.session?.id ?: id,
+                        currentConversationId = convId,
+                        isGenerating = isConvGenerating,
+                        inputText = "",
+                        attachments = emptyList(),
+                        pastedBlocks = emptyList(),
+                        notice = null
                     )
                 }
             }
@@ -1319,11 +1394,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         val activeConvId = state.currentConversationId ?: state.currentSessionId
+        val isContinue = !activeConvId.isNullOrBlank()
         viewModelScope.launch {
             repository.sendMessage(
                 prompt = finalPrompt,
-                conversationId = activeConvId,
-                continueChat = true,
+                conversationId = if (isContinue) activeConvId else null,
+                continueChat = isContinue,
                 settings = state.settings,
                 attachments = userMessage.attachments
             ).onFailure { err ->
@@ -1346,8 +1422,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     it.copy(
                         messages = emptyList(),
                         isGenerating = false,
-                        currentSessionId = res.session?.id,
-                        currentConversationId = null
+                        currentSessionId = null,
+                        currentConversationId = null,
+                        inputText = "",
+                        pastedBlocks = emptyList(),
+                        attachments = emptyList(),
+                        notice = null
                     )
                 }
                 fetchConversations()

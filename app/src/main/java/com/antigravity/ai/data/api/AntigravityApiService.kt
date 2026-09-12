@@ -21,17 +21,17 @@ import java.util.concurrent.TimeUnit
 sealed class StreamEvent {
     data class Init(val conversationId: String) : StreamEvent()
     data class GeneratingStatus(val conversationId: String?, val isGenerating: Boolean) : StreamEvent()
-    data class Chunk(val textDelta: String, val fullContent: String) : StreamEvent()
-    data class ToolUpdate(val tool: ToolCall) : StreamEvent()
-    data class Done(val botMessage: SessionMessage?) : StreamEvent()
-    object Stopped : StreamEvent()
-    data class Error(val message: String) : StreamEvent()
-    data class AuthRequired(val message: String, val authUrl: String? = null) : StreamEvent()
+    data class Chunk(val textDelta: String, val fullContent: String, val conversationId: String? = null) : StreamEvent()
+    data class ToolUpdate(val tool: ToolCall, val conversationId: String? = null) : StreamEvent()
+    data class Done(val botMessage: SessionMessage?, val conversationId: String? = null) : StreamEvent()
+    data class Stopped(val conversationId: String? = null) : StreamEvent()
+    data class Error(val message: String, val conversationId: String? = null) : StreamEvent()
+    data class AuthRequired(val message: String, val authUrl: String? = null, val conversationId: String? = null) : StreamEvent()
     data class SessionLoaded(val session: SessionData) : StreamEvent()
     object SessionReset : StreamEvent()
     data class PermissionRequested(val request: PermissionRequestData) : StreamEvent()
     data class QuestionRequested(val request: QuestionRequestData) : StreamEvent()
-    data class Stderr(val text: String) : StreamEvent()
+    data class Stderr(val text: String, val conversationId: String? = null) : StreamEvent()
 }
 
 class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080") {
@@ -353,8 +353,10 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
         try {
             val json = JsonObject().apply {
                 addProperty("prompt", prompt)
-                conversationId?.let { addProperty("conversationId", it) }
-                addProperty("continue", continueChat)
+                if (!conversationId.isNullOrBlank()) {
+                    addProperty("conversationId", conversationId)
+                }
+                addProperty("continue", continueChat && !conversationId.isNullOrBlank())
                 addProperty("model", settings.model)
                 addProperty("effort", settings.effort)
                 addProperty("mode", settings.mode)
@@ -510,13 +512,15 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                             val json = gson.fromJson(data, JsonObject::class.java)
                             val delta = json.get("text_delta")?.asString ?: ""
                             val full = json.get("full_content")?.asString ?: ""
-                            trySend(StreamEvent.Chunk(delta, full))
+                            val convId = json.get("conversationId")?.asString
+                            trySend(StreamEvent.Chunk(delta, full, convId))
                         }
                         "tool_update" -> {
                             val json = gson.fromJson(data, JsonObject::class.java)
                             val toolObj = json.get("tool")
                             val tool = gson.fromJson(toolObj, ToolCall::class.java)
-                            trySend(StreamEvent.ToolUpdate(tool))
+                            val convId = json.get("conversationId")?.asString
+                            trySend(StreamEvent.ToolUpdate(tool, convId))
                         }
                         "done" -> {
                             terminated = true
@@ -524,11 +528,14 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                             val botMsg = if (json.has("botMessage")) {
                                 gson.fromJson(json.get("botMessage"), SessionMessage::class.java)
                             } else null
-                            trySend(StreamEvent.Done(botMsg))
+                            val convId = json.get("conversationId")?.asString
+                            trySend(StreamEvent.Done(botMsg, convId))
                         }
                         "stopped" -> {
                             terminated = true
-                            trySend(StreamEvent.Stopped)
+                            val json = gson.fromJson(data, JsonObject::class.java)
+                            val convId = json.get("conversationId")?.asString
+                            trySend(StreamEvent.Stopped(convId))
                         }
                         "session_loaded" -> {
                             val json = gson.fromJson(data, JsonObject::class.java)
@@ -544,19 +551,22 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                             terminated = true
                             val json = gson.fromJson(data, JsonObject::class.java)
                             val err = json.get("error")?.asString ?: "Unknown error"
-                            trySend(StreamEvent.Error(err))
+                            val convId = json.get("conversationId")?.asString
+                            trySend(StreamEvent.Error(err, convId))
                         }
                         "auth_required" -> {
                             terminated = true
                             val json = gson.fromJson(data, JsonObject::class.java)
                             val msg = json.get("error")?.asString ?: "Kimlik doğrulaması gerekiyor."
                             val authUrl = json.get("authUrl")?.asString
-                            trySend(StreamEvent.AuthRequired(msg, authUrl))
+                            val convId = json.get("conversationId")?.asString
+                            trySend(StreamEvent.AuthRequired(msg, authUrl, convId))
                         }
                         "stderr" -> {
                             val json = gson.fromJson(data, JsonObject::class.java)
                             val txt = json.get("text")?.asString ?: ""
-                            if (txt.isNotBlank()) trySend(StreamEvent.Stderr(txt.trim()))
+                            val convId = json.get("conversationId")?.asString
+                            if (txt.isNotBlank()) trySend(StreamEvent.Stderr(txt.trim(), convId))
                         }
                     }
                 } catch (e: Exception) {
