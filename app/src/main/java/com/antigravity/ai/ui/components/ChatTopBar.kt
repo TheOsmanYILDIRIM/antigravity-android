@@ -17,7 +17,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.antigravity.ai.data.api.ServerHealth
 import com.antigravity.ai.data.model.ChatSettings
 import com.antigravity.ai.data.model.UsageData
 import com.antigravity.ai.ui.theme.*
@@ -27,6 +26,8 @@ fun ChatTopBar(
     settings: ChatSettings,
     usage: UsageData?,
     isGenerating: Boolean,
+    modelName: String? = null,
+    onModelClick: (() -> Unit)? = null,
     onMenuClick: () -> Unit,
     onNewChatClick: () -> Unit,
     onUsageClick: () -> Unit,
@@ -60,29 +61,51 @@ fun ChatTopBar(
                 )
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
-            // Center: Gemini Sparkle + Antigravity Title
+            // Center: Gemini Sparkle + Antigravity Title & Model Selector
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .then(
+                        if (onModelClick != null) {
+                            Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onModelClick() }
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                        } else Modifier
+                    )
             ) {
                 GeminiSparkleIcon(size = 20.dp)
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Antigravity",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = TextPrimary,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                        if (onModelClick != null) {
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Model Seç",
+                                tint = TextMuted,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                    val displayModel = modelName ?: settings.model.replace("gemini-", "Gemini ").replace("-medium", "").replace("-high", " ⚡")
                     Text(
-                        text = "Antigravity",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = TextPrimary,
+                        text = displayModel,
+                        fontSize = 10.5.sp,
+                        color = PrimaryIndigo,
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = settings.model.replace("gemini-", "Gemini ").replace("-medium", "").replace("-high", " ⚡"),
-                        fontSize = 11.sp,
-                        color = TextMuted,
-                        maxLines = 1
                     )
                 }
             }

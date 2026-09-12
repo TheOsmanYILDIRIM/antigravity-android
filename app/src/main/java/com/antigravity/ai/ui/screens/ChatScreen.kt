@@ -315,10 +315,17 @@ fun ChatScreen(
     ) {
         Scaffold(
             topBar = {
+                val selectedModelName = uiState.availableModels.find { it.id == uiState.settings.model }?.name
+                    ?: uiState.settings.model
+
                 ChatTopBar(
                     settings = uiState.settings,
                     usage = uiState.usage,
                     isGenerating = uiState.isGenerating,
+                    modelName = selectedModelName,
+                    onModelClick = {
+                        viewModel.setSettingsDialogVisible(true)
+                    },
                     onMenuClick = {
                         scope.launch { drawerState.open() }
                     },

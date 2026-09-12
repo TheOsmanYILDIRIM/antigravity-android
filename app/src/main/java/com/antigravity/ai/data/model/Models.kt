@@ -295,6 +295,32 @@ data class SkillsResponse(
     val skills: List<SkillItem>?
 )
 
+data class UsageBucket(
+    @SerializedName("id")
+    val id: String = "",
+    @SerializedName("name")
+    val name: String = "",
+    @SerializedName("description")
+    val description: String? = null,
+    @SerializedName("window")
+    val window: String = "", // "5h", "weekly"
+    @SerializedName("remaining_fraction")
+    val remainingFraction: Double = 1.0,
+    @SerializedName("reset_time")
+    val resetTime: String? = null,
+    @SerializedName("disabled")
+    val disabled: Boolean = false
+)
+
+data class UsageGroup(
+    @SerializedName("name")
+    val name: String = "",
+    @SerializedName("description")
+    val description: String? = null,
+    @SerializedName("buckets")
+    val buckets: List<UsageBucket> = emptyList()
+)
+
 data class UsageMetrics(
     @SerializedName("totalTokens")
     val totalTokens: Long = 0,
@@ -311,7 +337,9 @@ data class UsageMetrics(
     @SerializedName("outputTokens")
     val outputTokens: Long = 0,
     @SerializedName("thinkingTokens")
-    val thinkingTokens: Long = 0
+    val thinkingTokens: Long = 0,
+    @SerializedName("resetTime")
+    val resetTime: String? = null
 )
 
 data class UsageData(
@@ -319,6 +347,8 @@ data class UsageData(
     val recent5h: UsageMetrics?,
     @SerializedName("weekly")
     val weekly: UsageMetrics?,
+    @SerializedName("groups")
+    val groups: List<UsageGroup>? = emptyList(),
     @SerializedName("lastTurn")
     val lastTurn: UsageStats?,
     @SerializedName("lastUpdated")
