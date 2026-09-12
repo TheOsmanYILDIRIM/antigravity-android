@@ -207,7 +207,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refreshAll() {
         fetchConversations()
-        syncWithServer()
+        val currentConvId = _uiState.value.currentConversationId
+        if (!currentConvId.isNullOrBlank()) {
+            selectConversation(currentConvId)
+        }
         fetchVaultFiles()
         fetchSkills()
         fetchUsage()
@@ -283,7 +286,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is StreamEvent.GeneratingStatus -> {
                         _uiState.update { state ->
-                            val currentActiveId = state.currentConversationId ?: state.currentSessionId
+                            val currentActiveId = state.currentConversationId
                             val updatedSet = state.generatingConversationIds.toMutableSet()
                             if (event.isGenerating) {
                                 event.conversationId?.let { updatedSet.add(it) }
@@ -304,7 +307,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is StreamEvent.Chunk -> {
                         _uiState.update { state ->
-                            val currentActiveId = state.currentConversationId ?: state.currentSessionId
+                            val currentActiveId = state.currentConversationId
                             val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
                             if (!isMatching) {
                                 state
@@ -323,7 +326,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is StreamEvent.ToolUpdate -> {
                         _uiState.update { state ->
-                            val currentActiveId = state.currentConversationId ?: state.currentSessionId
+                            val currentActiveId = state.currentConversationId
                             val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
                             if (!isMatching) {
                                 state
@@ -346,7 +349,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is StreamEvent.Done -> {
                         _uiState.update { state ->
-                            val currentActiveId = state.currentConversationId ?: state.currentSessionId
+                            val currentActiveId = state.currentConversationId
                             val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
                             val updatedSet = state.generatingConversationIds.toMutableSet()
                             event.conversationId?.let { updatedSet.remove(it) } ?: currentActiveId?.let { updatedSet.remove(it) }
@@ -381,7 +384,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is StreamEvent.Stopped -> {
                         _uiState.update { state ->
-                            val currentActiveId = state.currentConversationId ?: state.currentSessionId
+                            val currentActiveId = state.currentConversationId
                             val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
                             val updatedSet = state.generatingConversationIds.toMutableSet()
                             event.conversationId?.let { updatedSet.remove(it) } ?: currentActiveId?.let { updatedSet.remove(it) }
@@ -407,15 +410,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         fireNotification("Antigravity AI", "Üretim durduruldu")
                     }
                     is StreamEvent.SessionLoaded -> {
-                        val currentActiveId = _uiState.value.currentConversationId ?: _uiState.value.currentSessionId
+                        val currentActiveId = _uiState.value.currentConversationId
                         val loadedConvId = event.session.conversationId ?: event.session.id
-                        if (currentActiveId == null || currentActiveId == loadedConvId) {
+                        if (!currentActiveId.isNullOrBlank() && currentActiveId == loadedConvId) {
                             val serverMessages = event.session.messages?.map { mapSessionMessage(it) } ?: emptyList()
                             _uiState.update {
                                 it.copy(
                                     messages = serverMessages,
-                                    currentSessionId = event.session.id,
-                                    currentConversationId = event.session.conversationId,
+                                    currentSessionId = loadedConvId,
+                                    currentConversationId = loadedConvId,
                                     isGenerating = event.session.isGenerating
                                 )
                             }
@@ -423,7 +426,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is StreamEvent.SessionReset -> {
                         if (_uiState.value.currentConversationId == null) {
-                            _uiState.update { it.copy(messages = emptyList(), isGenerating = false) }
+                            _uiState.update { it.copy(messages = emptyList(), isGenerating = false, currentSessionId = null) }
                         }
                         fetchConversations()
                     }
@@ -435,7 +438,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is StreamEvent.Error -> {
                         _uiState.update { state ->
-                            val currentActiveId = state.currentConversationId ?: state.currentSessionId
+                            val currentActiveId = state.currentConversationId
                             val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
                             val updatedSet = state.generatingConversationIds.toMutableSet()
                             event.conversationId?.let { updatedSet.remove(it) } ?: currentActiveId?.let { updatedSet.remove(it) }
@@ -481,7 +484,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         fireNotification("Antigravity AI", "Oturum yenileme gerekli: ${event.message.take(140)}")
                     }
                     is StreamEvent.Stderr -> {
-                        val currentActiveId = _uiState.value.currentConversationId ?: _uiState.value.currentSessionId
+                        val currentActiveId = _uiState.value.currentConversationId
                         val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
                         if (isMatching) {
                             _uiState.update { it.copy(notice = event.text) }
@@ -504,7 +507,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     val combinedGenerating = (state.generatingConversationIds + serverGeneratingIds).toSet()
                     state.copy(
                         conversations = res.conversations ?: emptyList(),
-                        currentSessionId = res.currentSessionId ?: state.currentSessionId,
                         generatingConversationIds = combinedGenerating
                     )
                 }
@@ -551,7 +553,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update {
                     it.copy(
                         messages = serverMessages,
-                        currentSessionId = res.session?.id ?: id,
+                        currentSessionId = convId,
                         currentConversationId = convId,
                         isGenerating = isConvGenerating,
                         inputText = "",
@@ -568,7 +570,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.deleteConversation(id).onSuccess {
                 fetchConversations()
-                syncWithServer()
+                val wasActive = _uiState.value.currentConversationId == id || _uiState.value.currentSessionId == id
+                if (wasActive) {
+                    _uiState.update {
+                        it.copy(
+                            messages = emptyList(),
+                            currentSessionId = null,
+                            currentConversationId = null,
+                            isGenerating = false,
+                            notice = null
+                        )
+                    }
+                }
             }
         }
     }
@@ -869,16 +882,27 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun syncWithServer() {
+        val currentConvId = _uiState.value.currentConversationId
+        if (!currentConvId.isNullOrBlank()) {
+            selectConversation(currentConvId)
+            return
+        }
         viewModelScope.launch {
             repository.fetchSession().onSuccess { response ->
-                val serverMessages = response.session?.messages?.map { mapSessionMessage(it) } ?: emptyList()
-                _uiState.update {
-                    it.copy(
-                        messages = serverMessages,
-                        isGenerating = response.isGenerating,
-                        currentSessionId = response.session?.id,
-                        currentConversationId = response.session?.conversationId
-                    )
+                if (_uiState.value.currentConversationId == null && _uiState.value.messages.isEmpty()) {
+                    val serverMessages = response.session?.messages?.map { mapSessionMessage(it) } ?: emptyList()
+                    if (serverMessages.isNotEmpty()) {
+                        val convId = response.session?.conversationId ?: response.session?.id
+                        val isGenerating = (convId != null && _uiState.value.generatingConversationIds.contains(convId)) || response.isGenerating
+                        _uiState.update {
+                            it.copy(
+                                messages = serverMessages,
+                                isGenerating = isGenerating,
+                                currentSessionId = convId,
+                                currentConversationId = convId
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -1393,7 +1417,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
 
-        val activeConvId = state.currentConversationId ?: state.currentSessionId
+        val activeConvId = state.currentConversationId
         val isContinue = !activeConvId.isNullOrBlank()
         viewModelScope.launch {
             repository.sendMessage(

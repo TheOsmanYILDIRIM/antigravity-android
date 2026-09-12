@@ -271,7 +271,7 @@ fun ChatScreen(
         drawerContent = {
             ChatDrawer(
                 conversations = uiState.conversations,
-                currentSessionId = uiState.currentSessionId,
+                currentSessionId = uiState.currentConversationId,
                 pinnedIds = uiState.pinnedConversationIds,
                 generatingIds = uiState.generatingConversationIds,
                 onSelectConversation = { id ->
