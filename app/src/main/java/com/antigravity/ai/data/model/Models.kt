@@ -140,12 +140,12 @@ data class ConversationsResponse(
     val status: String,
     @SerializedName("currentSessionId")
     val currentSessionId: String?,
+    @SerializedName("conversations")
+    val conversations: List<ConversationMeta>?,
     @SerializedName("activeGeneratingId")
     val activeGeneratingId: String? = null,
     @SerializedName("isGenerating")
-    val isGenerating: Boolean = false,
-    @SerializedName("conversations")
-    val conversations: List<ConversationMeta>?
+    val isGenerating: Boolean = false
 )
 
 data class VaultItem(
