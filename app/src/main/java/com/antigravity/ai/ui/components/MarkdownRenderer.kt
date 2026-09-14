@@ -588,6 +588,15 @@ fun parseMarkdownBlocks(markdown: String): List<MarkdownBlock> {
         val line = lines[i]
         val trimmed = line.trim()
 
+        // 0. Skip HTML comments & Sentinel tags (e.g. <!--__AGY_SESSION_TITLE: ...__-->)
+        if (trimmed.startsWith("<!--")) {
+            while (i < lines.size && !lines[i].contains("-->")) {
+                i++
+            }
+            if (i < lines.size) i++
+            continue
+        }
+
         // 1. Code block fence
         if (trimmed.startsWith("```")) {
             val language = trimmed.removePrefix("```").trim()

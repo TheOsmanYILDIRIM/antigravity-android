@@ -34,7 +34,7 @@ fun MentionPopup(
     val cleanQuery = query.removePrefix("@")
     val filtered = items.filter {
         it.name.contains(cleanQuery, ignoreCase = true) || it.path.contains(cleanQuery, ignoreCase = true)
-    }.take(8)
+    }.take(20)
 
     if (filtered.isNotEmpty()) {
         Column(
@@ -44,7 +44,7 @@ fun MentionPopup(
                 .clip(RoundedCornerShape(12.dp))
                 .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
                 .background(SurfaceDark)
-                .heightIn(max = 220.dp)
+                .heightIn(max = 260.dp)
         ) {
             Text(
                 text = "DOSYA VE VAULT ETİKETLERİ (@MENTION)",
