@@ -433,6 +433,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     is StreamEvent.CompactCompleted -> {
                         val currentActiveId = _uiState.value.currentConversationId
                         val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
+                        if (isMatching) {
                             val bannerText = "> [!TIP]\n" +
                                 "> **📦 Bağlam Başarıyla Sıkıştırıldı (In-Place Compact)**\n>\n" +
                                 "> • **Önceki Bağlam:** ${String.format("%,d", event.beforeTokens)} tok\n>\n" +

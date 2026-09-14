@@ -341,8 +341,22 @@ fun ChatScreen(
                     bytes
                 }
 
-                val activeTokens = uiState.messages.lastOrNull { it.role == "bot" && it.usage != null }?.usage?.totalTokens
-                    ?: uiState.usage?.lastTurn?.totalTokens ?: 0
+                val activeTokens = remember(uiState.messages, uiState.usage) {
+                    val lastBot = uiState.messages.lastOrNull { it.role == "bot" && it.usage != null }
+                    val lastContextTokens = lastBot?.usage?.contextTokens ?: lastBot?.usage?.totalTokens ?: 0
+                    if (lastContextTokens > 500) {
+                        lastContextTokens
+                    } else {
+                        var totalChars = 0L
+                        for (m in uiState.messages) {
+                            totalChars += m.content.length
+                            for (t in m.tools) {
+                                totalChars += (t.name?.length ?: 0) + (t.output?.length ?: 0) + (t.parameters?.toString()?.length ?: 0)
+                            }
+                        }
+                        Math.max(1, Math.round(totalChars / 3.6).toInt())
+                    }
+                }
 
                 ChatTopBar(
                     settings = uiState.settings,
