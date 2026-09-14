@@ -60,6 +60,8 @@ fun ModelSettingsDialog(
     var currentFontSize by remember { mutableStateOf(currentSettings.fontSizeSp) }
     var thermalMode by remember { mutableStateOf(currentSettings.thermalMode) }
     var notificationsEnabled by remember { mutableStateOf(currentSettings.notificationsEnabled) }
+    var autoCompactEnabled by remember { mutableStateOf(currentSettings.autoCompactEnabled) }
+    var compactThreshold by remember { mutableStateOf(currentSettings.compactThresholdTokens) }
 
     val modelsList = if (availableModels.isNotEmpty()) availableModels else listOf(
         ModelItem("gemini-3.8-flash-high", "Gemini 3.8 Flash (High)", "Yüksek akıl yürütme & hızlı yanıt"),
@@ -523,6 +525,75 @@ fun ModelSettingsDialog(
 
             Spacer(modifier = Modifier.height(18.dp))
 
+            // 6.5 OTOMATİK BAĞLAM SIKIŞTIRMA (AUTO-COMPACT)
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = SurfaceVariantDark,
+                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Default.Compress, contentDescription = null, tint = GeminiPurple, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(text = "Otomatik Bağlam Sıkıştırma (Auto-Compact)", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = TextPrimary)
+                            }
+                            Text(text = "Token eşiğinde eski araç çıktılarını budar ve oturumu in-place sürdürür", fontSize = 10.sp, color = TextMuted)
+                        }
+                        Switch(
+                            checked = autoCompactEnabled,
+                            onCheckedChange = { autoCompactEnabled = it },
+                            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = GeminiPurple)
+                        )
+                    }
+
+                    if (autoCompactEnabled) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(text = "Sıkıştırma Eşiği (Threshold):", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val thresholds = listOf(
+                                50000 to "50k",
+                                80000 to "80k",
+                                120000 to "120k",
+                                160000 to "160k"
+                            )
+                            thresholds.forEach { (tokens, label) ->
+                                val isSel = compactThreshold == tokens
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSel) GeminiPurple else SurfaceDark,
+                                    border = if (isSel) null else androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { compactThreshold = tokens }
+                                ) {
+                                    Text(
+                                        text = label,
+                                        fontSize = 11.5.sp,
+                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSel) Color.White else TextPrimary,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
             // 7. GOOGLE HESAP VE TOKEN GİRİŞİ (User Request)
             Surface(
                 shape = RoundedCornerShape(12.dp),
@@ -820,7 +891,9 @@ fun ModelSettingsDialog(
                             useVault = useVault,
                             fontSizeSp = currentFontSize,
                             thermalMode = thermalMode,
-                            notificationsEnabled = notificationsEnabled
+                            notificationsEnabled = notificationsEnabled,
+                            autoCompactEnabled = autoCompactEnabled,
+                            compactThresholdTokens = compactThreshold
                         )
                     )
                     onDismiss()

@@ -27,6 +27,8 @@ fun ChatTopBar(
     usage: UsageData?,
     isGenerating: Boolean,
     modelName: String? = null,
+    sessionTokens: Int = 0,
+    outgoingDataBytes: Long = 0L,
     onModelClick: (() -> Unit)? = null,
     onMenuClick: () -> Unit,
     onNewChatClick: () -> Unit,
@@ -63,7 +65,7 @@ fun ChatTopBar(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Center: Gemini Sparkle + Antigravity Title & Model Selector
+            // Center: Gemini Sparkle + Antigravity Title & Live Token/Data Size Stats
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -93,16 +95,32 @@ fun ChatTopBar(
                             Spacer(modifier = Modifier.width(2.dp))
                             Icon(
                                 imageVector = Icons.Default.ArrowDropDown,
-                                contentDescription = "Model Seç",
+                                contentDescription = "Ayarlar",
                                 tint = TextMuted,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
                     }
-                    val displayModel = modelName ?: settings.model.replace("gemini-", "Gemini ").replace("-medium", "").replace("-high", " ⚡")
+
+                    // Format live active tokens & outgoing data payload size
+                    val tokenDisplay = if (sessionTokens >= 1000) {
+                        String.format("%.1fk", sessionTokens / 1000f) + " tok"
+                    } else {
+                        "$sessionTokens tok"
+                    }
+
+                    val dataDisplay = if (outgoingDataBytes >= 1024 * 1024) {
+                        String.format("%.1f MB", outgoingDataBytes / (1024f * 1024f))
+                    } else if (outgoingDataBytes >= 1024) {
+                        String.format("%.1f KB", outgoingDataBytes / 1024f)
+                    } else {
+                        "${outgoingDataBytes} B"
+                    }
+
                     Text(
-                        text = displayModel,
+                        text = "📊 $tokenDisplay • 📤 $dataDisplay",
                         fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Medium,
                         color = PrimaryIndigo,
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis

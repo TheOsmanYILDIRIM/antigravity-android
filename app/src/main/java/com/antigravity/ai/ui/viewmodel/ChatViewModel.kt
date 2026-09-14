@@ -430,6 +430,31 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                         fetchConversations()
                     }
+                    is StreamEvent.CompactCompleted -> {
+                        val currentActiveId = _uiState.value.currentConversationId
+                        val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
+                        if (isMatching) {
+                            val bannerText = "📦 **Bağlam Sıkıştırıldı (In-Place Compact)**\n\n" +
+                                "• **Önceki Bağlam:** ${event.beforeTokens} tok\n" +
+                                "• **Sıkıştırılmış:** ${event.afterTokens} tok\n" +
+                                "• **Kazanılan Alan:** %${event.savedPercent} tasarruf\n\n" +
+                                (event.summary?.takeIf { it.isNotBlank() } ?: "Eski araç çıktıları budandı, aktif görev durumu korundu.")
+
+                            _uiState.update { state ->
+                                val list = state.messages.toMutableList()
+                                list.add(
+                                    Message(
+                                        role = "bot",
+                                        content = bannerText,
+                                        state = MessageState.DONE
+                                    )
+                                )
+                                state.copy(messages = list)
+                            }
+                            fireNotification("Antigravity AI", "Bağlam sıkıştırıldı: %${event.savedPercent} tasarruf")
+                            fetchUsage()
+                        }
+                    }
                     is StreamEvent.PermissionRequested -> {
                         _uiState.update { it.copy(pendingPermission = event.request) }
                     }

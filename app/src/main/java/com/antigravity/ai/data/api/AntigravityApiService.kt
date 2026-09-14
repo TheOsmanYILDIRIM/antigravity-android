@@ -32,6 +32,13 @@ sealed class StreamEvent {
     data class PermissionRequested(val request: PermissionRequestData) : StreamEvent()
     data class QuestionRequested(val request: QuestionRequestData) : StreamEvent()
     data class Stderr(val text: String, val conversationId: String? = null) : StreamEvent()
+    data class CompactCompleted(
+        val beforeTokens: Int,
+        val afterTokens: Int,
+        val savedPercent: Int,
+        val summary: String? = null,
+        val conversationId: String? = null
+    ) : StreamEvent()
 }
 
 class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080") {
@@ -361,6 +368,8 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                 addProperty("effort", settings.effort)
                 addProperty("mode", settings.mode)
                 addProperty("useVault", settings.useVault)
+                addProperty("autoCompact", settings.autoCompactEnabled)
+                addProperty("compactThresholdTokens", settings.compactThresholdTokens)
                 addProperty("client", "antigravity-android")
                 addProperty("appVersion", "1.1.0")
 
@@ -567,6 +576,15 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                             val txt = json.get("text")?.asString ?: ""
                             val convId = json.get("conversationId")?.asString
                             if (txt.isNotBlank()) trySend(StreamEvent.Stderr(txt.trim(), convId))
+                        }
+                        "compact_completed" -> {
+                            val json = gson.fromJson(data, JsonObject::class.java)
+                            val beforeTokens = json.get("beforeTokens")?.asInt ?: 0
+                            val afterTokens = json.get("afterTokens")?.asInt ?: 0
+                            val savedPercent = json.get("savedPercent")?.asInt ?: 0
+                            val summary = json.get("summary")?.asString
+                            val convId = json.get("conversationId")?.asString
+                            trySend(StreamEvent.CompactCompleted(beforeTokens, afterTokens, savedPercent, summary, convId))
                         }
                     }
                 } catch (e: Exception) {

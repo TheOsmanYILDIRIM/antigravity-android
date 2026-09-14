@@ -319,11 +319,20 @@ fun ChatScreen(
                 val selectedModelName = uiState.availableModels.find { it.id == uiState.settings.model }?.name
                     ?: uiState.settings.model
 
+                val inputBytes = uiState.inputText.toByteArray().size.toLong() +
+                    uiState.pastedBlocks.sumOf { it.content.toByteArray().size.toLong() } +
+                    uiState.attachments.sumOf { it.size ?: 0L }
+
+                val activeTokens = uiState.messages.lastOrNull { it.role == "bot" && it.usage != null }?.usage?.totalTokens
+                    ?: uiState.usage?.lastTurn?.totalTokens ?: 0
+
                 ChatTopBar(
                     settings = uiState.settings,
                     usage = uiState.usage,
                     isGenerating = uiState.isGenerating,
                     modelName = selectedModelName,
+                    sessionTokens = activeTokens,
+                    outgoingDataBytes = inputBytes,
                     onModelClick = {
                         viewModel.setSettingsDialogVisible(true)
                     },
