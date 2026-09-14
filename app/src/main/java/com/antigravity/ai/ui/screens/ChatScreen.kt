@@ -319,9 +319,27 @@ fun ChatScreen(
                 val selectedModelName = uiState.availableModels.find { it.id == uiState.settings.model }?.name
                     ?: uiState.settings.model
 
-                val inputBytes = uiState.inputText.toByteArray().size.toLong() +
-                    uiState.pastedBlocks.sumOf { it.content.toByteArray().size.toLong() } +
-                    uiState.attachments.sumOf { it.size ?: 0L }
+                val totalSessionBytes = remember(uiState.messages, uiState.inputText, uiState.pastedBlocks, uiState.attachments) {
+                    var bytes = 0L
+                    uiState.messages.forEach { msg ->
+                        bytes += msg.content.toByteArray().size.toLong()
+                        msg.tools.forEach { t ->
+                            bytes += t.name.toByteArray().size.toLong()
+                            t.output?.let { bytes += it.toByteArray().size.toLong() }
+                            t.parameters?.let { bytes += it.toString().toByteArray().size.toLong() }
+                        }
+                        msg.attachments.forEach { a ->
+                            bytes += a.size ?: a.name.toByteArray().size.toLong()
+                        }
+                        msg.pastedBlocks.forEach { p ->
+                            bytes += p.content.toByteArray().size.toLong()
+                        }
+                    }
+                    bytes += uiState.inputText.toByteArray().size.toLong()
+                    bytes += uiState.pastedBlocks.sumOf { it.content.toByteArray().size.toLong() }
+                    bytes += uiState.attachments.sumOf { it.size ?: 0L }
+                    bytes
+                }
 
                 val activeTokens = uiState.messages.lastOrNull { it.role == "bot" && it.usage != null }?.usage?.totalTokens
                     ?: uiState.usage?.lastTurn?.totalTokens ?: 0
@@ -332,7 +350,7 @@ fun ChatScreen(
                     isGenerating = uiState.isGenerating,
                     modelName = selectedModelName,
                     sessionTokens = activeTokens,
-                    outgoingDataBytes = inputBytes,
+                    sessionDataBytes = totalSessionBytes,
                     onModelClick = {
                         viewModel.setSettingsDialogVisible(true)
                     },

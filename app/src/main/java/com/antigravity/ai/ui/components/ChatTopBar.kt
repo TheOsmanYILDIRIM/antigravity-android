@@ -28,7 +28,7 @@ fun ChatTopBar(
     isGenerating: Boolean,
     modelName: String? = null,
     sessionTokens: Int = 0,
-    outgoingDataBytes: Long = 0L,
+    sessionDataBytes: Long = 0L,
     onModelClick: (() -> Unit)? = null,
     onMenuClick: () -> Unit,
     onNewChatClick: () -> Unit,
@@ -65,7 +65,7 @@ fun ChatTopBar(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Center: Gemini Sparkle + Antigravity Title & Live Token/Data Size Stats
+            // Center: Gemini Sparkle + Antigravity Title & Live Token/Session Data Size Stats
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -102,23 +102,23 @@ fun ChatTopBar(
                         }
                     }
 
-                    // Format live active tokens & outgoing data payload size
+                    // Format live active tokens & total session context data size
                     val tokenDisplay = if (sessionTokens >= 1000) {
                         String.format("%.1fk", sessionTokens / 1000f) + " tok"
                     } else {
                         "$sessionTokens tok"
                     }
 
-                    val dataDisplay = if (outgoingDataBytes >= 1024 * 1024) {
-                        String.format("%.1f MB", outgoingDataBytes / (1024f * 1024f))
-                    } else if (outgoingDataBytes >= 1024) {
-                        String.format("%.1f KB", outgoingDataBytes / 1024f)
+                    val dataDisplay = if (sessionDataBytes >= 1024 * 1024) {
+                        String.format("%.1f MB", sessionDataBytes / (1024f * 1024f))
+                    } else if (sessionDataBytes >= 1024) {
+                        String.format("%.1f KB", sessionDataBytes / 1024f)
                     } else {
-                        "${outgoingDataBytes} B"
+                        "${sessionDataBytes} B"
                     }
 
                     Text(
-                        text = "📊 $tokenDisplay • 📤 $dataDisplay",
+                        text = "📊 $tokenDisplay • 💾 $dataDisplay",
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Medium,
                         color = PrimaryIndigo,
