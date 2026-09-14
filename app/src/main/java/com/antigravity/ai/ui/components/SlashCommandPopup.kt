@@ -56,7 +56,7 @@ fun SlashCommandPopup(
     val mcpsAsCommands = installedMcps.map {
         SlashCommand(
             command = it.command,
-            description = "${it.icon} ${it.description}",
+            description = it.description,
             example = it.command,
             isMcp = true
         )

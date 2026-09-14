@@ -9,10 +9,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -115,11 +123,23 @@ fun McpSelectorSheet(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(12.dp)
                             ) {
-                                Text(
-                                    text = mcp.icon.ifEmpty { "⚡" },
-                                    fontSize = 20.sp,
-                                    modifier = Modifier.padding(end = 10.dp)
-                                )
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = getMcpIconTint(mcp.name).copy(alpha = 0.15f),
+                                    modifier = Modifier.padding(end = 12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier.size(36.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = getMcpVectorIcon(mcp.name),
+                                            contentDescription = null,
+                                            tint = getMcpIconTint(mcp.name),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
 
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -209,5 +229,33 @@ fun McpSelectorSheet(
             }
             Spacer(modifier = Modifier.height(12.dp))
         }
+    }
+}
+
+private fun getMcpVectorIcon(name: String): androidx.compose.ui.graphics.vector.ImageVector {
+    val lower = name.lowercase()
+    return when {
+        lower.contains("design") || lower.contains("figma") || lower.contains("nakkas") || lower.contains("icon") -> Icons.Default.Palette
+        lower.contains("groundtruth") || lower.contains("doc") -> Icons.Default.MenuBook
+        lower.contains("gamedev") || lower.contains("love2d") -> Icons.Default.SportsEsports
+        lower.contains("jcodemunch") || lower.contains("code") -> Icons.Default.Code
+        lower.contains("qwen") -> Icons.Default.Psychology
+        lower.contains("stitch") -> Icons.Default.AutoAwesome
+        lower.contains("reuse") -> Icons.Default.Autorenew
+        else -> Icons.Default.Extension
+    }
+}
+
+private fun getMcpIconTint(name: String): Color {
+    val lower = name.lowercase()
+    return when {
+        lower.contains("design") || lower.contains("figma") || lower.contains("nakkas") -> GeminiPurple
+        lower.contains("groundtruth") -> GeminiBlue
+        lower.contains("gamedev") || lower.contains("love2d") -> SuccessGreen
+        lower.contains("jcodemunch") || lower.contains("code") -> PrimaryIndigo
+        lower.contains("qwen") -> WarningAmber
+        lower.contains("stitch") -> Color(0xFF38BDF8)
+        lower.contains("reuse") -> Color(0xFF10B981)
+        else -> GeminiBlue
     }
 }

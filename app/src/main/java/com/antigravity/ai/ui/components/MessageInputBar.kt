@@ -314,7 +314,7 @@ fun MessageInputBar(
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(Icons.Default.Extension, contentDescription = null, tint = GeminiBlue, modifier = Modifier.size(18.dp))
                                             Spacer(modifier = Modifier.width(10.dp))
-                                            Text("⚡ MCP Sunucuları & Araçları", color = TextPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                                            Text("MCP Sunucuları & Araçları", color = TextPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
                                         }
                                     },
                                     onClick = {

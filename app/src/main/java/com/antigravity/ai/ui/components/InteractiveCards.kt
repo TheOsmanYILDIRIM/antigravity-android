@@ -104,7 +104,7 @@ fun InteractiveChoiceCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "✍️ Yazarak Yanıtla",
+                        text = "Özel Yanıt Yaz",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
                     )
