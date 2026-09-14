@@ -16,6 +16,7 @@ interface ChatBackend {
     suspend fun deleteConversation(id: String): Result<Unit>
     suspend fun getModelsConfig(): Result<ModelsConfigResponse>
     suspend fun getSkills(): Result<SkillsResponse>
+    suspend fun getMcps(): Result<McpsResponse> = Result.success(McpsResponse("ok", 0, emptyList()))
     suspend fun getUsage(): Result<UsageResponse>
 
     suspend fun sendPrompt(

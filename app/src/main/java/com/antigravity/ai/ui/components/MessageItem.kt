@@ -43,7 +43,9 @@ fun MessageItem(
     isLastBotMessage: Boolean = false,
     fontSizeSp: Float = 13.5f,
     onOpenFile: (String) -> Unit = {},
-    onOpenImage: (String, String) -> Unit = { _, _ -> }
+    onOpenImage: (String, String) -> Unit = { _, _ -> },
+    onSendMessage: (String) -> Unit = {},
+    onFillInput: (String) -> Unit = {}
 ) {
     val isUser = message.role == "user"
     val context = LocalContext.current
@@ -295,7 +297,9 @@ fun MessageItem(
                             markdown = message.content,
                             fontSizeSp = fontSizeSp,
                             onOpenFile = onOpenFile,
-                            onOpenImage = onOpenImage
+                            onOpenImage = onOpenImage,
+                            onSendMessage = onSendMessage,
+                            onFillInput = onFillInput
                         )
                     }
                 }

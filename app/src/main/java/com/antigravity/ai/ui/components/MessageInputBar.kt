@@ -56,6 +56,7 @@ fun MessageInputBar(
     onMicClick: () -> Unit,
     onAttachClick: () -> Unit,
     onOpenFileManager: () -> Unit = {},
+    onOpenMcpSelector: () -> Unit = {},
     onAddPastedBlock: (String) -> Unit = {},
     onOpenTemplateFill: (com.antigravity.ai.data.model.PromptTemplate) -> Unit = {},
     onOpenTemplateManager: () -> Unit = {},
@@ -306,6 +307,19 @@ fun MessageInputBar(
                                     onClick = {
                                         showAttachMenu = false
                                         onOpenFileManager()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Extension, contentDescription = null, tint = GeminiBlue, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Text("⚡ MCP Sunucuları & Araçları", color = TextPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    },
+                                    onClick = {
+                                        showAttachMenu = false
+                                        onOpenMcpSelector()
                                     }
                                 )
                                 DropdownMenuItem(

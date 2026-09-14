@@ -16,6 +16,7 @@ class AgyBackend(private val api: AntigravityApiService = AntigravityApiService(
     override suspend fun deleteConversation(id: String): Result<Unit> = api.deleteConversation(id)
     override suspend fun getModelsConfig(): Result<ModelsConfigResponse> = api.getModelsConfig()
     override suspend fun getSkills(): Result<SkillsResponse> = api.getSkills()
+    override suspend fun getMcps(): Result<McpsResponse> = api.getMcps()
     override suspend fun getUsage(): Result<UsageResponse> = api.getUsage()
 
     override suspend fun sendPrompt(

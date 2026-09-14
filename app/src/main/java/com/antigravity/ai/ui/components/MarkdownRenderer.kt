@@ -50,6 +50,8 @@ sealed class MarkdownBlock {
     data class NumberedItem(val number: String, val text: String) : MarkdownBlock()
     data class Image(val alt: String, val url: String) : MarkdownBlock()
     data class Table(val headers: List<String>, val rows: List<List<String>>) : MarkdownBlock()
+    data class InteractiveChecklist(val title: String, val items: List<String>) : MarkdownBlock()
+    data class InteractiveChoice(val question: String, val options: List<String>) : MarkdownBlock()
     object Divider : MarkdownBlock()
     data class Paragraph(val text: String) : MarkdownBlock()
 }
@@ -60,6 +62,8 @@ fun MarkdownRenderer(
     fontSizeSp: Float = 13.5f,
     onOpenFile: ((String) -> Unit)? = null,
     onOpenImage: ((String, String) -> Unit)? = null,
+    onSendMessage: ((String) -> Unit)? = null,
+    onFillInput: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val blocks = parseMarkdownBlocks(markdown)
@@ -389,6 +393,34 @@ fun MarkdownRenderer(
                     )
                 }
 
+                is MarkdownBlock.InteractiveChecklist -> {
+                    InteractiveChecklistCard(
+                        title = block.title,
+                        items = block.items,
+                        onSendSelected = { selected ->
+                            val text = "Seçilenler:\n" + selected.joinToString("\n") { "- $it" }
+                            onSendMessage?.invoke(text)
+                        }
+                    )
+                }
+
+                is MarkdownBlock.InteractiveChoice -> {
+                    InteractiveChoiceCard(
+                        question = block.question,
+                        options = block.options,
+                        onSelectOption = { chosen ->
+                            onSendMessage?.invoke(chosen)
+                        },
+                        onCustomAnswerClick = {
+                            if (onFillInput != null) {
+                                onFillInput(" ")
+                            } else {
+                                onSendMessage?.invoke("Farklı bir seçenek belirtmek istiyorum: ")
+                            }
+                        }
+                    )
+                }
+
                 is MarkdownBlock.Paragraph -> {
                     RenderInlineFormattedText(
                         rawText = block.text,
@@ -643,6 +675,57 @@ fun parseMarkdownBlocks(markdown: String): List<MarkdownBlock> {
             blocks.add(MarkdownBlock.Image(alt, url))
             i++
             continue
+        }
+
+        // 2.7 Interactive Checklist Block (- [ ] or - [x])
+        if (trimmed.startsWith("- [ ]") || trimmed.startsWith("- [x]") || trimmed.startsWith("* [ ]") || trimmed.startsWith("* [x]")) {
+            val checklistItems = mutableListOf<String>()
+            while (i < lines.size) {
+                val cl = lines[i].trim()
+                if (cl.startsWith("- [ ]") || cl.startsWith("- [x]") || cl.startsWith("* [ ]") || cl.startsWith("* [x]")) {
+                    val itemText = cl.substring(5).trim()
+                    if (itemText.isNotEmpty()) {
+                        checklistItems.add(itemText)
+                    }
+                    i++
+                } else if (cl.isEmpty()) {
+                    i++
+                    break
+                } else {
+                    break
+                }
+            }
+            if (checklistItems.isNotEmpty()) {
+                blocks.add(MarkdownBlock.InteractiveChecklist("Seçenekler / Görev Listesi", checklistItems))
+                continue
+            }
+        }
+
+        // 2.8 Interactive Choice Block (<choice> or <select>)
+        if (trimmed.startsWith("<choice>") || trimmed.startsWith("<select>")) {
+            val tag = if (trimmed.startsWith("<choice>")) "choice" else "select"
+            val endTag = "</$tag>"
+            var question = "Lütfen bir seçenek belirleyin:"
+            val options = mutableListOf<String>()
+            i++
+            while (i < lines.size && !lines[i].trim().contains(endTag)) {
+                val optLine = lines[i].trim()
+                if (optLine.startsWith("<question>")) {
+                    question = optLine.removePrefix("<question>").removeSuffix("</question>").trim()
+                } else if (optLine.startsWith("<option>")) {
+                    val opt = optLine.removePrefix("<option>").removeSuffix("</option>").trim()
+                    if (opt.isNotEmpty()) options.add(opt)
+                } else if (optLine.startsWith("- ") || optLine.startsWith("1. ") || optLine.startsWith("2. ") || optLine.startsWith("3. ")) {
+                    val opt = optLine.replace(Regex("^[0-9]+\\.\\s*|^-\\s*"), "").trim()
+                    if (opt.isNotEmpty()) options.add(opt)
+                }
+                i++
+            }
+            if (i < lines.size) i++ // skip endTag
+            if (options.isNotEmpty()) {
+                blocks.add(MarkdownBlock.InteractiveChoice(question, options))
+                continue
+            }
         }
 
         // 3. Headers (#, ##, ###, ####)

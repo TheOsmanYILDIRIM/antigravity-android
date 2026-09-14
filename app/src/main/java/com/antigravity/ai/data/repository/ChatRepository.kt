@@ -17,7 +17,7 @@ class ChatRepository(private val backend: ChatBackend) {
     suspend fun fetchModelsConfig(): Result<ModelsConfigResponse> = backend.getModelsConfig()
 
     suspend fun fetchSkills(): Result<SkillsResponse> = backend.getSkills()
-
+    suspend fun fetchMcps(): Result<McpsResponse> = backend.getMcps()
     suspend fun fetchUsage(): Result<UsageResponse> = backend.getUsage()
 
     suspend fun uploadFile(name: String, base64: String, type: String): Result<UploadResponse> =

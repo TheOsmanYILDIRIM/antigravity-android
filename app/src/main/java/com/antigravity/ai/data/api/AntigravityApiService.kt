@@ -142,6 +142,23 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
         }
     }
 
+    suspend fun getMcps(): Result<McpsResponse> = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("$baseUrl/api/mcps")
+                .get()
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext Result.failure(IOException("HTTP ${response.code}"))
+                val body = response.body?.string() ?: "{}"
+                Result.success(gson.fromJson(body, McpsResponse::class.java))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getUsage(): Result<UsageResponse> = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()

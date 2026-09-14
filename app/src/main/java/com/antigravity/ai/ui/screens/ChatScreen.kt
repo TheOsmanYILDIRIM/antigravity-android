@@ -431,11 +431,12 @@ fun ChatScreen(
                         }
                     }
 
-                    // Slash command & Dynamic Skills autocomplete popup
+                    // Slash command & Dynamic Skills & MCPs autocomplete popup
                     if (uiState.showSlashCommands) {
                         SlashCommandPopup(
                             query = uiState.slashQuery,
                             installedSkills = uiState.installedSkills,
+                            installedMcps = uiState.installedMcps,
                             onSelect = { cmd -> viewModel.onSelectSlashCommand(cmd) }
                         )
                     }
@@ -482,6 +483,9 @@ fun ChatScreen(
                         },
                         onOpenFileManager = {
                             viewModel.setFileManagerVisible(true)
+                        },
+                        onOpenMcpSelector = {
+                            viewModel.openMcpSelector()
                         },
                         onAddPastedBlock = viewModel::addPastedBlock,
                         onOpenTemplateFill = { tpl ->
@@ -587,7 +591,9 @@ fun ChatScreen(
                                     isLastBotMessage = isLastBot,
                                     fontSizeSp = uiState.settings.fontSizeSp,
                                     onOpenFile = { path -> viewModel.openFileInViewer(path) },
-                                    onOpenImage = { url, title -> viewModel.openImageInViewer(url, title) }
+                                    onOpenImage = { url, title -> viewModel.openImageInViewer(url, title) },
+                                    onSendMessage = { text -> viewModel.sendMessage(text) },
+                                    onFillInput = { text -> viewModel.onInputTextChange(text) }
                                 )
                             }
                         }
@@ -729,6 +735,19 @@ fun ChatScreen(
                 imageUrl = uiState.activeImageViewerUrl!!,
                 title = uiState.activeImageViewerTitle,
                 onDismiss = { viewModel.closeImageViewer() }
+            )
+        }
+
+        // MCP Selector & Tool Inserter BottomSheet
+        if (uiState.showMcpSelector) {
+            McpSelectorSheet(
+                installedMcps = uiState.installedMcps,
+                onSelectMcp = { mcp -> viewModel.insertMcpIntoPrompt(mcp) },
+                onSendSelectedMcps = { mcps ->
+                    val prompt = "Aşağıdaki MCP sunucularını ve yeteneklerini devreye al:\n" + mcps.joinToString("\n") { "- ${it.name}: ${it.description}" }
+                    viewModel.sendMessage(prompt)
+                },
+                onDismiss = { viewModel.closeMcpSelector() }
             )
         }
     }

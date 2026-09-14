@@ -309,6 +309,30 @@ data class SkillsResponse(
     val skills: List<SkillItem>?
 )
 
+data class McpItem(
+    @SerializedName("name")
+    val name: String,
+    @SerializedName("icon")
+    val icon: String = "⚡",
+    @SerializedName("description")
+    val description: String = "",
+    @SerializedName("command")
+    val command: String = "",
+    @SerializedName("toolsCount")
+    val toolsCount: Int = 0,
+    @SerializedName("tools")
+    val tools: List<String> = emptyList()
+)
+
+data class McpsResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("count")
+    val count: Int = 0,
+    @SerializedName("mcps")
+    val mcps: List<McpItem>?
+)
+
 data class UsageBucket(
     @SerializedName("id")
     val id: String = "",
@@ -458,7 +482,8 @@ data class SlashCommand(
     val command: String,
     val description: String,
     val example: String,
-    val isSkill: Boolean = false
+    val isSkill: Boolean = false,
+    val isMcp: Boolean = false
 )
 
 data class TemplateField(

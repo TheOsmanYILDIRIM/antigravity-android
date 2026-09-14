@@ -42,6 +42,8 @@ data class ChatUiState(
     val availableEfforts: List<EffortItem> = emptyList(),
     val vaultFiles: List<VaultItem> = emptyList(),
     val installedSkills: List<SkillItem> = emptyList(),
+    val installedMcps: List<McpItem> = emptyList(),
+    val showMcpSelector: Boolean = false,
     val usage: UsageData? = null,
     val activeVaultFileContent: String? = null,
     val activeVaultFilePath: String? = null,
@@ -213,6 +215,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
         fetchVaultFiles()
         fetchSkills()
+        fetchMcps()
         fetchUsage()
         fetchModelsConfig()
         fetchAuthStatus()
@@ -559,6 +562,35 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update { it.copy(installedSkills = res.skills ?: emptyList()) }
             }
         }
+    }
+
+    fun fetchMcps() {
+        viewModelScope.launch {
+            repository.fetchMcps().onSuccess { res ->
+                _uiState.update { it.copy(installedMcps = res.mcps ?: emptyList()) }
+            }
+        }
+    }
+
+    fun openMcpSelector() {
+        _uiState.update { it.copy(showMcpSelector = true) }
+        fetchMcps()
+    }
+
+    fun closeMcpSelector() {
+        _uiState.update { it.copy(showMcpSelector = false) }
+    }
+
+    fun insertMcpIntoPrompt(mcp: McpItem) {
+        val currentText = _uiState.value.inputText
+        val appendText = if (currentText.isBlank()) "${mcp.command} " else "$currentText ${mcp.command} "
+        onInputTextChange(appendText)
+    }
+
+    fun sendMessage(customText: String) {
+        if (customText.isBlank()) return
+        onInputTextChange(customText)
+        sendMessage()
     }
 
     fun fetchUsage() {

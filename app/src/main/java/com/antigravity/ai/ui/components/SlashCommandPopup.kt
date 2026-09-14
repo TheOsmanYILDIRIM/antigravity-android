@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.antigravity.ai.data.model.McpItem
 import com.antigravity.ai.data.model.SkillItem
 import com.antigravity.ai.data.model.SlashCommand
 import com.antigravity.ai.ui.theme.*
@@ -30,6 +31,7 @@ val CoreSlashCommands = listOf(
     SlashCommand("/boost", "Derin analiz ve çoklu bakış açısı modu", "/boost <konu>"),
     SlashCommand("/learn", "Yeni kural veya davranışı hafızaya kaydeder", "/learn <kural>"),
     SlashCommand("/status", "Arka plan ve sunucu durumunu görüntüler", "/status"),
+    SlashCommand("/mcp", "MCP sunucuları ve araçları listesini açar", "/mcp"),
     SlashCommand("/clear", "Sohbet ekranını ve geçmişini temizler", "/clear"),
     SlashCommand("/help", "Kullanılabilir tüm agy komutlarını listeler", "/help")
 )
@@ -38,6 +40,7 @@ val CoreSlashCommands = listOf(
 fun SlashCommandPopup(
     query: String,
     installedSkills: List<SkillItem>,
+    installedMcps: List<McpItem> = emptyList(),
     onSelect: (SlashCommand) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -50,7 +53,16 @@ fun SlashCommandPopup(
         )
     }
 
-    val allCommands = CoreSlashCommands + skillsAsCommands
+    val mcpsAsCommands = installedMcps.map {
+        SlashCommand(
+            command = it.command,
+            description = "${it.icon} ${it.description}",
+            example = it.command,
+            isMcp = true
+        )
+    }
+
+    val allCommands = CoreSlashCommands + skillsAsCommands + mcpsAsCommands
 
     val filtered = allCommands.filter {
         it.command.startsWith(query, ignoreCase = true) || it.description.contains(query.removePrefix("/"), ignoreCase = true)
@@ -67,7 +79,7 @@ fun SlashCommandPopup(
                 .heightIn(max = 240.dp)
         ) {
             Text(
-                text = "KOMUTLAR VE SKILL'LER (/SLASH & /SKILL)",
+                text = "KOMUTLAR, SKILL'LER VE MCP'LER (/SLASH & /MCP)",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextMuted,
@@ -91,7 +103,7 @@ fun SlashCommandPopup(
                                     fontFamily = FontFamily.Monospace,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
-                                    color = if (cmd.isSkill) SecondaryPurple else PrimaryIndigo
+                                    color = if (cmd.isSkill) SecondaryPurple else if (cmd.isMcp) GeminiBlue else PrimaryIndigo
                                 )
                                 if (cmd.isSkill) {
                                     Spacer(modifier = Modifier.width(6.dp))
@@ -102,6 +114,16 @@ fun SlashCommandPopup(
                                             .padding(horizontal = 4.dp, vertical = 1.dp)
                                     ) {
                                         Text(text = "SKILL", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = SecondaryPurple)
+                                    }
+                                } else if (cmd.isMcp) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(GeminiBlue.copy(alpha = 0.18f))
+                                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                                    ) {
+                                        Text(text = "MCP", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = GeminiBlue)
                                     }
                                 }
                             }
