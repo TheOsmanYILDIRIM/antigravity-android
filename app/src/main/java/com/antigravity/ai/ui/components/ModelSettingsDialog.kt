@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import kotlin.math.roundToInt
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
@@ -554,23 +555,70 @@ fun ModelSettingsDialog(
                     }
 
                     if (autoCompactEnabled) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(text = "Sıkıştırma Eşiği (Threshold):", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Sıkıştırma Eşiği (Threshold):",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextSecondary
+                            )
+                            val tokenDisplay = when {
+                                compactThreshold >= 1_000_000 -> "1.0M tok"
+                                else -> "${compactThreshold / 1000}k tok"
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = GeminiPurple.copy(alpha = 0.15f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, GeminiPurple.copy(alpha = 0.4f))
+                            ) {
+                                Text(
+                                    text = "$tokenDisplay (${String.format("%,d", compactThreshold)})",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = GeminiPurple,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Slider(
+                            value = compactThreshold.toFloat().coerceIn(10000f, 1000000f),
+                            onValueChange = { newVal ->
+                                val stepped = ((newVal / 10000f).roundToInt() * 10000).coerceIn(10000, 1000000)
+                                compactThreshold = stepped
+                            },
+                            valueRange = 10000f..1000000f,
+                            steps = 98,
+                            colors = SliderDefaults.colors(
+                                thumbColor = GeminiPurple,
+                                activeTrackColor = GeminiPurple,
+                                inactiveTrackColor = BorderSubtle
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
-                            val thresholds = listOf(
+                            val quickPresets = listOf(
                                 50000 to "50k",
-                                80000 to "80k",
-                                120000 to "120k",
-                                160000 to "160k"
+                                100000 to "100k",
+                                200000 to "200k",
+                                500000 to "500k",
+                                1000000 to "1M"
                             )
-                            thresholds.forEach { (tokens, label) ->
+                            quickPresets.forEach { (tokens, label) ->
                                 val isSel = compactThreshold == tokens
                                 Surface(
-                                    shape = RoundedCornerShape(8.dp),
+                                    shape = RoundedCornerShape(6.dp),
                                     color = if (isSel) GeminiPurple else SurfaceDark,
                                     border = if (isSel) null else androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
                                     modifier = Modifier
@@ -579,11 +627,11 @@ fun ModelSettingsDialog(
                                 ) {
                                     Text(
                                         text = label,
-                                        fontSize = 11.5.sp,
+                                        fontSize = 10.5.sp,
                                         fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSel) Color.White else TextPrimary,
+                                        color = if (isSel) Color.White else TextMuted,
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                        modifier = Modifier.padding(vertical = 8.dp)
+                                        modifier = Modifier.padding(vertical = 5.dp)
                                     )
                                 }
                             }
