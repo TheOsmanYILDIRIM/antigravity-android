@@ -433,12 +433,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     is StreamEvent.CompactCompleted -> {
                         val currentActiveId = _uiState.value.currentConversationId
                         val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
-                        if (isMatching) {
-                            val bannerText = "📦 **Bağlam Sıkıştırıldı (In-Place Compact)**\n\n" +
-                                "• **Önceki Bağlam:** ${event.beforeTokens} tok\n" +
-                                "• **Sıkıştırılmış:** ${event.afterTokens} tok\n" +
-                                "• **Kazanılan Alan:** %${event.savedPercent} tasarruf\n\n" +
-                                (event.summary?.takeIf { it.isNotBlank() } ?: "Eski araç çıktıları budandı, aktif görev durumu korundu.")
+                            val bannerText = "> [!TIP]\n" +
+                                "> **📦 Bağlam Başarıyla Sıkıştırıldı (In-Place Compact)**\n>\n" +
+                                "> • **Önceki Bağlam:** ${String.format("%,d", event.beforeTokens)} tok\n>\n" +
+                                "> • **Yeni Bağlam:** ${String.format("%,d", event.afterTokens)} tok\n>\n" +
+                                "> • **Tasarruf:** %${event.savedPercent} alan kazanıldı\n\n" +
+                                (event.summary?.takeIf { it.isNotBlank() } ?: "Eski araç çıktıları ve düşünce zincirleri budandı, aktif görev durumu korundu.")
 
                             _uiState.update { state ->
                                 val list = state.messages.toMutableList()
