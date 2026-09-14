@@ -103,7 +103,9 @@ fun ChatTopBar(
                     }
 
                     // Format live active tokens & total session context data size
-                    val tokenDisplay = if (sessionTokens >= 1000) {
+                    val tokenDisplay = if (sessionTokens >= 1_000_000) {
+                        String.format("%.2fM", sessionTokens / 1_000_000f) + " tok"
+                    } else if (sessionTokens >= 1000) {
                         String.format("%.1fk", sessionTokens / 1000f) + " tok"
                     } else {
                         "$sessionTokens tok"

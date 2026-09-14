@@ -48,7 +48,13 @@ data class UsageStats(
     @SerializedName("output_tokens")
     val outputTokens: Int = 0,
     @SerializedName("cache_read_tokens")
-    val cacheReadTokens: Int = 0
+    val cacheReadTokens: Int = 0,
+    @SerializedName("turn_tokens")
+    val turnTokens: Int = 0,
+    @SerializedName("context_tokens")
+    val contextTokens: Int = 0,
+    @SerializedName("cumulative_tokens")
+    val cumulativeTokens: Long = 0
 )
 
 data class PastedBlock(

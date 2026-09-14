@@ -374,9 +374,19 @@ fun MessageItem(
                         }
 
                         // Usage telemetry pill
-                        if (message.usage != null && message.usage!!.totalTokens > 0) {
+                        if (message.usage != null && (message.usage!!.turnTokens > 0 || message.usage!!.totalTokens > 0)) {
+                            val u = message.usage!!
+                            val turnTok = if (u.turnTokens > 0) u.turnTokens else u.outputTokens + (if (u.inputTokens in 1..100000) u.inputTokens else 0)
+                            val tokenText = if (turnTok > 0 && turnTok != u.totalTokens && u.totalTokens > 0) {
+                                val totalFormatted = if (u.totalTokens >= 1_000_000) String.format("%.2fM", u.totalTokens / 1_000_000f) else if (u.totalTokens >= 1000) String.format("%.1fk", u.totalTokens / 1000f) else "${u.totalTokens}"
+                                "📊 ${String.format("%,d", turnTok)} tok • $totalFormatted bağlam"
+                            } else {
+                                val tok = if (turnTok > 0) turnTok else u.totalTokens
+                                val formatted = if (tok >= 1_000_000) String.format("%.2fM", tok / 1_000_000f) else if (tok >= 1000) String.format("%.1fk", tok / 1000f) else "${String.format("%,d", tok)}"
+                                "📊 $formatted token"
+                            }
                             Text(
-                                text = "📊 ${message.usage?.totalTokens} token",
+                                text = tokenText,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 11.sp,
                                 color = TextMuted
