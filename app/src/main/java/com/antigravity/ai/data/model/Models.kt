@@ -132,7 +132,9 @@ data class ConversationMeta(
     @SerializedName("messageCount")
     val messageCount: Int = 0,
     @SerializedName("isGenerating")
-    val isGenerating: Boolean = false
+    val isGenerating: Boolean = false,
+    @SerializedName("isSubagent")
+    val isSubagent: Boolean = false
 )
 
 data class ConversationsResponse(
