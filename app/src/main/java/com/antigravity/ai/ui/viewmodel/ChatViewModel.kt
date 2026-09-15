@@ -3,6 +3,7 @@ package com.antigravity.ai.ui.viewmodel
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognitionListener
@@ -25,6 +26,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.util.Locale
 
@@ -1319,13 +1321,60 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun onSaveAnnotatedImage(newAttachment: Attachment) {
-        val currentSource = _uiState.value.markupImageSource
-        if (currentSource is Attachment) {
-            replaceAttachment(currentSource, newAttachment)
-        } else {
-            addAttachment(newAttachment)
+    fun uploadAnnotatedBitmap(bitmap: Bitmap, baseName: String, originalAttachment: Attachment? = null) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUploadingAttachment = true) }
+            try {
+                val stream = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                val bytes = stream.toByteArray()
+                val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                val cleanBase = baseName.substringAfterLast("/").substringBeforeLast(".").ifBlank { "annotated" }.replace("[^a-zA-Z0-9._-]".toRegex(), "_")
+                val fileName = "annotated_${System.currentTimeMillis()}_$cleanBase.png"
+
+                repository.uploadFile(fileName, base64, "image").onSuccess { res ->
+                    val attachment = Attachment(
+                        name = res.fileName,
+                        path = res.path,
+                        localUri = null,
+                        relPath = res.relPath,
+                        type = res.type,
+                        size = res.size
+                    )
+                    if (originalAttachment != null) {
+                        replaceAttachment(originalAttachment, attachment)
+                    } else {
+                        addAttachment(attachment)
+                    }
+                    _uiState.update { it.copy(isUploadingAttachment = false) }
+                }.onFailure { err ->
+                    _uiState.update {
+                        it.copy(
+                            isUploadingAttachment = false,
+                            errorMessage = "Görsel sunucuya yüklenemedi: ${err.message}"
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isUploadingAttachment = false,
+                        errorMessage = "Hata: ${e.localizedMessage}"
+                    )
+                }
+            }
         }
+    }
+
+    fun onSaveAnnotatedImage(bitmap: Bitmap, title: String) {
+        val currentSource = _uiState.value.markupImageSource
+        val originalAtt = if (currentSource is Attachment) currentSource else null
+        val baseName = when (currentSource) {
+            is Attachment -> currentSource.name
+            is String -> currentSource.substringAfterLast("/")
+            else -> title
+        }
+        uploadAnnotatedBitmap(bitmap, baseName, originalAtt)
         closeImageMarkup()
     }
 
@@ -1508,7 +1557,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         attachments.forEachIndexed { idx, att ->
             val num = idx + 1
-            val safePath = att.path ?: "/data/data/com.termux/files/home/uploads/${att.name}"
+            val safePath = when {
+                !att.path.isNullOrBlank() && att.path.startsWith("/data/data/com.termux/files/") -> att.path
+                !att.relPath.isNullOrBlank() -> "/data/data/com.termux/files/home/${att.relPath}"
+                else -> "/data/data/com.termux/files/home/uploads/${att.name}"
+            }
             val attTagRegex = Regex("\\[(image|resim|görsel|dosya|file|doc|ek)[-_]?$num\\]", RegexOption.IGNORE_CASE)
             val isImg = att.type == "image" || att.name.endsWith(".png", true) || att.name.endsWith(".jpg", true) || att.name.endsWith(".jpeg", true) || att.name.endsWith(".webp", true) || att.name.endsWith(".gif", true)
             val label = if (isImg) "Ek Görsel #$num" else "Ek Dosya #$num"
@@ -1524,7 +1577,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         // Metin içinde bahsedilmemiş diğer ekler varsa en sona ekle
         if (unplacedAttachments.isNotEmpty()) {
             val fileRefs = unplacedAttachments.joinToString("\n") { (num, a) ->
-                val safePath = a.path ?: "/data/data/com.termux/files/home/uploads/${a.name}"
+                val safePath = when {
+                    !a.path.isNullOrBlank() && a.path.startsWith("/data/data/com.termux/files/") -> a.path
+                    !a.relPath.isNullOrBlank() -> "/data/data/com.termux/files/home/${a.relPath}"
+                    else -> "/data/data/com.termux/files/home/uploads/${a.name}"
+                }
                 "[Eklenen Dosya/Resim: $safePath] (Adı: ${a.name})"
             }
             val attachmentNotice = "\n\nKullanıcının mesaja eklediği diğer dosya ve görseller:\n$fileRefs\nLütfen ekteki bu dosya/görselleri de inceleyerek yanıt verin."

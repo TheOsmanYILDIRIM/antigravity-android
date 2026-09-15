@@ -765,7 +765,7 @@ fun ChatScreen(
                 imageSource = uiState.markupImageSource!!,
                 title = uiState.markupImageTitle,
                 onDismiss = { viewModel.closeImageMarkup() },
-                onSaveAnnotated = { viewModel.onSaveAnnotatedImage(it) }
+                onSaveAnnotated = { bitmap, title -> viewModel.onSaveAnnotatedImage(bitmap, title) }
             )
         }
 

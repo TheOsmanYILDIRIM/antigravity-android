@@ -97,7 +97,7 @@ fun ImageMarkupDialog(
     imageSource: Any, // Uri, File path (String), or Attachment
     title: String = "Görseli İşaretle",
     onDismiss: () -> Unit,
-    onSaveAnnotated: (Attachment) -> Unit
+    onSaveAnnotated: (Bitmap, String) -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -264,21 +264,19 @@ fun ImageMarkupDialog(
                                 val bmp = loadedBitmap ?: return@Button
                                 coroutineScope.launch {
                                     try {
-                                        val annotated = saveAnnotatedBitmap(
-                                            context = context,
+                                        val annotated = renderAnnotatedBitmap(
                                             originalBitmap = bmp,
                                             elements = elements.toList(),
                                             renderedCanvasSize = canvasSize
                                         )
                                         if (annotated != null) {
-                                            onSaveAnnotated(annotated)
-                                            Toast.makeText(context, "İşaretlenmiş görsel mesaja eklendi", Toast.LENGTH_SHORT).show()
+                                            onSaveAnnotated(annotated, title)
                                             onDismiss()
                                         } else {
-                                            Toast.makeText(context, "Görsel kaydedilemedi", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "Görsel işlenemedi", Toast.LENGTH_SHORT).show()
                                         }
                                     } catch (e: Exception) {
-                                        Toast.makeText(context, "Kayıt hatası: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Çizim hatası: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             },
@@ -750,14 +748,13 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawArrow(
 
 /**
  * Orijinal Bitmap'in çözünürlüğüne uygun ölçekleyerek çizimleri Android Canvas ile
- * render edip dosyaya kaydeder ve Attachment nesnesi döndürür.
+ * render edip Bitmap nesnesi döndürür.
  */
-private suspend fun saveAnnotatedBitmap(
-    context: Context,
+private suspend fun renderAnnotatedBitmap(
     originalBitmap: Bitmap,
     elements: List<DrawnElement>,
     renderedCanvasSize: IntSize
-): Attachment? = withContext(Dispatchers.IO) {
+): Bitmap? = withContext(Dispatchers.IO) {
     try {
         val width = originalBitmap.width
         val height = originalBitmap.height
@@ -829,26 +826,7 @@ private suspend fun saveAnnotatedBitmap(
             }
         }
 
-        // Termux uploads klasörüne veya app files klasörüne kaydet
-        val uploadsDir = File("/data/data/com.termux/files/home/uploads")
-        val targetDir = if (uploadsDir.exists() && uploadsDir.canWrite()) uploadsDir else File(context.filesDir, "uploads").apply { mkdirs() }
-
-        val timestamp = System.currentTimeMillis()
-        val fileName = "annotated_${timestamp}.png"
-        val outputFile = File(targetDir, fileName)
-
-        FileOutputStream(outputFile).use { out ->
-            outputBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-        }
-
-        Attachment(
-            name = fileName,
-            path = outputFile.absolutePath,
-            localUri = Uri.fromFile(outputFile).toString(),
-            relPath = "uploads/$fileName",
-            type = "image",
-            size = outputFile.length()
-        )
+        outputBitmap
     } catch (e: Exception) {
         null
     }
