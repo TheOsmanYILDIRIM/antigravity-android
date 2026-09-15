@@ -47,6 +47,7 @@ fun MessageInputBar(
     onRemovePastedBlock: (PastedBlock) -> Unit,
     attachments: List<Attachment>,
     onRemoveAttachment: (Attachment) -> Unit,
+    onEditImage: (Attachment) -> Unit = {},
     selectedModelName: String = "Gemini 3.7 Flash",
     onModelPillClick: () -> Unit = {},
     isGenerating: Boolean,
@@ -55,6 +56,7 @@ fun MessageInputBar(
     onStop: () -> Unit,
     onMicClick: () -> Unit,
     onAttachClick: () -> Unit,
+    onAttachAndMarkupClick: () -> Unit = {},
     onOpenFileManager: () -> Unit = {},
     onOpenMcpSelector: () -> Unit = {},
     onAddPastedBlock: (String) -> Unit = {},
@@ -192,11 +194,12 @@ fun MessageInputBar(
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 color = SurfaceVariantDark,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle)
+                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                                modifier = Modifier.clickable(enabled = isImg) { if (isImg) onEditImage(att) }
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Icon(
                                         imageVector = if (att.type == "vault") Icons.Default.Storage else (if (isImg) Icons.Default.Image else Icons.Default.Attachment),
@@ -204,7 +207,7 @@ fun MessageInputBar(
                                         tint = if (att.type == "vault") GeminiPurple else if (isImg) GeminiAmber else PrimaryIndigo,
                                         modifier = Modifier.size(14.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(5.dp))
                                     Text(
                                         text = "$tagLabel ${att.name}",
                                         fontSize = 11.sp,
@@ -212,6 +215,17 @@ fun MessageInputBar(
                                         color = TextPrimary,
                                         maxLines = 1
                                     )
+                                    if (isImg) {
+                                        Spacer(modifier = Modifier.width(5.dp))
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Üzerine Çiz / İşaretle",
+                                            tint = DangerRed,
+                                            modifier = Modifier
+                                                .size(14.dp)
+                                                .clickable { onEditImage(att) }
+                                        )
+                                    }
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Icon(
                                         imageVector = Icons.Default.Close,
@@ -333,6 +347,22 @@ fun MessageInputBar(
                                     onClick = {
                                         showAttachMenu = false
                                         onAttachClick()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Draw, contentDescription = null, tint = DangerRed, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Column {
+                                                Text("Görsel Seç & Üzerine Çiz", color = TextPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                                                Text("Kırmızıyla işaretleyip talimat verin", color = TextMuted, fontSize = 11.sp)
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        showAttachMenu = false
+                                        onAttachAndMarkupClick()
                                     }
                                 )
                                 DropdownMenuItem(

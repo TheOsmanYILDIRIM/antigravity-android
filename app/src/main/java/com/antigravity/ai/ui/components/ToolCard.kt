@@ -51,10 +51,9 @@ fun ToolCallsContainer(
     val anyError = tools.any { it.state.equals("ERROR", true) || !it.error.isNullOrBlank() }
     val allDone = tools.all { it.state.equals("DONE", true) }
 
-    // Üretim sürerken otomatik açık, bittiğinde kullanıcı manuel kapatıp açabilir (varsayılan: bittiğinde kapalı)
-    var isExpanded by remember(tools.size, isGenerating) {
-        mutableStateOf(anyRunning || (isGenerating && tools.size <= 2))
-    }
+    // Kullanıcının manuel daraltma/genişletme tercihi (Kullanıcı daralttığında yeni tool gelse de sabit kalır)
+    var userExpandedOverride by remember { mutableStateOf<Boolean?>(null) }
+    val isExpanded = userExpandedOverride ?: (anyRunning || (isGenerating && tools.size <= 2))
 
     val totalDuration = tools.mapNotNull { it.durationSeconds }.sum()
 
@@ -78,14 +77,14 @@ fun ToolCallsContainer(
             .border(1.dp, headerBorderColor, RoundedCornerShape(12.dp))
             .background(Color(0xFF090D17))
     ) {
-        // Parent Header: Tek tıkla açılıp daraltılabilir
+        // Parent Header: Tek tıkla açılıp daraltılabilir (Kullanıcı tercihi sabit kalır)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
                 .background(headerBgColor)
-                .clickable { isExpanded = !isExpanded }
+                .clickable { userExpandedOverride = !isExpanded }
                 .padding(horizontal = 12.dp, vertical = 9.dp)
         ) {
             Row(

@@ -46,7 +46,8 @@ import com.antigravity.ai.ui.theme.*
 fun ImageViewerDialog(
     imageUrl: String,
     title: String = "Görsel",
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onMarkup: ((String, String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val resolvedUrl = resolveMediaUrl(imageUrl)
@@ -117,11 +118,31 @@ fun ImageViewerDialog(
                         }
                     }
 
-                    // Action buttons (Copy path & Share)
+                    // Action buttons (Markup, Copy path & Share)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        if (onMarkup != null) {
+                            IconButton(
+                                onClick = {
+                                    onMarkup(imageUrl, title)
+                                    onDismiss()
+                                },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(DangerRed.copy(alpha = 0.25f))
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "İşaretle / Çiz",
+                                    tint = DangerRed,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
                         IconButton(
                             onClick = {
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager

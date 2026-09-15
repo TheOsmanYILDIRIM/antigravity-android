@@ -114,6 +114,22 @@ fun ChatScreen(
         }
     }
 
+    // Image markup picker launcher (Görsel seçip doğrudan işaretleme/çizim ekranını açar)
+    val imageMarkupPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            var fileName = "image_${System.currentTimeMillis()}"
+            context.contentResolver.query(it, null, null, null, null)?.use { cursor ->
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (cursor.moveToFirst() && nameIndex >= 0) {
+                    fileName = cursor.getString(nameIndex)
+                }
+            }
+            viewModel.openImageMarkup(it, fileName)
+        }
+    }
+
     // Auto-scroll on new messages
     LaunchedEffect(uiState.messages.size, uiState.messages.lastOrNull()?.content) {
         if (uiState.messages.isNotEmpty()) {
@@ -460,6 +476,7 @@ fun ChatScreen(
                         onRemovePastedBlock = viewModel::removePastedBlock,
                         attachments = uiState.attachments,
                         onRemoveAttachment = viewModel::removeAttachment,
+                        onEditImage = { att -> viewModel.openImageMarkup(att, att.name) },
                         selectedModelName = selectedModelName,
                         onModelPillClick = { viewModel.setSettingsDialogVisible(true) },
                         isGenerating = uiState.isGenerating,
@@ -480,6 +497,9 @@ fun ChatScreen(
                         },
                         onAttachClick = {
                             filePickerLauncher.launch("*/*")
+                        },
+                        onAttachAndMarkupClick = {
+                            imageMarkupPickerLauncher.launch("image/*")
                         },
                         onOpenFileManager = {
                             viewModel.setFileManagerVisible(true)
@@ -734,7 +754,18 @@ fun ChatScreen(
             ImageViewerDialog(
                 imageUrl = uiState.activeImageViewerUrl!!,
                 title = uiState.activeImageViewerTitle,
-                onDismiss = { viewModel.closeImageViewer() }
+                onDismiss = { viewModel.closeImageViewer() },
+                onMarkup = { url, title -> viewModel.openImageMarkup(url, title) }
+            )
+        }
+
+        // Image Markup & Drawing Editor Dialog (Kullanıcı Talebi: Kırmızıyla çizerek talimat verme)
+        if (uiState.showImageMarkupDialog && uiState.markupImageSource != null) {
+            com.antigravity.ai.ui.components.ImageMarkupDialog(
+                imageSource = uiState.markupImageSource!!,
+                title = uiState.markupImageTitle,
+                onDismiss = { viewModel.closeImageMarkup() },
+                onSaveAnnotated = { viewModel.onSaveAnnotatedImage(it) }
             )
         }
 

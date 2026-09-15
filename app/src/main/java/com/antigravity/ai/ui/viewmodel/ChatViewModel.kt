@@ -77,6 +77,9 @@ data class ChatUiState(
     val isKeepAliveRunning: Boolean = false,
     val keepAliveMode: String = "invisible",
     val showUsageDetail: Boolean = false,
+    val showImageMarkupDialog: Boolean = false,
+    val markupImageSource: Any? = null,
+    val markupImageTitle: String = "Görseli İşaretle",
     val showSlashCommands: Boolean = false,
     val slashQuery: String = "",
     val showMentions: Boolean = false,
@@ -192,7 +195,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val fontSizeSp = prefs.getFloat("fontSizeSp", 13.5f)
         val thermalMode = prefs.getString("thermalMode", "eco") ?: "eco"
         val notificationsEnabled = prefs.getBoolean("notificationsEnabled", true)
-        return ChatSettings(model, effort, mode, useVault, fontSizeSp, thermalMode, notificationsEnabled)
+        val autoCompactEnabled = prefs.getBoolean("autoCompactEnabled", true)
+        val compactThresholdTokens = prefs.getInt("compactThresholdTokens", 80000)
+        return ChatSettings(
+            model = model,
+            effort = effort,
+            mode = mode,
+            useVault = useVault,
+            fontSizeSp = fontSizeSp,
+            thermalMode = thermalMode,
+            notificationsEnabled = notificationsEnabled,
+            autoCompactEnabled = autoCompactEnabled,
+            compactThresholdTokens = compactThresholdTokens
+        )
     }
 
     private fun saveSettings(settings: ChatSettings) {
@@ -204,6 +219,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             .putFloat("fontSizeSp", settings.fontSizeSp)
             .putString("thermalMode", settings.thermalMode)
             .putBoolean("notificationsEnabled", settings.notificationsEnabled)
+            .putBoolean("autoCompactEnabled", settings.autoCompactEnabled)
+            .putInt("compactThresholdTokens", settings.compactThresholdTokens)
             .apply()
     }
 
@@ -335,16 +352,33 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 state
                             } else {
                                 val list = state.messages.toMutableList()
-                                if (list.isNotEmpty() && list.last().role == "bot") {
-                                    val botMsg = list.last()
+                                val botMsgIndex = list.indexOfLast { it.role == "bot" }
+                                if (botMsgIndex >= 0) {
+                                    val botMsg = list[botMsgIndex]
                                     val tools = botMsg.tools.toMutableList()
                                     val idx = tools.indexOfFirst { it.stepIndex == event.tool.stepIndex }
                                     if (idx >= 0) {
-                                        tools[idx] = event.tool
+                                        val existing = tools[idx]
+                                        tools[idx] = existing.copy(
+                                            name = if (event.tool.name.isNotBlank()) event.tool.name else existing.name,
+                                            state = if (event.tool.state.isNotBlank()) event.tool.state else existing.state,
+                                            parameters = event.tool.parameters ?: existing.parameters,
+                                            output = event.tool.output ?: existing.output,
+                                            error = event.tool.error ?: existing.error,
+                                            durationSeconds = event.tool.durationSeconds ?: existing.durationSeconds
+                                        )
                                     } else {
                                         tools.add(event.tool)
                                     }
-                                    list[list.size - 1] = botMsg.copy(tools = tools)
+                                    list[botMsgIndex] = botMsg.copy(tools = tools)
+                                } else {
+                                    val newBotMsg = Message(
+                                        role = "bot",
+                                        content = "",
+                                        tools = mutableListOf(event.tool),
+                                        state = MessageState.GENERATING
+                                    )
+                                    list.add(newBotMsg)
                                 }
                                 state.copy(messages = list)
                             }
@@ -359,15 +393,21 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                             val list = if (isMatching) {
                                 val mList = state.messages.toMutableList()
-                                if (mList.isNotEmpty() && mList.last().role == "bot") {
-                                    val last = mList.last()
+                                val botMsgIndex = mList.indexOfLast { it.role == "bot" }
+                                if (botMsgIndex >= 0) {
+                                    val last = mList[botMsgIndex]
+                                    val mergedTools = when {
+                                        !event.botMessage?.tools.isNullOrEmpty() -> event.botMessage!!.tools.toMutableList()
+                                        last.tools.isNotEmpty() -> last.tools
+                                        else -> mutableListOf()
+                                    }
                                     val updated = last.copy(
                                         content = event.botMessage?.content ?: last.content,
-                                        tools = (event.botMessage?.tools ?: last.tools).toMutableList(),
+                                        tools = mergedTools,
                                         usage = event.botMessage?.usage ?: last.usage,
                                         state = MessageState.DONE
                                     )
-                                    mList[mList.size - 1] = updated
+                                    mList[botMsgIndex] = updated
                                 }
                                 mList
                             } else {
@@ -380,7 +420,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 isGenerating = isStillGenerating,
                                 generatingConversationIds = updatedSet
                             )
-                        }
                         fireNotification("Antigravity AI", "Yanıt hazır — sıra sende")
                         fetchConversations()
                         fetchUsage()
@@ -1244,6 +1283,48 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 inputText = updatedInput
             )
         }
+    }
+
+    fun replaceAttachment(oldAttachment: Attachment, newAttachment: Attachment) {
+        _uiState.update { state ->
+            val list = state.attachments.toMutableList()
+            val idx = list.indexOfFirst { it.name == oldAttachment.name || it.path == oldAttachment.path || (it.localUri != null && it.localUri == oldAttachment.localUri) }
+            if (idx >= 0) {
+                list[idx] = newAttachment
+            } else {
+                list.add(newAttachment)
+            }
+            state.copy(attachments = list)
+        }
+    }
+
+    fun openImageMarkup(source: Any, title: String = "Görseli İşaretle") {
+        _uiState.update {
+            it.copy(
+                showImageMarkupDialog = true,
+                markupImageSource = source,
+                markupImageTitle = title
+            )
+        }
+    }
+
+    fun closeImageMarkup() {
+        _uiState.update {
+            it.copy(
+                showImageMarkupDialog = false,
+                markupImageSource = null
+            )
+        }
+    }
+
+    fun onSaveAnnotatedImage(newAttachment: Attachment) {
+        val currentSource = _uiState.value.markupImageSource
+        if (currentSource is Attachment) {
+            replaceAttachment(currentSource, newAttachment)
+        } else {
+            addAttachment(newAttachment)
+        }
+        closeImageMarkup()
     }
 
     fun removeAttachment(attachment: Attachment) {
