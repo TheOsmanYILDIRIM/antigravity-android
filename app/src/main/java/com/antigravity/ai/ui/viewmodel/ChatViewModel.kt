@@ -396,8 +396,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 val botMsgIndex = mList.indexOfLast { it.role == "bot" }
                                 if (botMsgIndex >= 0) {
                                     val last = mList[botMsgIndex]
+                                    val eventTools = event.botMessage?.tools
                                     val mergedTools = when {
-                                        !event.botMessage?.tools.isNullOrEmpty() -> event.botMessage!!.tools.toMutableList()
+                                        !eventTools.isNullOrEmpty() -> eventTools.toMutableList()
                                         last.tools.isNotEmpty() -> last.tools
                                         else -> mutableListOf()
                                     }
