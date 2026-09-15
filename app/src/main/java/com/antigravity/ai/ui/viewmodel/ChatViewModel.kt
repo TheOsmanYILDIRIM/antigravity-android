@@ -420,6 +420,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                                 isGenerating = isStillGenerating,
                                 generatingConversationIds = updatedSet
                             )
+                        }
                         fireNotification("Antigravity AI", "Yanıt hazır — sıra sende")
                         fetchConversations()
                         fetchUsage()
