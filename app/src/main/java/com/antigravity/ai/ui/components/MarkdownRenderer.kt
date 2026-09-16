@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.ContentCopy
@@ -22,8 +21,6 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.OpenInFull
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -48,7 +45,6 @@ import com.antigravity.ai.ui.theme.*
 sealed class MarkdownBlock {
     data class Header(val level: Int, val text: String) : MarkdownBlock()
     data class Code(val code: String, val language: String) : MarkdownBlock()
-    data class Mermaid(val code: String) : MarkdownBlock()
     data class Alert(val type: String, val title: String, val text: String) : MarkdownBlock()
     data class BlockQuote(val text: String) : MarkdownBlock()
     data class BulletItem(val text: String, val indentLevel: Int = 0) : MarkdownBlock()
@@ -114,14 +110,6 @@ fun MarkdownRenderer(
                         code = block.code,
                         language = block.language,
                         fontSizeSp = (fontSizeSp * 0.9f)
-                    )
-                }
-
-                is MarkdownBlock.Mermaid -> {
-                    MermaidDiagramBlock(
-                        code = block.code,
-                        fontSizeSp = fontSizeSp,
-                        onOpenImage = onOpenImage
                     )
                 }
 
@@ -447,232 +435,6 @@ fun MarkdownRenderer(
     }
 }
 
-@Composable
-fun MermaidDiagramBlock(
-    code: String,
-    fontSizeSp: Float = 13.5f,
-    onOpenImage: ((String, String) -> Unit)? = null
-) {
-    val context = LocalContext.current
-    var showCode by remember { mutableStateOf(false) }
-    var isError by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(true) }
-
-    val mermaidUrl = remember(code) { generateMermaidUrl(code) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
-            .background(SurfaceDark)
-    ) {
-        // Header Bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(SurfaceVariantDark)
-                .padding(horizontal = 12.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f, fill = false)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AccountTree,
-                    contentDescription = null,
-                    tint = PrimaryIndigo,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Akış Şeması",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.5.sp,
-                    color = TextPrimary
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = PrimaryIndigo.copy(alpha = 0.15f),
-                    border = androidx.compose.foundation.BorderStroke(0.5.dp, PrimaryIndigo.copy(alpha = 0.4f))
-                ) {
-                    Text(
-                        text = "Mermaid",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = PrimaryIndigo,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                    )
-                }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Toggle Button (Şema / Kod)
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (showCode) PrimaryIndigo.copy(alpha = 0.2f) else Color(0xFF282A2C),
-                    border = androidx.compose.foundation.BorderStroke(0.8.dp, if (showCode) PrimaryIndigo else BorderSubtle),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .clickable { showCode = !showCode }
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (showCode) Icons.Default.Visibility else Icons.Default.Code,
-                            contentDescription = null,
-                            tint = if (showCode) PrimaryIndigo else TextSecondary,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (showCode) "Şema" else "Kod",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = if (showCode) PrimaryIndigo else TextSecondary
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                // Copy Code Button
-                IconButton(
-                    onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("Mermaid Code", code))
-                        Toast.makeText(context, "Mermaid kodu kopyalandı", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.size(26.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Kodu Kopyala",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-
-                if (!showCode && onOpenImage != null && !isError) {
-                    Spacer(modifier = Modifier.width(2.dp))
-                    IconButton(
-                        onClick = {
-                            onOpenImage(mermaidUrl, "Akış Şeması (Mermaid)")
-                        },
-                        modifier = Modifier.size(26.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.OpenInFull,
-                            contentDescription = "Tam Ekran Büyüt",
-                            tint = GeminiBlue,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // Body Content
-        if (showCode) {
-            Box(modifier = Modifier.padding(8.dp)) {
-                CodeBlock(code = code, language = "mermaid", fontSizeSp = fontSizeSp * 0.9f)
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 120.dp, max = 360.dp)
-                    .background(Color(0xFF131415))
-                    .clickable {
-                        if (!isError && onOpenImage != null) {
-                            onOpenImage(mermaidUrl, "Akış Şeması (Mermaid)")
-                        }
-                    }
-                    .padding(8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                if (mermaidUrl.isNotEmpty()) {
-                    AsyncImage(
-                        model = mermaidUrl,
-                        contentDescription = "Akış Şeması",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 100.dp, max = 340.dp),
-                        onLoading = {
-                            isLoading = true
-                            isError = false
-                        },
-                        onSuccess = {
-                            isLoading = false
-                            isError = false
-                        },
-                        onError = {
-                            isLoading = false
-                            isError = true
-                        }
-                    )
-                } else {
-                    isError = true
-                }
-
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = PrimaryIndigo,
-                        strokeWidth = 2.dp
-                    )
-                }
-
-                if (isError) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(12.dp)
-                    ) {
-                        Text(
-                            text = "Şema görseli yüklenemedi (Çevrimdışı veya geçersiz format)",
-                            fontSize = 11.5.sp,
-                            color = WarningAmber,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Button(
-                            onClick = { showCode = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = SurfaceVariantDark),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Text("Mermaid Kodunu Göster", fontSize = 11.sp, color = PrimaryIndigo)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-fun generateMermaidUrl(code: String): String {
-    return try {
-        val payload = org.json.JSONObject().apply {
-            put("code", code.trim())
-            put("mermaid", org.json.JSONObject().apply {
-                put("theme", "dark")
-            })
-        }
-        val jsonBytes = payload.toString().toByteArray(Charsets.UTF_8)
-        val b64 = android.util.Base64.encodeToString(jsonBytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP)
-        "https://mermaid.ink/img/$b64"
-    } catch (e: Exception) {
-        ""
-    }
-}
-
 private fun handleLinkClick(
     url: String,
     context: Context,
@@ -868,7 +630,7 @@ fun parseMarkdownBlocks(markdown: String): List<MarkdownBlock> {
             continue
         }
 
-        // 1. Code block fence or Mermaid diagram
+        // 1. Code block fence
         if (trimmed.startsWith("```")) {
             val language = trimmed.removePrefix("```").trim()
             val codeBuilder = StringBuilder()
@@ -880,18 +642,7 @@ fun parseMarkdownBlocks(markdown: String): List<MarkdownBlock> {
             // skip closing fence
             if (i < lines.size) i++
             val fullCode = codeBuilder.toString().trimEnd()
-            val langLower = language.lowercase()
-            val isMermaid = langLower == "mermaid" || langLower == "flowchart" ||
-                    fullCode.startsWith("flowchart ") || fullCode.startsWith("flowchart\n") ||
-                    fullCode.startsWith("graph ") || fullCode.startsWith("graph\n") ||
-                    fullCode.startsWith("sequenceDiagram") || fullCode.startsWith("classDiagram") ||
-                    fullCode.startsWith("stateDiagram") || fullCode.startsWith("erDiagram")
-
-            if (isMermaid) {
-                blocks.add(MarkdownBlock.Mermaid(fullCode))
-            } else {
-                blocks.add(MarkdownBlock.Code(fullCode, language))
-            }
+            blocks.add(MarkdownBlock.Code(fullCode, language))
             continue
         }
 
