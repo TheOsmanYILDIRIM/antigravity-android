@@ -178,15 +178,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun buildBackend(name: String): ChatBackend = when (name) {
         "opencode" -> OpenCodeBackend()
+        "cline" -> ClineBackend()
         else -> AgyBackend()
     }
 
-    /** Açık olan sunucuyu bulur: :8080 (agy) veya :4096 (opencode). İkisi de açıksa agy tercih edilir. */
+    /** Açık olan sunucuyu bulur: :8080 (agy), :5115 (cline) veya :4096 (opencode). */
     private fun detectBackend(): String {
         val agy = isPortOpen("127.0.0.1", 8080)
+        val cline = isPortOpen("127.0.0.1", 5115)
         val oc = isPortOpen("127.0.0.1", 4096)
         return when {
             agy -> "agy"
+            cline -> "cline"
             oc -> "opencode"
             else -> "agy"
         }
@@ -306,6 +309,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(isListening = false) }
     }
 
+    private val sessionMessagesCache = java.util.concurrent.ConcurrentHashMap<String, MutableList<Message>>()
+
     private fun startEventCollection() {
         eventsJob?.cancel()
         eventsJob = viewModelScope.launch {
@@ -316,9 +321,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             val updatedSet = state.generatingConversationIds.toMutableSet()
                             updatedSet.add(event.conversationId)
                             val isCurrentlyNew = state.currentConversationId == null
+                            val targetId = if (isCurrentlyNew) event.conversationId else state.currentConversationId
+                            sessionMessagesCache[event.conversationId] = (if (isCurrentlyNew) state.messages else emptyList()).toMutableList()
                             state.copy(
-                                currentSessionId = if (isCurrentlyNew) event.conversationId else state.currentSessionId,
-                                currentConversationId = if (isCurrentlyNew) event.conversationId else state.currentConversationId,
+                                currentSessionId = targetId,
+                                currentConversationId = targetId,
                                 generatingConversationIds = updatedSet,
                                 isGenerating = if (isCurrentlyNew) true else state.isGenerating
                             )
@@ -347,98 +354,97 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                     is StreamEvent.Chunk -> {
-                        _uiState.update { state ->
-                            val currentActiveId = state.currentConversationId
-                            val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
-                            if (!isMatching) {
-                                state
+                        val currentActiveId = _uiState.value.currentConversationId
+                        val targetId = event.conversationId ?: currentActiveId
+                        if (targetId != null) {
+                            val cached = sessionMessagesCache.getOrPut(targetId) {
+                                if (targetId == currentActiveId) _uiState.value.messages.toMutableList() else mutableListOf()
+                            }
+                            val botMsgIndex = cached.indexOfLast { it.role == "bot" }
+                            if (botMsgIndex >= 0) {
+                                cached[botMsgIndex] = cached[botMsgIndex].copy(
+                                    content = event.fullContent,
+                                    state = MessageState.GENERATING
+                                )
                             } else {
-                                val list = state.messages.toMutableList()
-                                if (list.isNotEmpty() && list.last().role == "bot") {
-                                    val last = list.last().copy(
-                                        content = event.fullContent,
-                                        state = MessageState.GENERATING
-                                    )
-                                    list[list.size - 1] = last
-                                }
-                                state.copy(messages = list, isGenerating = true)
+                                cached.add(Message(role = "bot", content = event.fullContent, state = MessageState.GENERATING))
+                            }
+                            if (targetId == currentActiveId || currentActiveId == null) {
+                                _uiState.update { it.copy(messages = ArrayList(cached), isGenerating = true) }
                             }
                         }
                     }
                     is StreamEvent.ToolUpdate -> {
-                        _uiState.update { state ->
-                            val currentActiveId = state.currentConversationId
-                            val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
-                            if (!isMatching) {
-                                state
-                            } else {
-                                val list = state.messages.toMutableList()
-                                val botMsgIndex = list.indexOfLast { it.role == "bot" }
-                                if (botMsgIndex >= 0) {
-                                    val botMsg = list[botMsgIndex]
-                                    val tools = botMsg.tools.toMutableList()
-                                    val idx = tools.indexOfFirst { it.stepIndex == event.tool.stepIndex }
-                                    if (idx >= 0) {
-                                        val existing = tools[idx]
-                                        tools[idx] = existing.copy(
-                                            name = if (event.tool.name.isNotBlank()) event.tool.name else existing.name,
-                                            state = if (event.tool.state.isNotBlank()) event.tool.state else existing.state,
-                                            parameters = event.tool.parameters ?: existing.parameters,
-                                            output = event.tool.output ?: existing.output,
-                                            error = event.tool.error ?: existing.error,
-                                            durationSeconds = event.tool.durationSeconds ?: existing.durationSeconds
-                                        )
-                                    } else {
-                                        tools.add(event.tool)
-                                    }
-                                    list[botMsgIndex] = botMsg.copy(tools = tools)
-                                } else {
-                                    val newBotMsg = Message(
-                                        role = "bot",
-                                        content = "",
-                                        tools = mutableListOf(event.tool),
-                                        state = MessageState.GENERATING
+                        val currentActiveId = _uiState.value.currentConversationId
+                        val targetId = event.conversationId ?: currentActiveId
+                        if (targetId != null) {
+                            val cached = sessionMessagesCache.getOrPut(targetId) {
+                                if (targetId == currentActiveId) _uiState.value.messages.toMutableList() else mutableListOf()
+                            }
+                            val botMsgIndex = cached.indexOfLast { it.role == "bot" }
+                            if (botMsgIndex >= 0) {
+                                val botMsg = cached[botMsgIndex]
+                                val tools = botMsg.tools.toMutableList()
+                                val idx = tools.indexOfFirst { it.stepIndex == event.tool.stepIndex }
+                                if (idx >= 0) {
+                                    val existing = tools[idx]
+                                    tools[idx] = existing.copy(
+                                        name = if (event.tool.name.isNotBlank()) event.tool.name else existing.name,
+                                        state = if (event.tool.state.isNotBlank()) event.tool.state else existing.state,
+                                        parameters = event.tool.parameters ?: existing.parameters,
+                                        output = event.tool.output ?: existing.output,
+                                        error = event.tool.error ?: existing.error,
+                                        durationSeconds = event.tool.durationSeconds ?: existing.durationSeconds
                                     )
-                                    list.add(newBotMsg)
+                                } else {
+                                    tools.add(event.tool)
                                 }
-                                state.copy(messages = list)
+                                cached[botMsgIndex] = botMsg.copy(tools = tools)
+                            } else {
+                                cached.add(Message(role = "bot", content = "", tools = mutableListOf(event.tool), state = MessageState.GENERATING))
+                            }
+                            if (targetId == currentActiveId || currentActiveId == null) {
+                                _uiState.update { it.copy(messages = ArrayList(cached)) }
                             }
                         }
                     }
                     is StreamEvent.Done -> {
-                        _uiState.update { state ->
-                            val currentActiveId = state.currentConversationId
-                            val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
-                            val updatedSet = state.generatingConversationIds.toMutableSet()
-                            event.conversationId?.let { updatedSet.remove(it) } ?: currentActiveId?.let { updatedSet.remove(it) }
-
-                            val list = if (isMatching) {
-                                val mList = state.messages.toMutableList()
-                                val botMsgIndex = mList.indexOfLast { it.role == "bot" }
-                                if (botMsgIndex >= 0) {
-                                    val last = mList[botMsgIndex]
-                                    val eventTools = event.botMessage?.tools
-                                    val mergedTools = when {
-                                        !eventTools.isNullOrEmpty() -> eventTools.toMutableList()
-                                        last.tools.isNotEmpty() -> last.tools
-                                        else -> mutableListOf()
-                                    }
-                                    val updated = last.copy(
-                                        content = event.botMessage?.content ?: last.content,
-                                        tools = mergedTools,
-                                        usage = event.botMessage?.usage ?: last.usage,
-                                        state = MessageState.DONE
-                                    )
-                                    mList[botMsgIndex] = updated
+                        val currentActiveId = _uiState.value.currentConversationId
+                        val targetId = event.conversationId ?: currentActiveId
+                        if (targetId != null) {
+                            val cached = sessionMessagesCache.getOrPut(targetId) {
+                                if (targetId == currentActiveId) _uiState.value.messages.toMutableList() else mutableListOf()
+                            }
+                            val botMsgIndex = cached.indexOfLast { it.role == "bot" }
+                            if (botMsgIndex >= 0) {
+                                val last = cached[botMsgIndex]
+                                val eventTools = event.botMessage?.tools
+                                val mergedTools = when {
+                                    !eventTools.isNullOrEmpty() -> eventTools.toMutableList()
+                                    last.tools.isNotEmpty() -> last.tools
+                                    else -> mutableListOf()
                                 }
-                                mList
+                                cached[botMsgIndex] = last.copy(
+                                    content = event.botMessage?.content ?: last.content,
+                                    tools = mergedTools,
+                                    usage = event.botMessage?.usage ?: last.usage,
+                                    state = MessageState.DONE
+                                )
+                            } else if (event.botMessage != null) {
+                                cached.add(mapSessionMessage(event.botMessage).copy(state = MessageState.DONE))
+                            }
+                        }
+                        _uiState.update { state ->
+                            val updatedSet = state.generatingConversationIds.toMutableSet()
+                            if (targetId != null) updatedSet.remove(targetId)
+                            val isStillGenerating = state.currentConversationId != null && updatedSet.contains(state.currentConversationId)
+                            val updatedMessages = if (targetId != null && targetId == state.currentConversationId && sessionMessagesCache.containsKey(targetId)) {
+                                ArrayList(sessionMessagesCache[targetId] ?: emptyList())
                             } else {
                                 state.messages
                             }
-
-                            val isStillGenerating = currentActiveId != null && updatedSet.contains(currentActiveId)
                             state.copy(
-                                messages = list,
+                                messages = updatedMessages,
                                 isGenerating = isStillGenerating,
                                 generatingConversationIds = updatedSet
                             )
@@ -448,26 +454,26 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         fetchUsage()
                     }
                     is StreamEvent.Stopped -> {
+                        val currentActiveId = _uiState.value.currentConversationId
+                        val targetId = event.conversationId ?: currentActiveId
+                        if (targetId != null && sessionMessagesCache.containsKey(targetId)) {
+                            val cached = sessionMessagesCache[targetId]!!
+                            val botMsgIndex = cached.indexOfLast { it.role == "bot" }
+                            if (botMsgIndex >= 0) {
+                                cached[botMsgIndex] = cached[botMsgIndex].copy(state = MessageState.DONE)
+                            }
+                        }
                         _uiState.update { state ->
-                            val currentActiveId = state.currentConversationId
-                            val isMatching = event.conversationId == null || currentActiveId == null || event.conversationId == currentActiveId
                             val updatedSet = state.generatingConversationIds.toMutableSet()
-                            event.conversationId?.let { updatedSet.remove(it) } ?: currentActiveId?.let { updatedSet.remove(it) }
-
-                            val list = if (isMatching) {
-                                val mList = state.messages.toMutableList()
-                                if (mList.isNotEmpty() && mList.last().role == "bot") {
-                                    val last = mList.last()
-                                    mList[mList.size - 1] = last.copy(state = MessageState.DONE)
-                                }
-                                mList
+                            if (targetId != null) updatedSet.remove(targetId)
+                            val isStillGenerating = state.currentConversationId != null && updatedSet.contains(state.currentConversationId)
+                            val updatedMessages = if (targetId != null && targetId == state.currentConversationId && sessionMessagesCache.containsKey(targetId)) {
+                                ArrayList(sessionMessagesCache[targetId] ?: emptyList())
                             } else {
                                 state.messages
                             }
-
-                            val isStillGenerating = currentActiveId != null && updatedSet.contains(currentActiveId)
                             state.copy(
-                                messages = list,
+                                messages = updatedMessages,
                                 isGenerating = isStillGenerating,
                                 generatingConversationIds = updatedSet
                             )
@@ -682,6 +688,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             repository.loadConversation(id).onSuccess { res ->
                 val serverMessages = res.session?.messages?.map { mapSessionMessage(it) } ?: emptyList()
                 val convId = res.session?.conversationId ?: res.session?.id ?: id
+                sessionMessagesCache[convId] = serverMessages.toMutableList()
                 val isConvGenerating = _uiState.value.generatingConversationIds.contains(convId) || res.isGenerating
                 val projectName = res.session?.projectName ?: res.session?.projectTag ?: _uiState.value.conversations.find { it.id == convId }?.let { it.projectName ?: it.projectTag }
                 val draftText = getDraft(convId)
@@ -1659,6 +1666,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         val activeConvId = state.currentConversationId
+        if (activeConvId != null) {
+            val cached = sessionMessagesCache.getOrPut(activeConvId) { mutableListOf() }
+            cached.add(userMessage)
+            cached.add(botPlaceholder)
+        }
         val activeDraftId = activeConvId ?: state.currentSessionId
         saveDraft(activeDraftId, "")
 

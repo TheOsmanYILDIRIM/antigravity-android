@@ -1,0 +1,53 @@
+package com.antigravity.ai.data.api
+
+import com.antigravity.ai.data.model.*
+import kotlinx.coroutines.flow.Flow
+
+/**
+ * Cline CLI sunucusunu saran backend.
+ * [ClineApiService] üzerinden REST ve SSE protokolü ile konuşur.
+ */
+class ClineBackend(private val api: ClineApiService = ClineApiService()) : ChatBackend {
+
+    override fun observeEvents(): Flow<StreamEvent> = api.observeEvents()
+
+    override suspend fun getConversations(): Result<ConversationsResponse> = api.getConversations()
+    override suspend fun loadConversation(id: String): Result<SessionResponse> = api.loadConversation(id)
+    override suspend fun deleteConversation(id: String): Result<Unit> = api.deleteConversation(id)
+    override suspend fun getModelsConfig(): Result<ModelsConfigResponse> = api.getModelsConfig()
+    override suspend fun getSkills(): Result<SkillsResponse> = api.getSkills()
+    override suspend fun getUsage(): Result<UsageResponse> = api.getUsage()
+
+    override suspend fun sendPrompt(
+        prompt: String,
+        conversationId: String?,
+        continueChat: Boolean,
+        settings: ChatSettings,
+        attachments: List<Attachment>
+    ): Result<Unit> = api.sendPrompt(prompt, conversationId, continueChat, settings, attachments)
+
+    override suspend fun newChat(): Result<SessionResponse> = api.newChat()
+    override suspend fun stopGeneration(): Result<Unit> = api.stopGeneration()
+
+    private val agyApi = AntigravityApiService()
+
+    // Shared filesystem and vault access via agyApi / native storage
+    override suspend fun uploadFile(name: String, base64: String, type: String): Result<UploadResponse> =
+        agyApi.uploadFile(name, base64, type)
+
+    override suspend fun fetchVaultFiles(): Result<VaultResponse> = agyApi.getVaultFiles()
+    override suspend fun fetchVaultFileContent(relPath: String): Result<VaultFileContent> =
+        agyApi.getVaultFileContent(relPath)
+
+    override suspend fun saveVaultNote(relPath: String?, title: String?, content: String): Result<Unit> =
+        agyApi.saveVaultNote(relPath, title, content)
+
+    override suspend fun createVaultFolder(folderPath: String): Result<Unit> =
+        agyApi.createVaultFolder(folderPath)
+
+    override suspend fun deleteVaultFile(relPath: String): Result<Unit> = agyApi.deleteVaultFile(relPath)
+    override suspend fun getFsList(dir: String?): Result<FsListResponse> = agyApi.getFsList(dir)
+    override suspend fun getFsProjects(): Result<FsProjectsResponse> = agyApi.getFsProjects()
+    override suspend fun getFsContent(path: String): Result<FsContentResponse> = agyApi.getFsContent(path)
+    override suspend fun saveFsFile(path: String, content: String): Result<FsSaveResponse> = agyApi.saveFsFile(path, content)
+}

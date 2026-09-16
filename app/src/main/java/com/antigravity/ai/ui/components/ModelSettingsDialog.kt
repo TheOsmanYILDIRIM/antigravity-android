@@ -157,6 +157,7 @@ fun ModelSettingsDialog(
                 val backends = listOf(
                     "auto" to "Otomatik",
                     "agy" to "AGY CLI",
+                    "cline" to "Cline",
                     "opencode" to "OpenCode"
                 )
                 backends.forEach { (id, label) ->
