@@ -413,6 +413,7 @@ fun ChatScreen(
                         viewModel.startNewChat()
                     },
                     onUsageClick = {
+                        viewModel.fetchUsage()
                         viewModel.setUsageDetailVisible(true)
                     }
                 )
@@ -491,6 +492,14 @@ fun ChatScreen(
                     val selectedModelName = uiState.availableModels.find { it.id == uiState.settings.model }?.name
                         ?: uiState.settings.model
 
+                    val effortLabel = when (uiState.settings.effort) {
+                        "low" -> "Düşük"
+                        "medium" -> "Orta"
+                        "high" -> "Yüksek"
+                        else -> "Standart"
+                    }
+                    val modelWithEffort = "$selectedModelName • $effortLabel"
+
                     MessageInputBar(
                         text = uiState.inputText,
                         onTextChange = viewModel::onInputTextChange,
@@ -499,7 +508,7 @@ fun ChatScreen(
                         attachments = uiState.attachments,
                         onRemoveAttachment = viewModel::removeAttachment,
                         onEditImage = { att -> viewModel.openImageMarkup(att, att.name) },
-                        selectedModelName = selectedModelName,
+                        selectedModelName = modelWithEffort,
                         onModelPillClick = { showQuickModelSheet = true },
                         isGenerating = uiState.isGenerating,
                         isListening = uiState.isListening,

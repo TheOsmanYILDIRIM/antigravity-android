@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -59,29 +60,30 @@ fun UsageWidget(
     modifier: Modifier = Modifier
 ) {
     val fiveHourRemaining = usage?.recent5h?.remainingPercent ?: 100
+    val quotaColor = if (fiveHourRemaining > 20) PrimaryIndigo else DangerRed
 
     Surface(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         color = SurfaceVariantDark,
         border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() }
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(7.dp)
-                    .clip(CircleShape)
-                    .background(if (fiveHourRemaining > 20) SuccessGreen else DangerRed)
+            Icon(
+                imageVector = Icons.Outlined.PieChart,
+                contentDescription = "Model Kotası",
+                tint = quotaColor,
+                modifier = Modifier.size(13.dp)
             )
-            Spacer(modifier = Modifier.width(5.dp))
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = "⚡ %$fiveHourRemaining",
-                fontSize = 11.sp,
+                text = "%$fiveHourRemaining",
+                fontSize = 11.5.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextPrimary,
                 maxLines = 1

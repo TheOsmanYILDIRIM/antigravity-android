@@ -38,29 +38,22 @@ fun ChatTopBar(
     onUsageClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Dynamic Subtitle state: auto-reveals on change / generating or periodic gentle ticker
-    var showStatsSubtitle by remember { mutableStateOf(false) }
+    // 1. Initial title collapse animation (Antigravity yazısı açılışta yıldızın içine katlanır)
+    var showTitleText by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        delay(2500)
+        showTitleText = false
+    }
 
-    // Auto-reveal on token updates or while generating
-    LaunchedEffect(sessionTokens, sessionDataBytes, isGenerating) {
+    // 2. Stats Subtitle state: only shows briefly on update or generating (no aggressive periodic ticker)
+    var showStatsSubtitle by remember { mutableStateOf(false) }
+    LaunchedEffect(sessionTokens, isGenerating) {
         if (isGenerating) {
             showStatsSubtitle = true
         } else if (sessionTokens > 0) {
             showStatsSubtitle = true
-            delay(4000)
+            delay(3000)
             showStatsSubtitle = false
-        }
-    }
-
-    // Periodic gentle ticker (arada bir 3.5 saniyeliğine kendi kendine açılıp kapanır)
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(20000) // Her 20 saniyede bir
-            if (!isGenerating && sessionTokens > 0) {
-                showStatsSubtitle = true
-                delay(3500)
-                showStatsSubtitle = false
-            }
         }
     }
 
@@ -80,7 +73,7 @@ fun ChatTopBar(
             IconButton(
                 onClick = onMenuClick,
                 modifier = Modifier
-                    .size(38.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
                     .background(SurfaceVariantDark)
             ) {
@@ -88,43 +81,51 @@ fun ChatTopBar(
                     imageVector = Icons.Default.Menu,
                     contentDescription = "Menü",
                     tint = TextPrimary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(19.dp)
                 )
             }
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Center: Brand Title + Project Badge + (Animated Expanding Subtitle)
+            // Center: Sparkle Icon + (Folding Title) + Project Badge + (Auto-collapsing stats)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(8.dp))
                     .clickable {
-                        // Tapping toggles stats visibility or opens model sheet if provided
+                        // Tapping toggles title text and stats
+                        showTitleText = !showTitleText
                         showStatsSubtitle = !showStatsSubtitle
                     }
                     .padding(horizontal = 4.dp, vertical = 2.dp)
             ) {
                 GeminiSparkleIcon(size = 20.dp)
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
+
+                Column(modifier = Modifier.padding(start = 6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Antigravity",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = TextPrimary,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
+                        // Animated Folding Title ("Antigravity" collapses into the sparkle icon)
+                        AnimatedVisibility(
+                            visible = showTitleText,
+                            enter = expandHorizontally() + fadeIn(),
+                            exit = shrinkHorizontally() + fadeOut()
+                        ) {
+                            Text(
+                                text = "Antigravity",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.5.sp,
+                                color = TextPrimary,
+                                maxLines = 1,
+                                modifier = Modifier.padding(end = 6.dp)
+                            )
+                        }
+
                         if (!projectName.isNullOrBlank()) {
                             val pColor = ProjectColorUtil.getColorForProject(projectName)
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = pColor.copy(alpha = 0.18f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, pColor.copy(alpha = 0.45f)),
-                                modifier = Modifier.padding(start = 6.dp)
+                                border = androidx.compose.foundation.BorderStroke(1.dp, pColor.copy(alpha = 0.45f))
                             ) {
                                 Text(
                                     text = projectName,
@@ -139,31 +140,31 @@ fun ChatTopBar(
                         }
                     }
 
-                    // Smooth Auto Expanding & Collapsing Subtitle
+                    // Smooth Auto Expanding & Collapsing Subtitle (Concise token & data format)
                     AnimatedVisibility(
-                        visible = showStatsSubtitle && (sessionTokens > 0 || sessionDataBytes > 0 || isGenerating),
+                        visible = showStatsSubtitle && (sessionTokens > 0 || isGenerating),
                         enter = expandVertically() + fadeIn(),
                         exit = shrinkVertically() + fadeOut()
                     ) {
                         val tokenDisplay = if (sessionTokens >= 1_000_000) {
-                            String.format("%.2fM", sessionTokens / 1_000_000f) + " bağlam"
+                            String.format("%.1fM", sessionTokens / 1_000_000f)
                         } else if (sessionTokens >= 1000) {
-                            String.format("%.1fk", sessionTokens / 1000f) + " bağlam"
+                            String.format("%.1fk", sessionTokens / 1000f)
                         } else {
-                            "$sessionTokens tok"
+                            "$sessionTokens"
                         }
 
                         val dataDisplay = if (sessionDataBytes >= 1024 * 1024) {
-                            String.format("%.1f MB", sessionDataBytes / (1024f * 1024f))
+                            String.format("%.1fMB", sessionDataBytes / (1024f * 1024f))
                         } else if (sessionDataBytes >= 1024) {
-                            String.format("%.1f KB", sessionDataBytes / 1024f)
+                            String.format("%.1fKB", sessionDataBytes / 1024f)
                         } else {
-                            "${sessionDataBytes} B"
+                            "${sessionDataBytes}B"
                         }
 
                         Text(
-                            text = if (isGenerating) "⚡ Üretiliyor • $tokenDisplay" else "📊 $tokenDisplay • 💾 $dataDisplay",
-                            fontSize = 10.5.sp,
+                            text = if (isGenerating) "⚡ Üretiliyor • $tokenDisplay tok" else "$tokenDisplay tok • $dataDisplay",
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (isGenerating) GeminiBlue else PrimaryIndigo,
                             maxLines = 1,
@@ -173,7 +174,7 @@ fun ChatTopBar(
                 }
             }
 
-            // Right Group: Usage Token Meter & New Chat
+            // Right Group: Usage Token Meter & Scaled Down (30% smaller) New Chat Button
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -183,11 +184,11 @@ fun ChatTopBar(
                     onClick = onUsageClick
                 )
 
-                // New Chat Button
+                // New Chat Button (Reduced by ~30% from 38dp to 28dp)
                 IconButton(
                     onClick = onNewChatClick,
                     modifier = Modifier
-                        .size(38.dp)
+                        .size(28.dp)
                         .clip(CircleShape)
                         .background(SurfaceVariantDark)
                 ) {
@@ -195,7 +196,7 @@ fun ChatTopBar(
                         imageVector = Icons.Outlined.Edit,
                         contentDescription = "Yeni Sohbet",
                         tint = GeminiBlue,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             }

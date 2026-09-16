@@ -62,12 +62,17 @@ fun ChatDrawer(
     var searchQuery by remember { mutableStateOf("") }
     var contextMenuConv by remember { mutableStateOf<ConversationMeta?>(null) }
 
-    // Distinct project tags for filtering
+    // Distinct project tags sorted by most recently used conversation
     val distinctProjects = remember(conversations) {
-        conversations.mapNotNull { it.projectName ?: it.projectTag }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .sorted()
+        conversations
+            .groupBy { it.projectName ?: it.projectTag }
+            .filterKeys { !it.isNullOrBlank() }
+            .map { (proj, convs) ->
+                val latestTime = convs.mapNotNull { it.lastMessageTime ?: it.createdAt }.maxOrNull() ?: ""
+                proj!! to latestTime
+            }
+            .sortedByDescending { it.second }
+            .map { it.first }
     }
 
     // Split and filter conversations
