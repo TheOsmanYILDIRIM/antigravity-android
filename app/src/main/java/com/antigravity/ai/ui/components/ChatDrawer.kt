@@ -55,20 +55,35 @@ fun ChatDrawer(
     onStartServer: () -> Unit = {},
     onStopServer: () -> Unit = {},
     onExitApp: (() -> Unit)? = null,
+    selectedProjectFilter: String? = null,
+    onSelectProjectFilter: (String?) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var contextMenuConv by remember { mutableStateOf<ConversationMeta?>(null) }
 
+    // Distinct project tags for filtering
+    val distinctProjects = remember(conversations) {
+        conversations.mapNotNull { it.projectName ?: it.projectTag }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+    }
+
     // Split and filter conversations
-    val (pinnedList, unpinnedList) = remember(conversations, pinnedIds, searchQuery) {
-        val filtered = if (searchQuery.isBlank()) {
+    val (pinnedList, unpinnedList) = remember(conversations, pinnedIds, searchQuery, selectedProjectFilter) {
+        val searchFiltered = if (searchQuery.isBlank()) {
             conversations
         } else {
             conversations.filter { it.title.contains(searchQuery, ignoreCase = true) }
         }
-        val pinned = filtered.filter { pinnedIds.contains(it.id) }
-        val unpinned = filtered.filter { !pinnedIds.contains(it.id) }
+        val projectFiltered = if (selectedProjectFilter.isNullOrBlank()) {
+            searchFiltered
+        } else {
+            searchFiltered.filter { (it.projectName ?: it.projectTag) == selectedProjectFilter }
+        }
+        val pinned = projectFiltered.filter { pinnedIds.contains(it.id) }
+        val unpinned = projectFiltered.filter { !pinnedIds.contains(it.id) }
         Pair(pinned, unpinned)
     }
 
@@ -248,6 +263,76 @@ fun ChatDrawer(
             }
 
             Divider(color = BorderSubtle, modifier = Modifier.padding(vertical = 8.dp))
+
+            // Project Filter Chips Row
+            if (distinctProjects.isNotEmpty()) {
+                androidx.compose.foundation.lazy.LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    item {
+                        val isAllSelected = selectedProjectFilter == null
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isAllSelected) GeminiBlue.copy(alpha = 0.22f) else SurfaceVariantDark,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isAllSelected) GeminiBlue else BorderSubtle
+                            ),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable { onSelectProjectFilter(null) }
+                        ) {
+                            Text(
+                                text = "Tümü",
+                                fontSize = 11.sp,
+                                fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isAllSelected) GeminiBlue else TextSecondary,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    items(distinctProjects, key = { it }) { projName ->
+                        val isProjSelected = selectedProjectFilter == projName
+                        val pColor = ProjectColorUtil.getColorForProject(projName)
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isProjSelected) pColor.copy(alpha = 0.22f) else SurfaceVariantDark,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isProjSelected) pColor else BorderSubtle
+                            ),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable {
+                                    onSelectProjectFilter(if (isProjSelected) null else projName)
+                                }
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(pColor)
+                                )
+                                Spacer(modifier = Modifier.width(5.dp))
+                                Text(
+                                    text = projName,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isProjSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isProjSelected) pColor else TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             // 5. Conversations List
             LazyColumn(
@@ -571,6 +656,27 @@ private fun ConversationRowItem(
                     .size(14.dp)
                     .padding(end = 4.dp)
             )
+        }
+
+        val project = conv.projectName ?: conv.projectTag
+        if (!project.isNullOrBlank()) {
+            val pColor = ProjectColorUtil.getColorForProject(project)
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = pColor.copy(alpha = 0.18f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, pColor.copy(alpha = 0.45f)),
+                modifier = Modifier.padding(end = 6.dp)
+            ) {
+                Text(
+                    text = project,
+                    fontSize = 9.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = pColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 4.5.dp, vertical = 1.dp)
+                )
+            }
         }
 
         Text(

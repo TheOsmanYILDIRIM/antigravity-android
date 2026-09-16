@@ -42,6 +42,7 @@ fun MessageItem(
     message: Message,
     isLastBotMessage: Boolean = false,
     fontSizeSp: Float = 13.5f,
+    projectColor: Color? = null,
     onOpenFile: (String) -> Unit = {},
     onOpenImage: (String, String) -> Unit = { _, _ -> },
     onSendMessage: (String) -> Unit = {},
@@ -52,7 +53,15 @@ fun MessageItem(
     var showMenu by remember { mutableStateOf(false) }
 
     if (isUser) {
-        // User Message (Figma: Right-aligned #282A2C bubble with action toolbar)
+        // User Message (Figma: Right-aligned bubble with optional project card tint)
+        val userBubbleShape = RoundedCornerShape(
+            topStart = 20.dp,
+            topEnd = 20.dp,
+            bottomStart = 20.dp,
+            bottomEnd = 4.dp
+        )
+        val userBgColor = if (projectColor != null) projectColor.copy(alpha = 0.18f) else UserBubbleColor
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -62,15 +71,13 @@ fun MessageItem(
             Column(
                 modifier = Modifier
                     .widthIn(min = 60.dp, max = 340.dp)
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = 20.dp,
-                            topEnd = 20.dp,
-                            bottomStart = 20.dp,
-                            bottomEnd = 4.dp
-                        )
+                    .clip(userBubbleShape)
+                    .then(
+                        if (projectColor != null) {
+                            Modifier.border(1.dp, projectColor.copy(alpha = 0.35f), userBubbleShape)
+                        } else Modifier
                     )
-                    .background(UserBubbleColor)
+                    .background(userBgColor)
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 // Attachments Preview (Images & Docs)
@@ -273,35 +280,51 @@ fun MessageItem(
                     )
                 }
 
-                // Message content with Full Markdown Renderer wrapped in SelectionContainer
-                if (message.content.isEmpty() && message.state == MessageState.GENERATING) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 6.dp)
+                val botContentComposable: @Composable () -> Unit = {
+                    if (message.content.isEmpty() && message.state == MessageState.GENERATING) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 6.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                strokeWidth = 2.dp,
+                                color = GeminiBlue
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "Antigravity düşünüyor…",
+                                fontSize = (fontSizeSp * 0.95f).sp,
+                                color = TextMuted
+                            )
+                        }
+                    } else {
+                        SelectionContainer {
+                            MarkdownRenderer(
+                                markdown = message.content,
+                                fontSizeSp = fontSizeSp,
+                                onOpenFile = onOpenFile,
+                                onOpenImage = onOpenImage,
+                                onSendMessage = onSendMessage,
+                                onFillInput = onFillInput
+                            )
+                        }
+                    }
+                }
+
+                if (projectColor != null && message.content.isNotEmpty()) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = projectColor.copy(alpha = 0.07f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, projectColor.copy(alpha = 0.22f)),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(14.dp),
-                            strokeWidth = 2.dp,
-                            color = GeminiBlue
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "Antigravity düşünüyor…",
-                            fontSize = (fontSizeSp * 0.95f).sp,
-                            color = TextMuted
-                        )
+                        Box(modifier = Modifier.padding(12.dp)) {
+                            botContentComposable()
+                        }
                     }
                 } else {
-                    SelectionContainer {
-                        MarkdownRenderer(
-                            markdown = message.content,
-                            fontSizeSp = fontSizeSp,
-                            onOpenFile = onOpenFile,
-                            onOpenImage = onOpenImage,
-                            onSendMessage = onSendMessage,
-                            onFillInput = onFillInput
-                        )
-                    }
+                    botContentComposable()
                 }
 
                 // Figma Actions Toolbar (👍 👎 ↗ 📋 ⋮) + Token Stats

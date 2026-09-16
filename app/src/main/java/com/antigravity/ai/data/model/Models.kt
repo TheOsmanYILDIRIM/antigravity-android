@@ -131,6 +131,10 @@ data class ConversationMeta(
     val id: String,
     @SerializedName("title")
     val title: String = "Yeni Sohbet",
+    @SerializedName("projectName")
+    val projectName: String? = null,
+    @SerializedName("projectTag")
+    val projectTag: String? = null,
     @SerializedName("createdAt")
     val createdAt: String? = null,
     @SerializedName("lastMessageTime")
@@ -455,6 +459,10 @@ data class SessionData(
     val conversationId: String?,
     @SerializedName("title")
     val title: String?,
+    @SerializedName("projectName")
+    val projectName: String? = null,
+    @SerializedName("projectTag")
+    val projectTag: String? = null,
     @SerializedName("messages")
     val messages: List<SessionMessage>?,
     @SerializedName("isGenerating")

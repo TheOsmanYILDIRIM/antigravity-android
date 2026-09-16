@@ -90,7 +90,9 @@ data class ChatUiState(
     val notice: String? = null,
     val activeBackend: String = "agy",
     val pendingPermission: PermissionRequestData? = null,
-    val pendingQuestion: QuestionRequestData? = null
+    val pendingQuestion: QuestionRequestData? = null,
+    val currentProjectName: String? = null,
+    val selectedProjectFilter: String? = null
 )
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
@@ -106,12 +108,29 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private var speechRecognizer: SpeechRecognizer? = null
 
+    private fun getDraftKey(sessionId: String?): String = "draft_${sessionId ?: "new_chat"}"
+
+    private fun saveDraft(sessionId: String?, text: String) {
+        val key = getDraftKey(sessionId)
+        if (text.isBlank()) {
+            prefs.edit().remove(key).apply()
+        } else {
+            prefs.edit().putString(key, text).apply()
+        }
+    }
+
+    private fun getDraft(sessionId: String?): String {
+        val key = getDraftKey(sessionId)
+        return prefs.getString(key, "") ?: ""
+    }
+
     init {
         initSpeechRecognizer()
+        val initialDraft = getDraft(null)
         val floatPrefs = application.getSharedPreferences(FloatingKeepAliveService.PREFS_NAME, Context.MODE_PRIVATE)
         val keepAliveEnabled = floatPrefs.getBoolean(FloatingKeepAliveService.KEY_ENABLED, false)
         val keepAliveMode = floatPrefs.getString(FloatingKeepAliveService.KEY_MODE, "invisible") ?: "invisible"
-        _uiState.update { it.copy(isKeepAliveRunning = keepAliveEnabled, keepAliveMode = keepAliveMode) }
+        _uiState.update { it.copy(inputText = initialDraft, isKeepAliveRunning = keepAliveEnabled, keepAliveMode = keepAliveMode) }
         if (keepAliveEnabled && FloatingKeepAliveService.canDrawOverlays(application)) {
             FloatingKeepAliveService.startKeepAlive(application)
         }
@@ -577,13 +596,23 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                 _uiState.update { state ->
                     val combinedGenerating = (state.generatingConversationIds + serverGeneratingIds).toSet()
+                    val activeId = state.currentConversationId ?: state.currentSessionId
+                    val activeProj = if (activeId != null) {
+                        res.conversations?.find { it.id == activeId }?.let { it.projectName ?: it.projectTag } ?: state.currentProjectName
+                    } else state.currentProjectName
+
                     state.copy(
                         conversations = res.conversations ?: emptyList(),
+                        currentProjectName = activeProj,
                         generatingConversationIds = combinedGenerating
                     )
                 }
             }
         }
+    }
+
+    fun setProjectFilter(filter: String?) {
+        _uiState.update { it.copy(selectedProjectFilter = filter) }
     }
 
     fun fetchModelsConfig() {
@@ -646,18 +675,24 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectConversation(id: String) {
         if (id.isBlank()) return
+        val currentId = _uiState.value.currentConversationId ?: _uiState.value.currentSessionId
+        saveDraft(currentId, _uiState.value.inputText)
+
         viewModelScope.launch {
             repository.loadConversation(id).onSuccess { res ->
                 val serverMessages = res.session?.messages?.map { mapSessionMessage(it) } ?: emptyList()
                 val convId = res.session?.conversationId ?: res.session?.id ?: id
                 val isConvGenerating = _uiState.value.generatingConversationIds.contains(convId) || res.isGenerating
+                val projectName = res.session?.projectName ?: res.session?.projectTag ?: _uiState.value.conversations.find { it.id == convId }?.let { it.projectName ?: it.projectTag }
+                val draftText = getDraft(convId)
                 _uiState.update {
                     it.copy(
                         messages = serverMessages,
                         currentSessionId = convId,
                         currentConversationId = convId,
+                        currentProjectName = projectName,
                         isGenerating = isConvGenerating,
-                        inputText = "",
+                        inputText = draftText,
                         attachments = emptyList(),
                         pastedBlocks = emptyList(),
                         notice = null
@@ -668,16 +703,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteConversation(id: String) {
+        saveDraft(id, "")
         viewModelScope.launch {
             repository.deleteConversation(id).onSuccess {
                 fetchConversations()
                 val wasActive = _uiState.value.currentConversationId == id || _uiState.value.currentSessionId == id
                 if (wasActive) {
+                    val newDraft = getDraft(null)
                     _uiState.update {
                         it.copy(
                             messages = emptyList(),
                             currentSessionId = null,
                             currentConversationId = null,
+                            currentProjectName = null,
+                            inputText = newDraft,
                             isGenerating = false,
                             notice = null
                         )
@@ -1183,10 +1222,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 val cleanPrefix = if (prefix.isNotEmpty() && !prefix.endsWith(" ")) "$prefix " else prefix
                 val cleanSuffix = if (suffix.isNotEmpty() && !suffix.startsWith(" ")) " $suffix" else suffix
                 val updatedInput = "$cleanPrefix$tag$cleanSuffix".trim()
+                val finalInput = if (updatedInput.endsWith(tag)) "$updatedInput " else updatedInput
+                saveDraft(_uiState.value.currentConversationId ?: _uiState.value.currentSessionId, finalInput)
 
                 _uiState.update {
                     it.copy(
-                        inputText = if (updatedInput.endsWith(tag)) "$updatedInput " else updatedInput,
+                        inputText = finalInput,
                         pastedBlocks = newBlocks
                     )
                 }
@@ -1197,6 +1238,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val lastWord = newText.split(Regex("[\\s\n]+")).lastOrNull() ?: ""
         val isSlash = lastWord.startsWith("/") && lastWord.length >= 1
         val isMention = lastWord.startsWith("@")
+
+        saveDraft(_uiState.value.currentConversationId ?: _uiState.value.currentSessionId, newText)
 
         _uiState.update {
             it.copy(
@@ -1616,6 +1659,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         val activeConvId = state.currentConversationId
+        val activeDraftId = activeConvId ?: state.currentSessionId
+        saveDraft(activeDraftId, "")
+
         val isContinue = !activeConvId.isNullOrBlank()
         viewModelScope.launch {
             repository.sendMessage(
@@ -1638,15 +1684,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startNewChat() {
+        val currentId = _uiState.value.currentConversationId ?: _uiState.value.currentSessionId
+        saveDraft(currentId, _uiState.value.inputText)
+
         viewModelScope.launch {
             repository.startNewChat().onSuccess { res ->
+                val newDraft = getDraft(null)
                 _uiState.update {
                     it.copy(
                         messages = emptyList(),
                         isGenerating = false,
                         currentSessionId = null,
                         currentConversationId = null,
-                        inputText = "",
+                        currentProjectName = null,
+                        inputText = newDraft,
                         pastedBlocks = emptyList(),
                         attachments = emptyList(),
                         notice = null

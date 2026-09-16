@@ -99,6 +99,7 @@ dependencies {
 
     // Coil Image Loading in Compose
     implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-svg:2.6.0")
 
     // Navigation & Coroutines
     implementation("androidx.navigation:navigation-compose:2.7.7")

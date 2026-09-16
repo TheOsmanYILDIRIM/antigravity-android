@@ -42,3 +42,27 @@ val DangerRed = Color(0xFFEA4335)
 // Code Blocks
 val CodeBlockBackground = Color(0xFF1E1F20)
 val CodeBlockBorder = Color(0xFF37393B)
+
+// Deterministic Project Colors (Subtle card theme tints & mini badges)
+object ProjectColorUtil {
+    private val projectColors = listOf(
+        Color(0xFF4285F4), // Gemini Blue
+        Color(0xFF10B981), // Emerald Green
+        Color(0xFF9B72CB), // Purple / Violet
+        Color(0xFFF59E0B), // Amber / Gold
+        Color(0xFFEC4899), // Rose Pink
+        Color(0xFF06B6D4), // Cyan
+        Color(0xFFF97316), // Orange
+        Color(0xFF14B8A6), // Teal
+        Color(0xFF6366F1), // Indigo
+        Color(0xFF84CC16), // Lime
+        Color(0xFFA855F7), // Magenta
+        Color(0xFFE11D48)  // Crimson
+    )
+
+    fun getColorForProject(projectName: String?): Color {
+        if (projectName.isNullOrBlank()) return PrimaryIndigo
+        val hash = kotlin.math.abs(projectName.lowercase().trim().hashCode())
+        return projectColors[hash % projectColors.size]
+    }
+}

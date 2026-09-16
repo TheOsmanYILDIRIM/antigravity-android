@@ -62,6 +62,7 @@ fun ChatScreen(
     val context = LocalContext.current
     var templateToFill by remember { mutableStateOf<com.antigravity.ai.data.model.PromptTemplate?>(null) }
     var showTemplateManager by remember { mutableStateOf(false) }
+    var showQuickModelSheet by remember { mutableStateOf(false) }
 
     val showScrollToBottom by remember {
         derivedStateOf {
@@ -205,6 +206,20 @@ fun ChatScreen(
         )
     }
 
+    // Quick Model Selector Bottom Sheet (Dedicated lightweight model selector)
+    if (showQuickModelSheet) {
+        QuickModelSelectorSheet(
+            selectedModelId = uiState.settings.model,
+            selectedEffort = uiState.settings.effort,
+            availableModels = uiState.availableModels,
+            availableEfforts = uiState.availableEfforts,
+            onSelectModel = { modelId, effort ->
+                viewModel.updateSettings(uiState.settings.copy(model = modelId, effort = effort))
+            },
+            onDismiss = { showQuickModelSheet = false }
+        )
+    }
+
     // opencode izin onayı dialogu
     if (uiState.pendingPermission != null) {
         val perm = uiState.pendingPermission!!
@@ -326,10 +341,16 @@ fun ChatScreen(
                 onRefresh = { viewModel.refreshAll() },
                 onStartServer = { viewModel.startAgyServer() },
                 onStopServer = { viewModel.stopAgyServer() },
-                onExitApp = onExitApp
+                onExitApp = onExitApp,
+                selectedProjectFilter = uiState.selectedProjectFilter,
+                onSelectProjectFilter = viewModel::setProjectFilter
             )
         }
     ) {
+        val activeProjectColor = remember(uiState.currentProjectName) {
+            uiState.currentProjectName?.let { ProjectColorUtil.getColorForProject(it) }
+        }
+
         Scaffold(
             topBar = {
                 val selectedModelName = uiState.availableModels.find { it.id == uiState.settings.model }?.name
@@ -379,6 +400,7 @@ fun ChatScreen(
                     usage = uiState.usage,
                     isGenerating = uiState.isGenerating,
                     modelName = selectedModelName,
+                    projectName = uiState.currentProjectName,
                     sessionTokens = activeTokens,
                     sessionDataBytes = totalSessionBytes,
                     onModelClick = {
@@ -478,7 +500,7 @@ fun ChatScreen(
                         onRemoveAttachment = viewModel::removeAttachment,
                         onEditImage = { att -> viewModel.openImageMarkup(att, att.name) },
                         selectedModelName = selectedModelName,
-                        onModelPillClick = { viewModel.setSettingsDialogVisible(true) },
+                        onModelPillClick = { showQuickModelSheet = true },
                         isGenerating = uiState.isGenerating,
                         isListening = uiState.isListening,
                         onSend = viewModel::sendMessage,
@@ -587,6 +609,14 @@ fun ChatScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
+                        .then(
+                            if (activeProjectColor != null) {
+                                Modifier
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(activeProjectColor.copy(alpha = 0.035f))
+                            } else Modifier
+                        )
                 ) {
                     if (uiState.messages.isEmpty()) {
                         FigmaGeminiHomeView(
@@ -601,7 +631,7 @@ fun ChatScreen(
                             state = listState,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 16.dp),
+                                .padding(horizontal = if (activeProjectColor != null) 10.dp else 16.dp),
                             contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp)
                         ) {
                             items(uiState.messages, key = { it.id }) { msg ->
@@ -610,6 +640,7 @@ fun ChatScreen(
                                     message = msg,
                                     isLastBotMessage = isLastBot,
                                     fontSizeSp = uiState.settings.fontSizeSp,
+                                    projectColor = activeProjectColor,
                                     onOpenFile = { path -> viewModel.openFileInViewer(path) },
                                     onOpenImage = { url, title -> viewModel.openImageInViewer(url, title) },
                                     onSendMessage = { text -> viewModel.sendMessage(text) },
