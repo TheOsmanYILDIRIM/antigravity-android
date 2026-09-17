@@ -131,10 +131,27 @@ fun ChatScreen(
         }
     }
 
-    // Auto-scroll on new messages
-    LaunchedEffect(uiState.messages.size, uiState.messages.lastOrNull()?.content) {
+    // Track conversation ID and initial load to instantly position at the very bottom
+    var lastLoadedConversationId by remember { mutableStateOf<String?>(null) }
+
+    // Instant jump to the very bottom when a conversation is opened or loaded
+    LaunchedEffect(uiState.currentConversationId, uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
-            listState.animateScrollToItem(uiState.messages.size - 1)
+            if (lastLoadedConversationId != uiState.currentConversationId) {
+                lastLoadedConversationId = uiState.currentConversationId
+                listState.scrollToItem(uiState.messages.size - 1, scrollOffset = 100000)
+            }
+        }
+    }
+
+    // Auto-scroll on new messages or streaming chunks (instant jump pinned to bottom if already near end)
+    LaunchedEffect(uiState.messages.size, uiState.messages.lastOrNull()?.content?.length) {
+        if (uiState.messages.isNotEmpty()) {
+            val totalItems = uiState.messages.size
+            val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            if (lastVisibleIndex >= totalItems - 3) {
+                listState.scrollToItem(totalItems - 1, scrollOffset = 100000)
+            }
         }
     }
 
@@ -678,7 +695,9 @@ fun ChatScreen(
                             .clip(CircleShape)
                             .clickable {
                                 scope.launch {
-                                    listState.animateScrollToItem(uiState.messages.size - 1)
+                                    if (uiState.messages.isNotEmpty()) {
+                                        listState.animateScrollToItem(uiState.messages.size - 1, scrollOffset = 100000)
+                                    }
                                 }
                             }
                     ) {
