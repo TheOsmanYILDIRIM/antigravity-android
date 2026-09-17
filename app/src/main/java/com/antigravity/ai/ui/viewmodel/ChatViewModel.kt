@@ -322,12 +322,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             updatedSet.add(event.conversationId)
                             val isCurrentlyNew = state.currentConversationId == null
                             val targetId = if (isCurrentlyNew) event.conversationId else state.currentConversationId
-                            sessionMessagesCache[event.conversationId] = (if (isCurrentlyNew) state.messages else emptyList()).toMutableList()
+                            val cached = sessionMessagesCache.getOrPut(event.conversationId) { mutableListOf() }
+                            if (cached.isEmpty() && (isCurrentlyNew || targetId == event.conversationId)) {
+                                cached.addAll(state.messages)
+                            }
                             state.copy(
                                 currentSessionId = targetId,
                                 currentConversationId = targetId,
                                 generatingConversationIds = updatedSet,
-                                isGenerating = if (isCurrentlyNew) true else state.isGenerating
+                                isGenerating = if (isCurrentlyNew || targetId == event.conversationId) true else state.isGenerating
                             )
                         }
                         fetchConversations()
@@ -456,7 +459,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             state.copy(
                                 messages = updatedMessages,
                                 isGenerating = isStillGenerating,
-                                generatingConversationIds = updatedSet
+                                generatingConversationIds = updatedSet,
+                                errorMessage = null
                             )
                         }
                         fireNotification("Antigravity AI", "Yanıt hazır — sıra sende")
@@ -1680,6 +1684,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val activeConvId = state.currentConversationId
         if (activeConvId != null) {
             val cached = sessionMessagesCache.getOrPut(activeConvId) { mutableListOf() }
+            if (cached.isEmpty() && state.messages.isNotEmpty()) {
+                cached.addAll(state.messages)
+            }
             cached.add(userMessage)
             cached.add(botPlaceholder)
         }
