@@ -346,7 +346,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             } else {
                                 event.conversationId?.let { updatedSet.remove(it) }
                                 val isCurrentDone = event.conversationId == null || event.conversationId == currentActiveId
+                                val updatedMessages = if (isCurrentDone) {
+                                    state.messages.map { msg ->
+                                        if (msg.state == MessageState.GENERATING) msg.copy(state = MessageState.DONE) else msg
+                                    }
+                                } else {
+                                    state.messages
+                                }
                                 state.copy(
+                                    messages = updatedMessages,
                                     generatingConversationIds = updatedSet,
                                     isGenerating = if (isCurrentDone) false else state.isGenerating
                                 )
@@ -441,7 +449,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             val updatedMessages = if (targetId != null && targetId == state.currentConversationId && sessionMessagesCache.containsKey(targetId)) {
                                 ArrayList(sessionMessagesCache[targetId] ?: emptyList())
                             } else {
-                                state.messages
+                                state.messages.map { msg ->
+                                    if (msg.state == MessageState.GENERATING) msg.copy(state = MessageState.DONE) else msg
+                                }
                             }
                             state.copy(
                                 messages = updatedMessages,
@@ -470,7 +480,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                             val updatedMessages = if (targetId != null && targetId == state.currentConversationId && sessionMessagesCache.containsKey(targetId)) {
                                 ArrayList(sessionMessagesCache[targetId] ?: emptyList())
                             } else {
-                                state.messages
+                                state.messages.map { msg ->
+                                    if (msg.state == MessageState.GENERATING) msg.copy(state = MessageState.DONE) else msg
+                                }
                             }
                             state.copy(
                                 messages = updatedMessages,
