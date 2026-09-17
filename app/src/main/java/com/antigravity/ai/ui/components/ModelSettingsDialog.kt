@@ -377,6 +377,26 @@ fun ModelSettingsDialog(
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 modelsList.forEach { modelItem ->
                     val isSelected = selectedModel == modelItem.id
+                    val isClaude = modelItem.id.contains("claude", ignoreCase = true)
+                    val isHighEffort = modelItem.name.contains("High", ignoreCase = true) || modelItem.id.contains("high", ignoreCase = true)
+                    val isLowEffort = modelItem.name.contains("Low", ignoreCase = true) || modelItem.id.contains("low", ignoreCase = true)
+                    val isThinking = modelItem.name.contains("Thinking", ignoreCase = true) || isHighEffort
+
+                    val brandColor = if (isClaude) Color(0xFFD97706) else PrimaryIndigo
+
+                    val cleanTitle = modelItem.name
+                        .replace(Regex("\\s*\\((Low|Medium|High|Thinking)\\)", RegexOption.IGNORE_CASE), "")
+                        .trim()
+
+                    val badgeLabel = when {
+                        isClaude && isThinking -> "🧠 Thinking"
+                        isHighEffort -> "⚡ High"
+                        isLowEffort -> "⚡ Hızlı"
+                        modelItem.name.contains("Pro", ignoreCase = true) -> "✦ Pro"
+                        modelItem.name.contains("Flash", ignoreCase = true) -> "✦ Flash"
+                        else -> null
+                    }
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -384,22 +404,46 @@ fun ModelSettingsDialog(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
                             .background(if (isSelected) SurfaceVariantDark else Color.Transparent)
-                            .border(1.dp, if (isSelected) PrimaryIndigo else BorderSubtle, RoundedCornerShape(10.dp))
+                            .border(1.dp, if (isSelected) brandColor else BorderSubtle, RoundedCornerShape(10.dp))
                             .clickable { selectedModel = modelItem.id }
-                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                            .padding(horizontal = 12.dp, vertical = 9.dp)
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = modelItem.name,
-                                fontSize = 13.sp,
-                                color = if (isSelected) TextPrimary else TextSecondary,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = cleanTitle,
+                                    fontSize = 13.sp,
+                                    color = if (isSelected) TextPrimary else TextSecondary,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                                if (badgeLabel != null) {
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = brandColor.copy(alpha = 0.18f)
+                                    ) {
+                                        Text(
+                                            text = badgeLabel,
+                                            fontSize = 9.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = brandColor,
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                        )
+                                    }
+                                }
+                            }
                             if (modelItem.description.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = modelItem.description,
-                                    fontSize = 10.sp,
-                                    color = TextMuted
+                                    fontSize = 10.5.sp,
+                                    color = TextMuted,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -407,7 +451,7 @@ fun ModelSettingsDialog(
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
-                                tint = PrimaryIndigo,
+                                tint = brandColor,
                                 modifier = Modifier.size(16.dp)
                             )
                         }

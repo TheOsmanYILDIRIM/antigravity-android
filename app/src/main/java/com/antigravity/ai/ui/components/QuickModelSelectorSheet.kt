@@ -121,7 +121,7 @@ fun QuickModelSelectorSheet(
 
             // Thinking Effort Selector Chips
             Text(
-                text = "Düşünme Seviyesi (Reasoning / Effort)",
+                text = "Düşünme Seviyesi (Reasoning Effort)",
                 fontSize = 11.5.sp,
                 fontWeight = FontWeight.Medium,
                 color = TextSecondary,
@@ -131,42 +131,49 @@ fun QuickModelSelectorSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 14.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 effortsList.forEach { effort ->
                     val isEffortSelected = tempEffort == effort.id
+                    val effortDisplay = when (effort.id) {
+                        "low" -> "⚡ Hızlı"
+                        "medium" -> "⚖️ Dengeli"
+                        "high" -> "🧠 Derin"
+                        else -> "Standart"
+                    }
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (isEffortSelected) PrimaryIndigo.copy(alpha = 0.2f) else SurfaceVariantDark,
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isEffortSelected) PrimaryIndigo.copy(alpha = 0.22f) else SurfaceVariantDark,
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
                             if (isEffortSelected) PrimaryIndigo else BorderSubtle
                         ),
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(8.dp))
                             .clickable {
                                 tempEffort = effort.id
                                 onSelectModel(tempModelId, tempEffort)
                             }
                     ) {
-                        Column(
-                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                        Box(
+                            modifier = Modifier.padding(vertical = 7.dp, horizontal = 2.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = effort.name,
-                                fontSize = 12.sp,
+                                text = effortDisplay,
+                                fontSize = 11.5.sp,
                                 fontWeight = if (isEffortSelected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isEffortSelected) PrimaryIndigo else TextPrimary
+                                color = if (isEffortSelected) PrimaryIndigo else TextSecondary,
+                                maxLines = 1
                             )
                         }
                     }
                 }
             }
 
-            Divider(color = BorderSubtle, thickness = 1.dp, modifier = Modifier.padding(bottom = 12.dp))
+            HorizontalDivider(color = BorderSubtle, thickness = 1.dp, modifier = Modifier.padding(bottom = 10.dp))
 
             // Models List
             Text(
@@ -181,13 +188,15 @@ fun QuickModelSelectorSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 380.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 items(modelsList) { model ->
                     val isSelected = tempModelId == model.id
                     val isClaude = model.id.contains("claude", ignoreCase = true)
                     val isPro = model.id.contains("pro", ignoreCase = true)
-                    val isThinking = model.name.contains("Thinking", ignoreCase = true) || model.id.contains("high", ignoreCase = true)
+                    val isHighEffort = model.name.contains("High", ignoreCase = true) || model.id.contains("high", ignoreCase = true)
+                    val isLowEffort = model.name.contains("Low", ignoreCase = true) || model.id.contains("low", ignoreCase = true)
+                    val isThinking = model.name.contains("Thinking", ignoreCase = true) || isHighEffort
 
                     val brandColor = when {
                         isClaude -> Color(0xFFD97706) // Claude Amber
@@ -195,8 +204,23 @@ fun QuickModelSelectorSheet(
                         else -> GeminiBlue
                     }
 
+                    val cleanTitle = remember(model.name) {
+                        model.name
+                            .replace(Regex("\\s*\\((Low|Medium|High|Thinking)\\)", RegexOption.IGNORE_CASE), "")
+                            .trim()
+                    }
+
+                    val badgeLabel = when {
+                        isClaude && isThinking -> "🧠 Thinking"
+                        isHighEffort -> "⚡ High"
+                        isLowEffort -> "⚡ Hızlı"
+                        isPro -> "✦ Pro"
+                        model.name.contains("Flash", ignoreCase = true) -> "✦ Flash"
+                        else -> null
+                    }
+
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
                         color = if (isSelected) brandColor.copy(alpha = 0.12f) else SurfaceVariantDark.copy(alpha = 0.7f),
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
@@ -204,7 +228,7 @@ fun QuickModelSelectorSheet(
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(10.dp))
                             .clickable {
                                 tempModelId = model.id
                                 onSelectModel(tempModelId, tempEffort)
@@ -214,13 +238,13 @@ fun QuickModelSelectorSheet(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(horizontal = 10.dp, vertical = 9.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             // Model icon
                             Box(
                                 modifier = Modifier
-                                    .size(34.dp)
+                                    .size(28.dp)
                                     .clip(CircleShape)
                                     .background(brandColor.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center
@@ -229,32 +253,36 @@ fun QuickModelSelectorSheet(
                                     imageVector = if (isThinking) Icons.Default.Psychology else Icons.Default.Speed,
                                     contentDescription = null,
                                     tint = brandColor,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(15.dp)
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
 
                             Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
                                     Text(
-                                        text = model.name,
-                                        fontSize = 14.sp,
+                                        text = cleanTitle,
+                                        fontSize = 13.5.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                        color = if (isSelected) brandColor else TextPrimary
+                                        color = if (isSelected) brandColor else TextPrimary,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
-                                    if (isThinking) {
-                                        Spacer(modifier = Modifier.width(6.dp))
+                                    if (badgeLabel != null) {
                                         Surface(
                                             shape = RoundedCornerShape(4.dp),
-                                            color = brandColor.copy(alpha = 0.2f)
+                                            color = brandColor.copy(alpha = 0.18f)
                                         ) {
                                             Text(
-                                                text = "Thinking",
-                                                fontSize = 9.sp,
+                                                text = badgeLabel,
+                                                fontSize = 9.5.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = brandColor,
-                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
                                             )
                                         }
                                     }
@@ -263,8 +291,8 @@ fun QuickModelSelectorSheet(
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = model.description,
-                                        fontSize = 11.5.sp,
-                                        color = TextSecondary,
+                                        fontSize = 11.sp,
+                                        color = TextMuted,
                                         maxLines = 1,
                                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
@@ -274,7 +302,7 @@ fun QuickModelSelectorSheet(
                             if (isSelected) {
                                 Box(
                                     modifier = Modifier
-                                        .size(22.dp)
+                                        .size(20.dp)
                                         .clip(CircleShape)
                                         .background(brandColor),
                                     contentAlignment = Alignment.Center
@@ -283,7 +311,7 @@ fun QuickModelSelectorSheet(
                                         imageVector = Icons.Default.Check,
                                         contentDescription = "Seçili",
                                         tint = Color.Black,
-                                        modifier = Modifier.size(14.dp)
+                                        modifier = Modifier.size(13.dp)
                                     )
                                 }
                             }

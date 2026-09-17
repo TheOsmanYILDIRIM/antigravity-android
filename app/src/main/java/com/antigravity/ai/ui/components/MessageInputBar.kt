@@ -38,6 +38,29 @@ import com.antigravity.ai.data.model.Attachment
 import com.antigravity.ai.data.model.PastedBlock
 import com.antigravity.ai.ui.theme.*
 
+// Helper to format model name and reasoning weight in a sleek, compact way
+private fun formatCompactModelPill(rawName: String): String {
+    val parts = rawName.split("•").map { it.trim() }
+    val baseName = parts.getOrNull(0) ?: rawName
+    val effort = parts.getOrNull(1)?.lowercase() ?: ""
+
+    val clean = baseName
+        .replace(Regex("\\s*\\((Low|Medium|High|Thinking)\\)", RegexOption.IGNORE_CASE), "")
+        .trim()
+
+    val isHigh = baseName.contains("High", ignoreCase = true) ||
+                 baseName.contains("Thinking", ignoreCase = true) ||
+                 effort.contains("yüksek") || effort.contains("derin") || effort.contains("high")
+    val isLow = baseName.contains("Low", ignoreCase = true) ||
+                effort.contains("düşük") || effort.contains("hızlı") || effort.contains("low")
+
+    return when {
+        isHigh -> "$clean ⚡"
+        isLow -> "$clean • Hızlı"
+        else -> clean
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageInputBar(
@@ -279,7 +302,8 @@ fun MessageInputBar(
                     // Left Actions: + Attach and Model Pill
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.weight(1f, fill = false)
                     ) {
                         // + Attachment / Long-click Template Action
                         Box(contentAlignment = Alignment.Center) {
@@ -460,6 +484,10 @@ fun MessageInputBar(
                         }
 
                         // Model Selector Pill (Figma "Fast" / Model chip)
+                        val formattedPillText = remember(selectedModelName) {
+                            formatCompactModelPill(selectedModelName)
+                        }
+
                         Surface(
                             shape = RoundedCornerShape(16.dp),
                             color = SurfaceVariantDark,
@@ -469,30 +497,34 @@ fun MessageInputBar(
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Tune,
                                     contentDescription = null,
                                     tint = GeminiBlue,
-                                    modifier = Modifier.size(14.dp)
+                                    modifier = Modifier.size(13.dp)
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = selectedModelName.replace(" (Medium)", "").replace(" (High)", " ⚡"),
-                                    fontSize = 12.sp,
+                                    text = formattedPillText,
+                                    fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = TextPrimary,
-                                    maxLines = 1
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                 )
                             }
                         }
                     }
 
+                    Spacer(modifier = Modifier.width(6.dp))
+
                     // Right Actions: Mic & Live Waveform / Send Button
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.wrapContentWidth()
                     ) {
                         // Voice Mic
                         IconButton(

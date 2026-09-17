@@ -1,6 +1,10 @@
 # Antigravity Android - Günlük & Değişiklik Günlüğü (log.md)
 
-## [2026-09-15] Görsel Çizim Editörü, Oto-Compact Kalıcılığı ve Tool Gruplama Sabitliği
+## [2026-09-17] Input Bar Buton Taşma / Sıkışma Düzeltmesi ve Minimal Model Sunumu
+- **Input Bar Buton Sıkışması ve Görünmezlik Engeli:** Sol eylem çubuğuna (`+` ve Model Seçici Hapı) `Modifier.weight(1f, fill = false)` eklendi ve sağ eylem çubuğu (`Sesli Yaz` + `Gönder / Live Waveform`) taşma ve sıkışmaya karşı korundu. Dar ekranlarda veya uzun model isimlerinde sağ butonların ekrandan dışarı taşması / görünmez olması tamamen engellendi.
+- **Akıllı ve Minimal Model Hapı Formatı (`formatCompactModelPill`):** Giriş barındaki model hapında gereksiz parantez içi ağırlık etiketleri (`(Low)`, `(Medium)`, `(High)`, `(Thinking)`) temizlendi; akıl yürütme seviyesi `⚡` (Yüksek/Derin) veya `• Hızlı` (Düşük) şeklinde minimalleştirildi.
+- **Minimal Model & Ağırlık Seçici (`QuickModelSelectorSheet` & `ModelSettingsDialog`):** Düşünme seviyesi çipleri kompakt ikonlu sekmelere (`⚡ Hızlı`, `⚖️ Dengeli`, `🧠 Derin`, `Standart`) dönüştürüldü; modeller listesinde karmaşık uzun açıklamalar yerine temiz başlıklar ve şık etiket rozetleri (`✦ Flash`, `✦ Pro`, `⚡ High`, `🧠 Thinking`) ile yüksek okunabilirlik sağlandı.
+
 - **Termux Uploads Köprüsü & Sandbox İzolasyonu Düzeltmesi:** Çizilen ve işaretlenen tüm görseller Android private sandbox'ında bırakılmayıp `server.js` (`/api/upload`) üzerinden Termux `/data/data/com.termux/files/home/uploads/` dizinine yüklendi; AI'ın görsellere doğrudan ve eksiksiz erişmesi sağlandı.
 - **Oto-Compact Ayarı Kalıcılığı:** `autoCompactEnabled` ve `compactThresholdTokens` değerleri SharedPreferences yükleme/kaydetme döngüsüne (`loadSavedSettings` & `saveSettings`) dahil edildi, ayarların unutulması engellendi.
 - **Görsel Üzerine Çizim & İşaretleme Editörü (Image Markup Dialog):** Kırmızı kalem, ok işareti, daire ve dikdörtgen kutu araçları, renk paleti ve kalınlık seçenekleriyle ekran görüntüleri üzerine anında çizim yapıp AI'a görsel talimat verme özelliği eklendi.
