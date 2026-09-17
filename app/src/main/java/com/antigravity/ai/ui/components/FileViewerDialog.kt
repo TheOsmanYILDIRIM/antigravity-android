@@ -1,10 +1,15 @@
 package com.antigravity.ai.ui.components
 
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Environment
+import android.webkit.MimeTypeMap
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -32,8 +37,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.FileProvider
 import com.antigravity.ai.data.model.FsContentResponse
 import com.antigravity.ai.ui.theme.*
+import java.io.File
+import java.io.FileOutputStream
 
 @Composable
 fun FileViewerDialog(
@@ -68,59 +76,55 @@ fun FileViewerDialog(
                 // Top Header Bar
                 Surface(
                     color = SurfaceDark,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                    border = BorderStroke(1.dp, BorderSubtle),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(SurfaceVariantDark)
                         ) {
-                            IconButton(
-                                onClick = onDismiss,
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(SurfaceVariantDark)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Kapat",
-                                    tint = TextPrimary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(10.dp))
-
-                            Column {
-                                Text(
-                                    text = fileName,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = TextPrimary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = if (contentResponse != null) {
-                                        "${contentResponse.lineCount} satır • ${formatBytes(contentResponse.size)} • ${filePath.substringBeforeLast("/")}"
-                                    } else filePath,
-                                    fontSize = 11.sp,
-                                    color = TextMuted,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Kapat",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
 
-                        // Top Action icons
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = fileName,
+                                fontSize = 14.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = if (contentResponse != null) {
+                                    "${contentResponse.lineCount} satır • ${formatBytes(contentResponse.size)} • ${filePath.substringBeforeLast("/")}"
+                                } else filePath,
+                                fontSize = 11.sp,
+                                color = TextMuted,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
+                        // Compact Top Action Icon Bar (Non-overlapping)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -134,16 +138,16 @@ fun FileViewerDialog(
                                             Toast.makeText(context, "Kaydedildi!", Toast.LENGTH_SHORT).show()
                                         },
                                         colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                                         modifier = Modifier.height(32.dp)
                                     ) {
-                                        Text("Kaydet", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                        Text("Kaydet", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                     }
                                 } else {
                                     IconButton(
                                         onClick = { isEditing = true },
                                         modifier = Modifier
-                                            .size(34.dp)
+                                            .size(32.dp)
                                             .clip(CircleShape)
                                             .background(SurfaceVariantDark)
                                     ) {
@@ -151,12 +155,67 @@ fun FileViewerDialog(
                                             imageVector = Icons.Outlined.Edit,
                                             contentDescription = "Düzenle",
                                             tint = GeminiBlue,
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(15.dp)
                                         )
                                     }
                                 }
                             }
 
+                            // Dışarıda Aç (Open In External App)
+                            IconButton(
+                                onClick = {
+                                    openFileWithExternalApp(context, filePath, fileName, contentResponse?.content)
+                                },
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(SurfaceVariantDark)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.OpenInNew,
+                                    contentDescription = "Dışarıda Aç",
+                                    tint = GeminiBlue,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+
+                            // Storage'a Kopyala / İndir
+                            IconButton(
+                                onClick = {
+                                    copyFileToStorage(context, filePath, fileName, contentResponse?.content)
+                                },
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(SurfaceVariantDark)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Download,
+                                    contentDescription = "İndir / Storage'a Kaydet",
+                                    tint = SuccessGreen,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+
+                            // Dosyayı Paylaş (Share File with Intent)
+                            IconButton(
+                                onClick = {
+                                    shareFileWithIntent(context, filePath, fileName, contentResponse?.content)
+                                },
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(SurfaceVariantDark)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Share,
+                                    contentDescription = "Dosyayı Paylaş",
+                                    tint = GeminiPurple,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+
+                            // İçeriği Kopyala
                             IconButton(
                                 onClick = {
                                     val textToCopy = contentResponse?.content ?: filePath
@@ -165,15 +224,15 @@ fun FileViewerDialog(
                                     Toast.makeText(context, "İçerik panoya kopyalandı", Toast.LENGTH_SHORT).show()
                                 },
                                 modifier = Modifier
-                                    .size(34.dp)
+                                    .size(32.dp)
                                     .clip(CircleShape)
                                     .background(SurfaceVariantDark)
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.ContentCopy,
-                                    contentDescription = "Kopyala",
-                                    tint = TextPrimary,
-                                    modifier = Modifier.size(16.dp)
+                                    contentDescription = "Metni Kopyala",
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(15.dp)
                                 )
                             }
                         }
@@ -185,7 +244,7 @@ fun FileViewerDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     if (isLoading) {
                         Column(
@@ -224,6 +283,24 @@ fun FileViewerDialog(
                                 fontSize = 13.sp,
                                 color = TextMuted
                             )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = { openFileWithExternalApp(context, filePath, fileName, null) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = GeminiBlue)
+                                ) {
+                                    Icon(imageVector = Icons.Outlined.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Uygulama ile Aç")
+                                }
+                                OutlinedButton(
+                                    onClick = { copyFileToStorage(context, filePath, fileName, null) }
+                                ) {
+                                    Icon(imageVector = Icons.Outlined.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("İndirilenler'e Kaydet")
+                                }
+                            }
                         }
                     } else {
                         if (isEditing) {
@@ -248,7 +325,7 @@ fun FileViewerDialog(
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
                                 color = SurfaceDark,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                                border = BorderStroke(1.dp, BorderSubtle),
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 val vScroll = rememberScrollState()
@@ -265,7 +342,7 @@ fun FileViewerDialog(
                                             .fillMaxSize()
                                             .verticalScroll(vScroll)
                                             .horizontalScroll(hScroll)
-                                            .padding(14.dp)
+                                            .padding(12.dp)
                                     )
                                 }
                             }
@@ -273,124 +350,247 @@ fun FileViewerDialog(
                     }
                 }
 
-                // Bottom Action Footer Bar
+                // Bottom Action Footer Bar (Scrollable to prevent any icon overlap on compact screens)
                 Surface(
                     color = SurfaceDark,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                    border = BorderStroke(1.dp, BorderSubtle),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // Sohbete Ekle Button
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = SurfaceVariantDark,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    onAttachToChat(filePath)
-                                    Toast.makeText(context, "Sohbete eklendi", Toast.LENGTH_SHORT).show()
-                                    onDismiss()
-                                }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AddComment,
-                                    contentDescription = null,
-                                    tint = PrimaryIndigo,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Sohbete Ekle",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = TextPrimary
-                                )
+                        ActionChip(
+                            icon = Icons.Default.AddComment,
+                            label = "Sohbete Ekle",
+                            tint = PrimaryIndigo,
+                            onClick = {
+                                onAttachToChat(filePath)
+                                Toast.makeText(context, "Sohbete eklendi", Toast.LENGTH_SHORT).show()
+                                onDismiss()
                             }
-                        }
+                        )
 
                         // Sohbette @Bahset Button
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = SurfaceVariantDark,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    onMentionInChat(filePath)
-                                    Toast.makeText(context, "Yol prompta eklendi", Toast.LENGTH_SHORT).show()
-                                    onDismiss()
-                                }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AlternateEmail,
-                                    contentDescription = null,
-                                    tint = GeminiBlue,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "@Bahset",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = TextPrimary
-                                )
+                        ActionChip(
+                            icon = Icons.Default.AlternateEmail,
+                            label = "@Bahset",
+                            tint = GeminiBlue,
+                            onClick = {
+                                onMentionInChat(filePath)
+                                Toast.makeText(context, "Yol prompta eklendi", Toast.LENGTH_SHORT).show()
+                                onDismiss()
                             }
-                        }
+                        )
+
+                        // Dışarıda Aç
+                        ActionChip(
+                            icon = Icons.Outlined.OpenInNew,
+                            label = "Dışarıda Aç",
+                            tint = GeminiBlue,
+                            onClick = {
+                                openFileWithExternalApp(context, filePath, fileName, contentResponse?.content)
+                            }
+                        )
+
+                        // Storage'a Kaydet
+                        ActionChip(
+                            icon = Icons.Outlined.Download,
+                            label = "İndirilenler'e Kaydet",
+                            tint = SuccessGreen,
+                            onClick = {
+                                copyFileToStorage(context, filePath, fileName, contentResponse?.content)
+                            }
+                        )
+
+                        // Dosyayı Paylaş
+                        ActionChip(
+                            icon = Icons.Outlined.Share,
+                            label = "Dosyayı Paylaş",
+                            tint = GeminiPurple,
+                            onClick = {
+                                shareFileWithIntent(context, filePath, fileName, contentResponse?.content)
+                            }
+                        )
 
                         // Yolu Kopyala
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = SurfaceVariantDark,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    clipboard.setPrimaryClip(ClipData.newPlainText("Path", filePath))
-                                    Toast.makeText(context, "Yol kopyalandı", Toast.LENGTH_SHORT).show()
-                                }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.ContentCopy,
-                                    contentDescription = null,
-                                    tint = TextSecondary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Yolu Kopyala",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = TextPrimary
-                                )
+                        ActionChip(
+                            icon = Icons.Outlined.ContentCopy,
+                            label = "Yolu Kopyala",
+                            tint = TextSecondary,
+                            onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Path", filePath))
+                                Toast.makeText(context, "Yol kopyalandı", Toast.LENGTH_SHORT).show()
                             }
-                        }
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ActionChip(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = SurfaceVariantDark,
+        border = BorderStroke(1.dp, BorderSubtle),
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(15.dp)
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text(
+                text = label,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
+            )
+        }
+    }
+}
+
+private fun getMimeType(fileName: String): String {
+    val ext = fileName.substringAfterLast('.', "").lowercase()
+    if (ext.isEmpty()) return "*/*"
+    val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
+    return when {
+        mime != null -> mime
+        ext == "kt" || ext == "kts" -> "text/x-kotlin"
+        ext == "java" -> "text/x-java-source"
+        ext == "py" -> "text/x-python"
+        ext == "js" || ext == "mjs" || ext == "cjs" -> "application/javascript"
+        ext == "ts" || ext == "tsx" -> "application/typescript"
+        ext == "json" -> "application/json"
+        ext == "md" || ext == "markdown" -> "text/markdown"
+        ext == "sh" || ext == "bash" -> "application/x-sh"
+        ext == "html" || ext == "htm" -> "text/html"
+        ext == "css" -> "text/css"
+        ext == "xml" -> "text/xml"
+        ext == "svg" -> "image/svg+xml"
+        ext == "png" -> "image/png"
+        ext == "jpg" || ext == "jpeg" -> "image/jpeg"
+        ext == "gif" -> "image/gif"
+        ext == "webp" -> "image/webp"
+        ext == "pdf" -> "application/pdf"
+        ext == "apk" -> "application/vnd.android.package-archive"
+        ext == "zip" -> "application/zip"
+        else -> "text/plain"
+    }
+}
+
+private fun prepareLocalExportFile(context: Context, filePath: String, fileName: String, textContent: String?): File {
+    val sourceFile = File(filePath)
+    val cacheDir = File(context.cacheDir, "shared_files").apply { mkdirs() }
+    val destFile = File(cacheDir, fileName)
+
+    if (sourceFile.exists() && sourceFile.canRead() && sourceFile.length() > 0) {
+        try {
+            sourceFile.copyTo(destFile, overwrite = true)
+            return destFile
+        } catch (e: Exception) {}
+    }
+
+    if (textContent != null) {
+        try {
+            FileOutputStream(destFile).use { it.write(textContent.toByteArray(Charsets.UTF_8)) }
+            return destFile
+        } catch (e: Exception) {}
+    }
+
+    return destFile
+}
+
+private fun openFileWithExternalApp(context: Context, filePath: String, fileName: String, textContent: String?) {
+    try {
+        val file = prepareLocalExportFile(context, filePath, fileName, textContent)
+        val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val mimeType = getMimeType(fileName)
+
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, mimeType)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        val chooser = Intent.createChooser(intent, "Dosyayı Aç: $fileName")
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(chooser)
+    } catch (e: ActivityNotFoundException) {
+        Toast.makeText(context, "Bu dosya tipini (${fileName.substringAfterLast('.')}) açacak bir uygulama bulunamadı.", Toast.LENGTH_LONG).show()
+    } catch (e: Exception) {
+        Toast.makeText(context, "Dosya açılamadı: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun copyFileToStorage(context: Context, filePath: String, fileName: String, textContent: String?) {
+    try {
+        val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            ?: File("/storage/emulated/0/Download")
+        if (!downloadDir.exists()) downloadDir.mkdirs()
+
+        val destFile = File(downloadDir, fileName)
+        val sourceFile = File(filePath)
+
+        if (sourceFile.exists() && sourceFile.canRead() && sourceFile.length() > 0) {
+            sourceFile.copyTo(destFile, overwrite = true)
+        } else if (textContent != null) {
+            FileOutputStream(destFile).use { it.write(textContent.toByteArray(Charsets.UTF_8)) }
+        } else {
+            val cached = prepareLocalExportFile(context, filePath, fileName, textContent)
+            if (cached.exists()) {
+                cached.copyTo(destFile, overwrite = true)
+            } else {
+                Toast.makeText(context, "Dosya içeriği bulunamadı.", Toast.LENGTH_SHORT).show()
+                return
+            }
+        }
+
+        Toast.makeText(context, "✅ İndirilenler klasörüne kaydedildi:\n${destFile.absolutePath}", Toast.LENGTH_LONG).show()
+    } catch (e: Exception) {
+        Toast.makeText(context, "Kayıt başarısız: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+    }
+}
+
+private fun shareFileWithIntent(context: Context, filePath: String, fileName: String, textContent: String?) {
+    try {
+        val file = prepareLocalExportFile(context, filePath, fileName, textContent)
+        val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val mimeType = getMimeType(fileName)
+
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = mimeType
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, fileName)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        val chooser = Intent.createChooser(shareIntent, "Dosyayı Paylaş: $fileName")
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(chooser)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Paylaşım başlatılamadı: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
     }
 }
 
