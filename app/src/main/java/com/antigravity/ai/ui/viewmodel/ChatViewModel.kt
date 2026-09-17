@@ -1695,12 +1695,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 settings = state.settings,
                 attachments = userMessage.attachments
             ).onFailure { err ->
+                val raw = err.message ?: "Mesaj gönderilemedi"
+                val friendlyMessage = when {
+                    raw.contains("429") -> "⚠️ Hız/Kota Sınırı (429): AI model sağlayıcısının istek sınırına ulaşıldı. Lütfen 1-2 dakika bekleyin veya modeli değiştirin."
+                    raw.contains("500") -> "⚠️ Sunucu Hatası (500): Termux arka plan servisinde hata oluştu. Sunucu yeniden başlatılıyor olabilir."
+                    raw.contains("503") -> "⚠️ Servis Kesintisi (503): AI sağlayıcısı geçici olarak hizmet veremiyor. Lütfen birazdan tekrar deneyin."
+                    raw.contains("timeout", ignoreCase = true) -> "⚠️ Bağlantı Zaman Aşımı: Termux arka plan servisine ulaşılamadı. Sunucunun çalıştığından emin olun."
+                    else -> raw
+                }
                 _uiState.update { current ->
                     val cleanList = current.messages.filter { it.id != botPlaceholder.id }
                     current.copy(
                         messages = cleanList,
                         isGenerating = false,
-                        errorMessage = err.message ?: "Mesaj gönderilemedi"
+                        errorMessage = friendlyMessage
                     )
                 }
             }
