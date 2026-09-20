@@ -33,7 +33,23 @@ app/src/main/java/com/antigravity/ai/
 
 ---
 
-## 🔌 Çift Arka Uç Desteği (AGY CLI + OpenCode)
+## 🔌 Çoklu Arka Uç Desteği (AGY CLI + Codex CLI + OpenCode)
+
+Ana sohbet ekranındaki **AGY** ve **Codex** sekmeleri bağımsız oturum durumunu korur. AGY bir yanıt üretirken Codex sekmesine geçilebilir; iki istemcinin olay bağlantısı aynı anda açık kalır. Uygulama Codex sekmesi için Termux'ta düşük öncelikli olarak şu yerel servisi başlatır:
+
+```bash
+taskset -c 0-5 nice -n 15 codex app-server --listen ws://127.0.0.1:4500
+```
+
+Termux'ta kısa komut:
+
+```bash
+codex-serve
+```
+
+Alias tanımı: `alias codex-serve='taskset -c 0-5 nice -n 15 /data/data/com.termux/files/usr/bin/codex app-server --listen ws://127.0.0.1:4500'`
+
+Codex bağlantısı yalnızca cihaz içindeki `127.0.0.1` adresini kullanır ve resmi app-server JSON-RPC protokolüne bağlanır.
 
 Uygulama **aynı APK** içinde iki arka ucu da destekler; ayarlar panelinden (`⚙️ Ayarlar → Arka Uç`) seçilir veya **Otomatik** modda açık olan sunucuya bağlanır:
 
@@ -68,4 +84,3 @@ Sunucu arka planda `127.0.0.1:8080` portunda çalışır ve Android istemcisine 
 ## 🚀 GitHub Actions ile Otomatik APK Derleme
 
 Her commit ve tag oluşturulduğunda GitHub Actions iş akışı (`build-apk.yml`) otomatik olarak tetiklenir ve ARM64-v8a uyumlu debug/release APK dosyasını derleyip GitHub Releases bölümünde yayınlar.
-

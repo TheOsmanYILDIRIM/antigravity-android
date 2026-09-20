@@ -53,7 +53,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel = viewModel(),
-    onExitApp: (() -> Unit)? = null
+    forcedBackend: String? = null,
+    onExitApp: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -63,6 +65,12 @@ fun ChatScreen(
     var templateToFill by remember { mutableStateOf<com.antigravity.ai.data.model.PromptTemplate?>(null) }
     var showTemplateManager by remember { mutableStateOf(false) }
     var showQuickModelSheet by remember { mutableStateOf(false) }
+
+    LaunchedEffect(forcedBackend, uiState.activeBackend) {
+        if (forcedBackend != null && uiState.activeBackend != forcedBackend) {
+            viewModel.setBackend(forcedBackend, persist = false)
+        }
+    }
 
     val showScrollToBottom by remember {
         derivedStateOf {
@@ -189,7 +197,9 @@ fun ChatScreen(
                 viewModel.setAuthDialogVisible(true)
             },
             currentBackend = uiState.activeBackend,
-            onBackendChange = { viewModel.setBackend(it) },
+            onBackendChange = { backend ->
+                if (forcedBackend == null || backend == forcedBackend) viewModel.setBackend(backend)
+            },
             onNotificationToggle = { enabled ->
                 if (enabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                     notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
@@ -245,7 +255,7 @@ fun ChatScreen(
             title = { Text("İzin Gerekli (${perm.action})") },
             text = {
                 Column {
-                    Text("OpenCode bu işlemi çalıştırmak istiyor:")
+                    Text("${if (uiState.activeBackend == "codex") "Codex" else "OpenCode"} bu işlemi çalıştırmak istiyor:")
                     Spacer(Modifier.height(6.dp))
                     perm.resources.forEach { Text("• $it", fontSize = 12.sp) }
                 }
@@ -268,7 +278,7 @@ fun ChatScreen(
         var answer by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { viewModel.dismissQuestion() },
-            title = { Text("OpenCode Sorusu") },
+            title = { Text("${if (uiState.activeBackend == "codex") "Codex" else "OpenCode"} Sorusu") },
             text = {
                 Column {
                     q.questions.forEach { Text("• $it", fontSize = 13.sp) }
@@ -313,7 +323,7 @@ fun ChatScreen(
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
         ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {

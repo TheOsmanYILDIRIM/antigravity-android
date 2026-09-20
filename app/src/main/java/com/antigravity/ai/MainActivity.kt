@@ -7,7 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.antigravity.ai.ui.screens.ChatScreen
+import com.antigravity.ai.ui.screens.ChatWorkspace
 import com.antigravity.ai.ui.theme.AntigravityAITheme
 import com.antigravity.ai.ui.theme.BackgroundDark
 
@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = BackgroundDark
                 ) {
-                    ChatScreen(
+                    ChatWorkspace(
                         onExitApp = {
                             com.antigravity.ai.data.api.AgyServerManager.shutdownLifecycle(this@MainActivity)
                             finishAffinity()

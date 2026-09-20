@@ -1,5 +1,13 @@
 # Antigravity Android - Günlük & Değişiklik Günlüğü (log.md)
 
+## [2026-09-20] AGY + Codex Eşzamanlı Sohbet Sekmeleri
+- Sohbet alanına bağımsız `AGY` ve `Codex` sekmeleri eklendi; iki ayrı ViewModel sayesinde mesajlar, üretim durumu ve olay bağlantıları sekme değişiminde korunuyor.
+- Codex CLI resmi app-server WebSocket/JSON-RPC protokolüyle bağlandı (`127.0.0.1:4500`): initialize, model/geçmiş listesi, thread açma/devam ettirme, streaming, terminal çıktıları, durdurma ve kullanıcı onayları destekleniyor.
+- Codex app-server Termux `RUN_COMMAND` üzerinden `taskset -c 0-5 nice -n 15` sınırıyla otomatik başlatılıyor.
+- Codex ve AGY ayarları/draft alanları ayrıldı; backend başlangıç yarışı ve iki kez AGY sunucusu başlatma riski giderildi.
+- Mevcut SSE heartbeat ayrıştırma hatasının sessizce yutulması kaldırıldı. Codex RPC timeout/pending temizliği, socket kapanışları ve parça parça terminal çıktısı biriktirme davranışı güvenli hale getirildi.
+- Gerçek Codex app-server üzerinde initialize, `thread/list` ve `model/list` semantik olarak doğrulandı. Android Gradle derlemesi proje kuralı gereği yerelde çalıştırılmadı; CI doğrulaması commit/push sonrasına kaldı.
+
 ## [2026-09-17] Input Bar Buton Taşma / Sıkışma Düzeltmesi ve Minimal Model Sunumu
 - **Input Bar Buton Sıkışması ve Görünmezlik Engeli:** Sol eylem çubuğuna (`+` ve Model Seçici Hapı) `Modifier.weight(1f, fill = false)` eklendi ve sağ eylem çubuğu (`Sesli Yaz` + `Gönder / Live Waveform`) taşma ve sıkışmaya karşı korundu. Dar ekranlarda veya uzun model isimlerinde sağ butonların ekrandan dışarı taşması / görünmez olması tamamen engellendi.
 - **Akıllı ve Minimal Model Hapı Formatı (`formatCompactModelPill`):** Giriş barındaki model hapında gereksiz parantez içi ağırlık etiketleri (`(Low)`, `(Medium)`, `(High)`, `(Thinking)`) temizlendi; akıl yürütme seviyesi `⚡` (Yüksek/Derin) veya `• Hızlı` (Düşük) şeklinde minimalleştirildi.

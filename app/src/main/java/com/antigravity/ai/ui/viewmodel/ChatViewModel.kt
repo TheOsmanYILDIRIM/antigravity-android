@@ -95,9 +95,15 @@ data class ChatUiState(
     val selectedProjectFilter: String? = null
 )
 
-class ChatViewModel(application: Application) : AndroidViewModel(application) {
+class ChatViewModel @JvmOverloads constructor(
+    application: Application,
+    private val fixedBackend: String? = null
+) : AndroidViewModel(application) {
 
-    private val prefs = application.getSharedPreferences("agy_settings", android.content.Context.MODE_PRIVATE)
+    private val prefs = application.getSharedPreferences(
+        if (fixedBackend == "codex") "codex_settings" else "agy_settings",
+        android.content.Context.MODE_PRIVATE
+    )
     private lateinit var repository: ChatRepository
     private var eventsJob: Job? = null
     private val _uiState = MutableStateFlow(ChatUiState(
@@ -135,19 +141,19 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             FloatingKeepAliveService.startKeepAlive(application)
         }
         viewModelScope.launch(Dispatchers.IO) {
-            val name = resolveBackendName()
+            val name = fixedBackend ?: resolveBackendName()
             repository = ChatRepository(buildBackend(name))
             _uiState.update { it.copy(activeBackend = name) }
             startEventCollection()
             refreshAll()
             val health = AgyServerManager.checkHealth()
             _uiState.update { it.copy(serverHealth = health) }
-            if (!health.isOnline) {
+            if (!health.isOnline && fixedBackend != "codex") {
                 withContext(Dispatchers.Main) {
                     startAgyServer()
                 }
             }
-            startPeriodicHealthCheck()
+            if (fixedBackend != "codex") startPeriodicHealthCheck()
         }
     }
 
@@ -177,18 +183,21 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun buildBackend(name: String): ChatBackend = when (name) {
+        "codex" -> CodexBackend()
         "opencode" -> OpenCodeBackend()
         "cline" -> ClineBackend()
         else -> AgyBackend()
     }
 
-    /** Açık olan sunucuyu bulur: :8080 (agy), :5115 (cline) veya :4096 (opencode). */
+    /** Açık olan sunucuyu bulur: :8080 (agy), :4500 (codex), :5115 (cline) veya :4096 (opencode). */
     private fun detectBackend(): String {
         val agy = isPortOpen("127.0.0.1", 8080)
         val cline = isPortOpen("127.0.0.1", 5115)
         val oc = isPortOpen("127.0.0.1", 4096)
+        val codex = isPortOpen("127.0.0.1", 4500)
         return when {
             agy -> "agy"
+            codex -> "codex"
             cline -> "cline"
             oc -> "opencode"
             else -> "agy"
@@ -200,8 +209,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }.isSuccess
 
     /** Backend'i değiştirir (agy <-> opencode) ve olay akışını yeniden başlatır. */
-    fun setBackend(name: String) {
-        prefs.edit().putString("backend", name).apply()
+    fun setBackend(name: String, persist: Boolean = true) {
+        if (fixedBackend != null && name != fixedBackend) return
+        if (persist) prefs.edit().putString("backend", name).apply()
         viewModelScope.launch(Dispatchers.IO) {
             val resolved = if (name == "auto") detectBackend() else name
             repository = ChatRepository(buildBackend(resolved))
@@ -212,7 +222,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun loadSavedSettings(): ChatSettings {
-        val model = prefs.getString("model", "gemini-3.7-flash-medium") ?: "gemini-3.7-flash-medium"
+        val defaultModel = if (fixedBackend == "codex") "default" else "gemini-3.7-flash-medium"
+        val model = prefs.getString("model", defaultModel) ?: defaultModel
         val effort = prefs.getString("effort", "default") ?: "default"
         val mode = prefs.getString("mode", "default") ?: "default"
         val useVault = prefs.getBoolean("useVault", true)
@@ -602,6 +613,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         if (isMatching) {
                             _uiState.update { it.copy(notice = event.text) }
                         }
+                    }
+                    is StreamEvent.Heartbeat -> {
+                        // Keep connection alive, no UI change needed
                     }
                 }
             }

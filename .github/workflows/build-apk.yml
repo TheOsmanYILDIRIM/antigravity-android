@@ -44,10 +44,15 @@ jobs:
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.4.0
-          name: "Antigravity AI Mobile App v1.4.0 (Official Gemini UI Redesign)"
+          tag_name: v1.5.0
+          name: "Antigravity AI Mobile App v1.5.0 (AGY + Codex Workspace)"
           body: |
-            ### ⚡ Antigravity AI - Jetpack Compose Native Mobile App (v1.4.0)
+            ### ⚡ Antigravity AI - Jetpack Compose Native Mobile App (v1.5.0)
+
+            #### 🧭 AGY + Codex çalışma alanı
+            - Sohbet alanında bağımsız AGY ve Codex sekmeleri.
+            - İki arka uç için aynı anda açık kalan ayrı oturum ve olay akışları.
+            - Codex app-server WebSocket/JSON-RPC entegrasyonu, geçmiş, streaming, araç çıktısı ve onay desteği.
             
             Android (ARM64-v8a) için optimize edilmiş ve **Figma Gemini UI Screens** tasarımı baz alınarak baştan sona yeniden tasarlanmış yerel mobil asistan uygulaması.
             

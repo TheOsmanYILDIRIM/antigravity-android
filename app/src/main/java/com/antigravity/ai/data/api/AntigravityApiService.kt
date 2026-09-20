@@ -32,6 +32,7 @@ sealed class StreamEvent {
     data class PermissionRequested(val request: PermissionRequestData) : StreamEvent()
     data class QuestionRequested(val request: QuestionRequestData) : StreamEvent()
     data class Stderr(val text: String, val conversationId: String? = null) : StreamEvent()
+    data class Heartbeat(val timestamp: Long, val isGenerating: Boolean? = null) : StreamEvent()
     data class CompactCompleted(
         val beforeTokens: Int,
         val afterTokens: Int,
@@ -594,6 +595,16 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                             val convId = json.get("conversationId")?.asString
                             if (txt.isNotBlank()) trySend(StreamEvent.Stderr(txt.trim(), convId))
                         }
+                        "heartbeat" -> {
+                            try {
+                                val json = gson.fromJson(data, JsonObject::class.java)
+                                val time = json.get("time")?.asLong ?: System.currentTimeMillis()
+                                val isGen = if (json.has("isGenerating")) json.get("isGenerating").asBoolean else null
+                                trySend(StreamEvent.Heartbeat(time, isGen))
+                            } catch (e: Exception) {
+                                trySend(StreamEvent.Stderr("Heartbeat verisi çözümlenemedi: ${e.message ?: "geçersiz veri"}"))
+                            }
+                        }
                         "compact_completed" -> {
                             val json = gson.fromJson(data, JsonObject::class.java)
                             val beforeTokens = json.get("beforeTokens")?.asInt ?: 0
@@ -610,23 +621,19 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
             }
 
             override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {
-                if (!terminated) {
+                // Sadece açık bir HTTP sunucu hatası (4xx/5xx) durumunda error fırlat, geçici kopmada oturumu sıfırlama
+                if (!terminated && response != null && response.code >= 400) {
                     terminated = true
                     trySend(
                         StreamEvent.Error(
-                            "Sunucu bağlantısı kesildi${t?.message?.let { " ($it)" } ?: ""}. Üretim durdu, yanıt tamamlanamadı."
+                            "Sunucu bağlantı hatası (HTTP ${response.code})${t?.message?.let { ": $it" } ?: ""}"
                         )
                     )
                 }
             }
 
             override fun onClosed(eventSource: EventSource) {
-                if (!terminated) {
-                    terminated = true
-                    trySend(
-                        StreamEvent.Error("Sunucu yanıt akışı beklenmedik şekilde kapandı. Üretim tamamlanamadı.")
-                    )
-                }
+                // EventSource normal kapandı
             }
         }
 

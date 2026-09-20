@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onRoot
 import com.antigravity.ai.data.model.ChatSettings
 import com.antigravity.ai.ui.components.ModelSettingsDialog
 import com.antigravity.ai.ui.screens.FigmaGeminiHomeView
+import com.antigravity.ai.ui.screens.WorkspaceTabRow
 import com.antigravity.ai.ui.theme.AntigravityAITheme
 import com.antigravity.ai.ui.theme.BackgroundDark
 import org.junit.Assert.assertEquals
@@ -33,6 +34,20 @@ class UiSemanticsTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    @Test
+    @Config(qualifiers = "w320dp-h640dp-320dpi", sdk = [33])
+    fun workspace_tabs_switch_between_agy_and_codex() {
+        var selected = 0
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                WorkspaceTabRow(selectedTab = selected, onTabSelected = { selected = it })
+            }
+        }
+        composeTestRule.onNodeWithText("AGY").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Codex").assertIsDisplayed().performClick()
+        assertEquals(1, selected)
+    }
 
     // 1. Ayarlar dialog'u OpenCode (çift-backend) seçeneğini gösteriyor mu?
     @Test

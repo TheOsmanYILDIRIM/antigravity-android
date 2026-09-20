@@ -11,8 +11,8 @@ android {
         applicationId = "com.antigravity.ai"
         minSdk = 24
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.4.0"
+        versionCode = 6
+        versionName = "1.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -122,4 +122,3 @@ dependencies {
     testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("org.robolectric:robolectric:4.13")
 }
-
