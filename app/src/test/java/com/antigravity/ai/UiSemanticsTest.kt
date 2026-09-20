@@ -9,9 +9,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onRoot
 import com.antigravity.ai.data.model.ChatSettings
+import com.antigravity.ai.ui.components.FloatingBackendSwitcher
 import com.antigravity.ai.ui.components.ModelSettingsDialog
 import com.antigravity.ai.ui.screens.FigmaGeminiHomeView
-import com.antigravity.ai.ui.screens.WorkspaceTabRow
 import com.antigravity.ai.ui.theme.AntigravityAITheme
 import com.antigravity.ai.ui.theme.BackgroundDark
 import org.junit.Assert.assertEquals
@@ -37,16 +37,21 @@ class UiSemanticsTest {
 
     @Test
     @Config(qualifiers = "w320dp-h640dp-320dpi", sdk = [33])
-    fun workspace_tabs_switch_between_agy_and_codex() {
-        var selected = 0
+    fun floating_backend_switcher_toggles_and_selects_backend() {
+        var selected = "agy"
         composeTestRule.setContent {
             AntigravityAITheme {
-                WorkspaceTabRow(selectedTab = selected, onTabSelected = { selected = it })
+                FloatingBackendSwitcher(
+                    selectedBackend = selected,
+                    onBackendSelected = { selected = it },
+                    isDrawerOpen = false
+                )
             }
         }
-        composeTestRule.onNodeWithText("AGY").assertIsDisplayed()
+        // Kırmızı tetikleyici çizgiye tıklanarak balonlar açılır
+        composeTestRule.onRoot().performClick()
         composeTestRule.onNodeWithText("Codex").assertIsDisplayed().performClick()
-        assertEquals(1, selected)
+        assertEquals("codex", selected)
     }
 
     // 1. Ayarlar dialog'u OpenCode (çift-backend) seçeneğini gösteriyor mu?

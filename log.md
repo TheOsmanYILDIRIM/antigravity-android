@@ -1,5 +1,13 @@
 # Antigravity Android - Günlük & Değişiklik Günlüğü (log.md)
 
+## [2026-09-20] Hamburger Altı Kırmızı Çizgili Yüzen Backend Balonları (AGY, Codex, OpenCode, Cline)
+- Ekranın üstünü kaplayan `WorkspaceTabRow` tamamen kaldırıldı; temiz ve ferah `ChatTopBar` görünümüne dönüldü.
+- Hamburger menü ikonunun altına açılır-kapanır tek bir kırmızı tetikleyici çizgi (`FloatingBackendSwitcher`) eklendi.
+- Kırmızı çizgiye tıklandığında hafif saydam (`Color(0xFF14171C).copy(alpha = 0.78f)`) arka planlı, dikey sıralanan mini yüzen geçiş balonları (`AGY`, `Codex`, `OpenCode`, `Cline`) yumuşak dikey animasyonla açılıyor/daralıyor.
+- Hamburger menü (drawer) açıldığında yüzen balonlar ve kırmızı çizgi otomatik olarak gizleniyor (`!drawerState.isOpen`).
+- `ChatWorkspace` 4 backend'in (AGY, Codex, OpenCode, Cline) ViewModel'lerini eşzamanlı ve bağımsız canlı tutacak şekilde güncellendi.
+- `UiSemanticsTest` yeni yüzen switcher etkileşimi ve semantik doğrulamasını kapsayacak şekilde uyarlandı.
+
 ## [2026-09-20] AGY + Codex Eşzamanlı Sohbet Sekmeleri
 - Termux için `codex-serve` alias'ı belgelendi: `taskset -c 0-5 nice -n 15 /data/data/com.termux/files/usr/bin/codex app-server --listen ws://127.0.0.1:4500`.
 - Özellik commit'i `b82be045382faaa06b46956b036ec99fd29455d3`, CI import düzeltmesi `cc11c19f62db75991c5236be9713ccf8611a513b` olarak `main` dalına pushlandı.

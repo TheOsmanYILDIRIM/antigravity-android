@@ -54,6 +54,8 @@ import kotlinx.coroutines.launch
 fun ChatScreen(
     viewModel: ChatViewModel = viewModel(),
     forcedBackend: String? = null,
+    selectedBackend: String = forcedBackend ?: "agy",
+    onBackendSelected: ((String) -> Unit)? = null,
     onExitApp: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -378,7 +380,8 @@ fun ChatScreen(
             uiState.currentProjectName?.let { ProjectColorUtil.getColorForProject(it) }
         }
 
-        Scaffold(
+        Box(modifier = Modifier.fillMaxSize()) {
+            Scaffold(
             topBar = {
                 val selectedModelName = uiState.availableModels.find { it.id == uiState.settings.model }?.name
                     ?: uiState.settings.model
@@ -724,6 +727,20 @@ fun ChatScreen(
             } // Box
         } // Column
     } // Scaffold
+
+    // Hamburger menünün altında dikey açılan 4'lü mini yüzen backend balonları (drawer açıkken kaybolur)
+    FloatingBackendSwitcher(
+        selectedBackend = selectedBackend,
+        onBackendSelected = { backend ->
+            onBackendSelected?.invoke(backend) ?: viewModel.setBackend(backend)
+        },
+        isDrawerOpen = drawerState.isOpen,
+        modifier = Modifier
+            .align(Alignment.TopStart)
+            .statusBarsPadding()
+            .padding(top = 44.dp)
+    )
+} // Box
 } // ModalNavigationDrawer
 
         // Back Press Handlers
