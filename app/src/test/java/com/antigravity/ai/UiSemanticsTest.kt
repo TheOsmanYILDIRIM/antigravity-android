@@ -143,4 +143,16 @@ class UiSemanticsTest {
         assertEquals("[Ek Görsel #2 (screen2.png): /uploads/screen2.png] incele ve [Ek Görsel #3 (screen3.png): /uploads/screen3.png] ile karşılaştır", processed)
         assertEquals(listOf("screen1.png"), unplaced)
     }
+
+    // 5. Epoch timestamp ve ISO formatResetTime çözümlenmesi testi
+    @Test
+    fun reset_time_epoch_and_iso_formatting() {
+        val formattedEpoch = com.antigravity.ai.ui.components.formatResetTime("1789946948")
+        org.junit.Assert.assertNotEquals("-", formattedEpoch)
+        org.junit.Assert.assertTrue(formattedEpoch.contains(":"))
+
+        val formattedIso = com.antigravity.ai.ui.components.formatResetTime("2026-09-20T22:00:00.000Z")
+        org.junit.Assert.assertNotEquals("-", formattedIso)
+        org.junit.Assert.assertTrue(formattedIso.contains("20"))
+    }
 }

@@ -40,6 +40,16 @@ fun formatTokenCount(tokens: Long): String {
 
 fun formatResetTime(isoTime: String?): String {
     if (isoTime.isNullOrBlank()) return "-"
+    val epochSec = isoTime.toLongOrNull()
+    if (epochSec != null) {
+        return try {
+            val date = java.util.Date(epochSec * 1000L)
+            val outputFormat = SimpleDateFormat("d MMM, HH:mm", Locale("tr", "TR"))
+            outputFormat.format(date)
+        } catch (e: Exception) {
+            isoTime
+        }
+    }
     return try {
         val clean = isoTime.substringBefore('.')
         val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {

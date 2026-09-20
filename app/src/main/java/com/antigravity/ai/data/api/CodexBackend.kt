@@ -58,28 +58,157 @@ class CodexBackend(
             addProperty("includeHidden", false)
         }).mapCatching { result ->
             val rows = result.array("data", "models")
+            val effortMap = linkedMapOf<String, String>()
+            effortMap["default"] = "Varsayılan (Otomatik)"
+            effortMap["low"] = "Düşük (Hızlı & Hafif Akıl Yürütme)"
+            effortMap["medium"] = "Orta (Dengeli Günlük İşler)"
+            effortMap["high"] = "Yüksek (Derin & Karmaşık Görevler)"
+            effortMap["xhigh"] = "Ekstra Yüksek (İleri Düzey Kodlama)"
+            effortMap["max"] = "Maksimum (En Zor Problemler)"
+            effortMap["ultra"] = "Ultra (Otomatik Görev Delegasyonu)"
+
             val models = rows.map { element ->
                 val model = element.asJsonObject
+                val modelId = model.stringOrNull("model") ?: model.string("id")
+                val displayName = model.stringOrNull("displayName") ?: modelId
+                val desc = model.stringOrNull("description") ?: ""
+
+                model.getAsJsonArray("supportedReasoningEfforts")?.forEach { effElem ->
+                    val effObj = effElem.asJsonObject
+                    val effId = effObj.stringOrNull("reasoningEffort")
+                    val effDesc = effObj.stringOrNull("description")
+                    if (!effId.isNullOrBlank()) {
+                        val label = when (effId) {
+                            "low" -> "Düşük (Hızlı)"
+                            "medium" -> "Orta (Dengeli)"
+                            "high" -> "Yüksek (Derin)"
+                            "xhigh" -> "Ekstra Yüksek"
+                            "max" -> "Maksimum"
+                            "ultra" -> "Ultra (Multi-Agent)"
+                            else -> effId.replaceFirstChar { it.uppercase() }
+                        }
+                        effortMap[effId] = if (!effDesc.isNullOrBlank()) "$label • $effDesc" else label
+                    }
+                }
+
                 ModelItem(
-                    id = model.stringOrNull("model") ?: model.string("id"),
-                    name = model.stringOrNull("displayName") ?: model.stringOrNull("model") ?: model.string("id")
+                    id = modelId,
+                    name = displayName,
+                    description = desc
                 )
             }
+
+            val effortList = effortMap.map { (id, desc) ->
+                val shortName = when (id) {
+                    "default" -> "Varsayılan"
+                    "low" -> "Düşük"
+                    "medium" -> "Orta"
+                    "high" -> "Yüksek"
+                    "xhigh" -> "X-Yüksek"
+                    "max" -> "Maksimum"
+                    "ultra" -> "Ultra"
+                    else -> id.replaceFirstChar { it.uppercase() }
+                }
+                EffortItem(id = id, name = shortName, description = desc)
+            }
+
             ModelsConfigResponse(
                 "ok",
-                listOf(ModelItem("default", "Codex varsayılan modeli")) + models,
+                listOf(ModelItem("default", "Codex Varsayılan Modeli", "Config.toml içerisindeki varsayılan model")) + models,
+                effortList,
                 listOf(
-                    EffortItem("default", "Varsayılan"),
-                    EffortItem("low", "Düşük"),
-                    EffortItem("medium", "Orta"),
-                    EffortItem("high", "Yüksek")
-                ),
-                emptyList()
+                    ModeItem("default", "Standart"),
+                    ModeItem("plan", "Planlama (Plan Mode)"),
+                    ModeItem("review", "Kod İnceleme (Review)")
+                )
             )
         }
 
     override suspend fun getSkills(): Result<SkillsResponse> = Result.success(SkillsResponse("ok", 0, emptyList()))
-    override suspend fun getUsage(): Result<UsageResponse> = Result.success(UsageResponse("ok", null))
+
+    override suspend fun getUsage(): Result<UsageResponse> = runCatching {
+        val rateLimitsRes = api.request("account/rateLimits/read", JsonObject()).getOrNull()
+        val accountRes = api.request("account/read", JsonObject()).getOrNull()
+
+        val rateLimitsObj = rateLimitsRes?.getAsJsonObject("rateLimits")
+        val primaryObj = rateLimitsObj?.getAsJsonObject("primary")
+        val secondaryObj = rateLimitsObj?.getAsJsonObject("secondary")
+        val resetCreditsObj = rateLimitsRes?.getAsJsonObject("rateLimitResetCredits")
+        val availableCredits = resetCreditsObj?.get("availableCount")?.asInt ?: 0
+
+        val primaryUsed = primaryObj?.get("usedPercent")?.asInt ?: 0
+        val primaryWindowHours = (primaryObj?.get("windowDurationMins")?.asLong ?: 300L) / 60
+        val primaryResetsAt = primaryObj?.get("resetsAt")?.takeUnless { it.isJsonNull }?.asLong
+        val primaryResetStr = primaryResetsAt?.toString()
+
+        val secondaryUsed = secondaryObj?.get("usedPercent")?.asInt ?: 0
+        val secondaryWindowHours = (secondaryObj?.get("windowDurationMins")?.asLong ?: 10080L) / 60
+        val secondaryResetsAt = secondaryObj?.get("resetsAt")?.takeUnless { it.isJsonNull }?.asLong
+        val secondaryResetStr = secondaryResetsAt?.toString()
+
+        val planType = rateLimitsObj?.get("planType")?.takeUnless { it.isJsonNull }?.asString
+            ?: accountRes?.getAsJsonObject("account")?.get("planType")?.takeUnless { it.isJsonNull }?.asString
+            ?: "Codex Plan"
+        val email = accountRes?.getAsJsonObject("account")?.get("email")?.takeUnless { it.isJsonNull }?.asString
+
+        val recent5h = UsageMetrics(
+            usedPercent = primaryUsed,
+            remainingPercent = (100 - primaryUsed).coerceIn(0, 100),
+            windowHours = primaryWindowHours.toInt(),
+            resetTime = primaryResetStr
+        )
+
+        val weekly = UsageMetrics(
+            usedPercent = secondaryUsed,
+            remainingPercent = (100 - secondaryUsed).coerceIn(0, 100),
+            windowHours = secondaryWindowHours.toInt(),
+            resetTime = secondaryResetStr
+        )
+
+        val buckets = mutableListOf<UsageBucket>()
+        buckets += UsageBucket(
+            id = "codex_5h",
+            name = "5 Saatlik Kayan Limit (${planType.uppercase()})",
+            window = "5h",
+            remainingFraction = (100.0 - primaryUsed).coerceIn(0.0, 100.0) / 100.0,
+            resetTime = primaryResetStr
+        )
+        buckets += UsageBucket(
+            id = "codex_weekly",
+            name = "Haftalık Limit",
+            window = "weekly",
+            remainingFraction = (100.0 - secondaryUsed).coerceIn(0.0, 100.0) / 100.0,
+            resetTime = secondaryResetStr
+        )
+        if (availableCredits > 0) {
+            buckets += UsageBucket(
+                id = "codex_reset_credits",
+                name = "$availableCredits Adet Sıfırlama Kredisi Mevcut",
+                window = "credits",
+                remainingFraction = 1.0,
+                description = "Haftalık ve 5 saatlik kotanızı anında sıfırlayabilirsiniz."
+            )
+        }
+
+        val groupDesc = if (!email.isNullOrBlank()) "Hesap: $email ($planType)" else "Plan: ${planType.uppercase()}"
+        val groups = listOf(
+            UsageGroup(
+                name = "Codex (${planType.replaceFirstChar { it.uppercase() }})",
+                description = groupDesc,
+                buckets = buckets
+            )
+        )
+
+        val usageData = UsageData(
+            recent5h = recent5h,
+            weekly = weekly,
+            groups = groups,
+            lastTurn = null,
+            lastUpdated = System.currentTimeMillis().toString()
+        )
+
+        UsageResponse("ok", usageData)
+    }
 
     override suspend fun sendPrompt(
         prompt: String,
