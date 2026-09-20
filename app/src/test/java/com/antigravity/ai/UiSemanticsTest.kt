@@ -5,6 +5,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onRoot
@@ -208,7 +209,35 @@ class UiSemanticsTest {
                 )
             }
         }
-        composeTestRule.onNodeWithText("Antigravity çalışıyor...").assertExists()
-        composeTestRule.onNodeWithText("Durdur").assertExists()
+        composeTestRule.onNodeWithContentDescription("Durdur").assertExists()
+        composeTestRule.onNodeWithContentDescription("Canlı Yönlendir (Steer)").assertDoesNotExist()
+    }
+
+    // 8. MessageInputBar canSteer=true ve text dolu olduğunda steer butonunu gösteriyor mu?
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun message_input_bar_shows_steer_when_supported() {
+        // Codex Backend (canSteer = true): Hem Stop hem Steer görünmeli
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                com.antigravity.ai.ui.components.MessageInputBar(
+                    text = "Ek talimat",
+                    onTextChange = {},
+                    pastedBlocks = emptyList(),
+                    onRemovePastedBlock = {},
+                    attachments = emptyList(),
+                    onRemoveAttachment = {},
+                    isGenerating = true,
+                    canSteer = true,
+                    isListening = false,
+                    onSend = {},
+                    onStop = {},
+                    onMicClick = {},
+                    onAttachClick = {}
+                )
+            }
+        }
+        composeTestRule.onNodeWithContentDescription("Durdur").assertExists()
+        composeTestRule.onNodeWithContentDescription("Canlı Yönlendir (Steer)").assertExists()
     }
 }
