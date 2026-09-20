@@ -30,6 +30,24 @@ class AgyBackend(private val api: AntigravityApiService = AntigravityApiService(
     override suspend fun newChat(): Result<SessionResponse> = api.newChat()
     override suspend fun stopGeneration(): Result<Unit> = api.stopGeneration()
 
+    override suspend fun steerPrompt(
+        prompt: String,
+        conversationId: String?,
+        attachments: List<Attachment>
+    ): Result<Unit> {
+        // AGY CLI için akıllı yönlendirme (steer fallback):
+        // Model çalışırken gelen yeni talimatta mevcut akışı kesip yeni yönlendirmeyi aynı oturuma enjekte eder
+        api.stopGeneration()
+        kotlinx.coroutines.delay(250)
+        return api.sendPrompt(
+            prompt = prompt,
+            conversationId = conversationId,
+            continueChat = true,
+            settings = ChatSettings(),
+            attachments = attachments
+        )
+    }
+
     override suspend fun uploadFile(name: String, base64: String, type: String): Result<UploadResponse> =
         api.uploadFile(name, base64, type)
 

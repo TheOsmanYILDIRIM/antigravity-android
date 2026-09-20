@@ -3,6 +3,7 @@
 ## [2026-09-20] Düşünme Seviyesi Yatay Kaydırma ve Canlı Yönlendirme (Turn Steer) Entegrasyonu
 - `QuickModelSelectorSheet.kt` güncellendi: Reasoning effort çipleri sabit sıkışık satır yerine `horizontalScroll` destekli esnek çiplere dönüştürüldü. `default` (✨ Otomatik), `low` (⚡ Düşük/Hızlı), `medium` (⚖️ Orta/Dengeli), `high` (🧠 Yüksek/Derin), `xhigh` (🚀 Ekstra Yüksek), `max` (🎯 Maksimum) ve `ultra` (🔮 Ultra Derin) rozetleri eksiksiz tanımlandı; dar ekranlarda buton metinlerinin kırpılması/bozulması tamamen önlendi.
 - `CodexBackend.kt` içine `turn/steer` RPC çağrısı (`steerPrompt`) eklendi: Model veya araçlar çalışırken kullanıcının girdiği yönlendirme mesajları Codex app-server'a iletilerek kesintisiz ve sıradaki adımın ardına enjekte ediliyor.
+- `AgyBackend.kt` içine akıllı steer fallback'i eklendi: AGY CLI oturumlarında üretim esnasında yönlendirme mesajı girildiğinde mevcut yarım adım kesilip yeni talimat aynı oturuma anında yeni turn olarak enjekte ediliyor.
 - `ChatViewModel.kt` güncellendi: `isGenerating == true` iken kullanıcının gönderdiği mesajlar ekrana kullanıcı mesajı olarak basılıp `steerMessage` ile arka plana yönlendiriliyor.
 - `MessageInputBar.kt` güncellendi: Model çalışırken metin yazıldığında Stop butonunun yanında şık `Canlı Yönlendir (Steer)` yukarı ok butonu beliriyor; placeholder metni dinamik olarak `Canlı yönlendirme (steer) ekleyin...` şeklinde kullanıcıya rehberlik ediyor.
 - `UiSemanticsTest.kt` içine `quick_model_selector_sheet_renders_efforts` semantik doğrulama testi eklendi.
