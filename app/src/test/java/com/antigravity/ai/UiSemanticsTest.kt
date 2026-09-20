@@ -44,7 +44,8 @@ class UiSemanticsTest {
                 FloatingBackendSwitcher(
                     selectedBackend = selected,
                     onBackendSelected = { selected = it },
-                    isDrawerOpen = false
+                    isDrawerOpen = false,
+                    activeBackendsOverride = setOf("agy", "codex")
                 )
             }
         }

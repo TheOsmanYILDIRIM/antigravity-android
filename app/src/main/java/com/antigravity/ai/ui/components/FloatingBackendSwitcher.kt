@@ -82,13 +82,18 @@ fun FloatingBackendSwitcher(
     selectedBackend: String,
     onBackendSelected: (String) -> Unit,
     isDrawerOpen: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    activeBackendsOverride: Set<String>? = null
 ) {
     var isExpanded by rememberSaveable { mutableStateOf(false) }
-    var onlineBackends by remember { mutableStateOf(setOf("agy", "codex")) }
+    var onlineBackends by remember { mutableStateOf(activeBackendsOverride ?: setOf("agy", "codex", "opencode", "cline")) }
 
     // Periyodik olarak açık sunucuları denetler, kapalı olan backend isimlerini otomatik gizler
-    LaunchedEffect(Unit) {
+    LaunchedEffect(activeBackendsOverride) {
+        if (activeBackendsOverride != null) {
+            onlineBackends = activeBackendsOverride
+            return@LaunchedEffect
+        }
         withContext(Dispatchers.IO) {
             while (true) {
                 val openSet = mutableSetOf<String>()
