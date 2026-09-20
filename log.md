@@ -1,6 +1,9 @@
 # Antigravity Android - Günlük & Değişiklik Günlüğü (log.md)
 
 ## [2026-09-20] AGY + Codex Eşzamanlı Sohbet Sekmeleri
+- Termux için `codex-serve` alias'ı belgelendi: `taskset -c 0-5 nice -n 15 /data/data/com.termux/files/usr/bin/codex app-server --listen ws://127.0.0.1:4500`.
+- Özellik commit'i `b82be045382faaa06b46956b036ec99fd29455d3`, CI import düzeltmesi `cc11c19f62db75991c5236be9713ccf8611a513b` olarak `main` dalına pushlandı.
+- CI doğrulaması başarılı: Android Lint & Unit Tests `35530671653`; Build & Release Antigravity AI APK `35530671658`.
 - Sohbet alanına bağımsız `AGY` ve `Codex` sekmeleri eklendi; iki ayrı ViewModel sayesinde mesajlar, üretim durumu ve olay bağlantıları sekme değişiminde korunuyor.
 - Codex CLI resmi app-server WebSocket/JSON-RPC protokolüyle bağlandı (`127.0.0.1:4500`): initialize, model/geçmiş listesi, thread açma/devam ettirme, streaming, terminal çıktıları, durdurma ve kullanıcı onayları destekleniyor.
 - Codex app-server Termux `RUN_COMMAND` üzerinden `taskset -c 0-5 nice -n 15` sınırıyla otomatik başlatılıyor.
