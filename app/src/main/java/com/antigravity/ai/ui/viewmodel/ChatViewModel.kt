@@ -591,7 +591,10 @@ class ChatViewModel @JvmOverloads constructor(
                                 notice = null
                             )
                         }
-                        fireNotification("Antigravity AI", "Üretim hatası: ${event.message.take(140)}")
+                        val isConnError = isConnectionOrOfflineError(event.message)
+                        if (!isConnError && _uiState.value.isGenerating) {
+                            fireNotification("Antigravity AI", "Üretim hatası: ${event.message.take(140)}")
+                        }
                     }
                     is StreamEvent.AuthRequired -> {
                         _uiState.update {
@@ -1800,6 +1803,21 @@ class ChatViewModel @JvmOverloads constructor(
 
     fun clearNotice() {
         _uiState.update { it.copy(notice = null) }
+    }
+
+    private fun isConnectionOrOfflineError(msg: String): Boolean {
+        val lower = msg.lowercase()
+        return lower.contains("connection refused") ||
+            lower.contains("failed to connect") ||
+            lower.contains("bağlantı hatası") ||
+            lower.contains("bağlantısı kesildi") ||
+            lower.contains("bağlantısı kapandı") ||
+            lower.contains("sockettimeoutexception") ||
+            lower.contains("connectexception") ||
+            lower.contains("econnrefused") ||
+            lower.contains("unreachable") ||
+            lower.contains("timed out") ||
+            lower.contains("kapalı")
     }
 
     private fun fireNotification(title: String, message: String) {

@@ -1,5 +1,10 @@
 # Antigravity Android - Günlük & Değişiklik Günlüğü (log.md)
 
+## [2026-09-20] Kapalı Sunucu Bildirim Spam Engeli, Kapalı Backend'leri Gizleme & 2.5x Büyütülmüş Kırmızı Buton
+- `ChatViewModel.kt` içine `isConnectionOrOfflineError()` koruması eklendi: Sunucu kapalıyken veya bağlantı koptuğunda Android cihaz bildirim çubuğuna durmadan hata bildirimi fırlatılması tamamen engellendi; durum yalnız ekranda offline banner olarak gösterilir.
+- `FloatingBackendSwitcher.kt` içinde port kontrolüyle dinamik filtreleme yapıldı: Portu kapalı olan sunucuların yüzen balonları listede gizlenir, sadece sunucusu açık/çalışan backend'ler ve seçili olan gösterilir.
+- Hamburger menü altındaki kırmızı tetikleyici buton 2.5x kalınlaştırıldı (`38dp × 8.5dp`) ve dokunma alanı (`hitbox`) genişletilerek basış ergonomisi mükemmelleştirildi.
+
 ## [2026-09-20] Codex Dinamik Modeller, Reasoning Ağırlıkları ve Canlı RateLimits Kota Entegrasyonu
 - `CodexBackend.kt` içinde `getModelsConfig()` güçlendirildi: `model/list` üzerinden `supportedReasoningEfforts` array'leri dinamik olarak toplanarak Düşük (low), Orta (medium), Yüksek (high), Ekstra Yüksek (xhigh), Maksimum (max) ve Ultra (ultra) seviyeleri kullanıcı arayüzüne bağlandı.
 - `CodexBackend.kt` içinde `getUsage()` tamamlandı: `account/rateLimits/read` ve `account/read` JSON-RPC çağrıları üzerinden 5 saatlik kayan limit, haftalık limit, kalan yüzde, yenilenme saati, hesap bilgisi ve kullanılabilir kota sıfırlama kredileri (`rateLimitResetCredits`) canlı `UsageData` yapısına dönüştürüldü.
