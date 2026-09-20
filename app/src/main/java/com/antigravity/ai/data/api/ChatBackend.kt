@@ -30,6 +30,16 @@ interface ChatBackend {
     suspend fun newChat(): Result<SessionResponse>
     suspend fun stopGeneration(): Result<Unit>
 
+    /**
+     * Model çalışırken / turn devam ederken canlı yönlendirme mesajı (steer) gönderir.
+     * Codex'te `turn/steer`, diğer backend'lerde destekleniyorsa enjekte edilir.
+     */
+    suspend fun steerPrompt(
+        prompt: String,
+        conversationId: String? = null,
+        attachments: List<Attachment> = emptyList()
+    ): Result<Unit> = Result.failure(UnsupportedOperationException("steer desteklenmiyor"))
+
     // --- opencode'a özgü, agy backend'inde no-op ---
 
     suspend fun replyPermission(

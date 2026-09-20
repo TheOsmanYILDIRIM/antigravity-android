@@ -156,4 +156,31 @@ class UiSemanticsTest {
         org.junit.Assert.assertNotEquals("-", formattedIso)
         org.junit.Assert.assertTrue(formattedIso.contains("20"))
     }
+
+    // 6. QuickModelSelectorSheet reasoning effort rozetleri doğru yükleniyor mu?
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun quick_model_selector_sheet_renders_efforts() {
+        var selectedEffort = "low"
+        val efforts = listOf(
+            com.antigravity.ai.data.model.EffortItem("default", "Otomatik", "Varsayılan"),
+            com.antigravity.ai.data.model.EffortItem("low", "Düşük", "Hızlı mod"),
+            com.antigravity.ai.data.model.EffortItem("high", "Yüksek", "Derin düşünme")
+        )
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                com.antigravity.ai.ui.components.QuickModelSelectorSheet(
+                    selectedModelId = "gpt-5.6-luna",
+                    selectedEffort = selectedEffort,
+                    availableModels = listOf(com.antigravity.ai.data.model.ModelItem("gpt-5.6-luna", "Luna", "Hızlı")),
+                    availableEfforts = efforts,
+                    onSelectModel = { _, eff -> selectedEffort = eff },
+                    onDismiss = {}
+                )
+            }
+        }
+        composeTestRule.onNodeWithText("Düşük (Hızlı)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Yüksek (Derin)").assertIsDisplayed().performClick()
+        assertEquals("high", selectedEffort)
+    }
 }

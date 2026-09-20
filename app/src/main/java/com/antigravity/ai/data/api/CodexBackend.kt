@@ -266,6 +266,33 @@ class CodexBackend(
         }).mapCatching { Unit }
     }
 
+    override suspend fun steerPrompt(
+        prompt: String,
+        conversationId: String?,
+        attachments: List<Attachment>
+    ): Result<Unit> = runCatching {
+        val threadId = conversationId ?: currentThreadId
+            ?: error("Aktif Codex thread bulunamadı")
+        val turnId = currentTurnId
+            ?: error("Aktif çalışan bir turn bulunamadı (steer yalnız üretim esnasında kullanılabilir)")
+
+        val text = buildString {
+            append(prompt)
+            attachments.mapNotNull { it.path ?: it.relPath }.forEach { append("\n[Ek: ").append(it).append(']') }
+        }
+        val input = JsonArray().apply {
+            add(JsonObject().apply {
+                addProperty("type", "text")
+                addProperty("text", text)
+            })
+        }
+        api.request("turn/steer", JsonObject().apply {
+            addProperty("threadId", threadId)
+            addProperty("expectedTurnId", turnId)
+            add("input", input)
+        }).getOrThrow()
+    }
+
     override suspend fun replyPermission(
         sessionID: String,
         requestID: String,

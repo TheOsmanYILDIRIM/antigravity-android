@@ -1679,6 +1679,47 @@ class ChatViewModel @JvmOverloads constructor(
             pastedBlocks = blocks,
             attachments = attachments
         )
+
+        val activeConvId = state.currentConversationId
+        val activeDraftId = activeConvId ?: state.currentSessionId
+
+        if (state.isGenerating) {
+            // Canlı Yönlendirme (Steer): Model çalışırken girilen mesaj sıradaki adıma eklenir
+            _uiState.update {
+                it.copy(
+                    inputText = "",
+                    pastedBlocks = emptyList(),
+                    attachments = emptyList(),
+                    showSlashCommands = false,
+                    showMentions = false,
+                    messages = it.messages + userMessage,
+                    notice = null
+                )
+            }
+            if (activeConvId != null) {
+                val cached = sessionMessagesCache.getOrPut(activeConvId) { mutableListOf() }
+                if (cached.isEmpty() && state.messages.isNotEmpty()) {
+                    cached.addAll(state.messages)
+                }
+                cached.add(userMessage)
+            }
+            saveDraft(activeDraftId, "")
+
+            viewModelScope.launch {
+                repository.steerMessage(
+                    prompt = finalPrompt,
+                    conversationId = activeConvId,
+                    attachments = userMessage.attachments
+                ).onFailure { err ->
+                    val raw = err.message ?: "Yönlendirme iletilemedi"
+                    _uiState.update { current ->
+                        current.copy(errorMessage = "⚠️ Canlı Yönlendirme Hatası: $raw")
+                    }
+                }
+            }
+            return
+        }
+
         val botPlaceholder = Message(
             role = "bot",
             content = "",
@@ -1698,7 +1739,6 @@ class ChatViewModel @JvmOverloads constructor(
             )
         }
 
-        val activeConvId = state.currentConversationId
         if (activeConvId != null) {
             val cached = sessionMessagesCache.getOrPut(activeConvId) { mutableListOf() }
             if (cached.isEmpty() && state.messages.isNotEmpty()) {
@@ -1707,7 +1747,6 @@ class ChatViewModel @JvmOverloads constructor(
             cached.add(userMessage)
             cached.add(botPlaceholder)
         }
-        val activeDraftId = activeConvId ?: state.currentSessionId
         saveDraft(activeDraftId, "")
 
         val isContinue = !activeConvId.isNullOrBlank()

@@ -131,39 +131,48 @@ fun QuickModelSelectorSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .androidx.compose.foundation.horizontalScroll(androidx.compose.foundation.rememberScrollState())
                     .padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 effortsList.forEach { effort ->
                     val isEffortSelected = tempEffort == effort.id
-                    val effortDisplay = when (effort.id) {
-                        "low" -> "⚡ Hızlı"
-                        "medium" -> "⚖️ Dengeli"
-                        "high" -> "🧠 Derin"
-                        else -> "Standart"
+                    val (effortDisplay, effortEmoji) = when (effort.id.lowercase()) {
+                        "default" -> "Otomatik" to "✨"
+                        "low" -> "Düşük (Hızlı)" to "⚡"
+                        "medium" -> "Orta (Dengeli)" to "⚖️"
+                        "high" -> "Yüksek (Derin)" to "🧠"
+                        "xhigh" -> "Ekstra Yüksek" to "🚀"
+                        "max" -> "Maksimum" to "🎯"
+                        "ultra" -> "Ultra Derin" to "🔮"
+                        else -> (if (effort.name.isNotBlank()) effort.name else effort.id.replaceFirstChar { it.uppercase() }) to "💡"
                     }
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(10.dp),
                         color = if (isEffortSelected) PrimaryIndigo.copy(alpha = 0.22f) else SurfaceVariantDark,
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
                             if (isEffortSelected) PrimaryIndigo else BorderSubtle
                         ),
                         modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(10.dp))
                             .clickable {
                                 tempEffort = effort.id
                                 onSelectModel(tempModelId, tempEffort)
                             }
                     ) {
-                        Box(
-                            modifier = Modifier.padding(vertical = 7.dp, horizontal = 2.dp),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            modifier = Modifier.padding(vertical = 7.dp, horizontal = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
                             Text(
+                                text = effortEmoji,
+                                fontSize = 12.sp
+                            )
+                            Text(
                                 text = effortDisplay,
-                                fontSize = 11.5.sp,
+                                fontSize = 12.sp,
                                 fontWeight = if (isEffortSelected) FontWeight.Bold else FontWeight.Medium,
                                 color = if (isEffortSelected) PrimaryIndigo else TextSecondary,
                                 maxLines = 1

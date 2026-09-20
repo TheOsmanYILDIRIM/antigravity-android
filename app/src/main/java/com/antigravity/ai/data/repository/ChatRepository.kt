@@ -46,6 +46,12 @@ class ChatRepository(private val backend: ChatBackend) {
         attachments: List<Attachment> = emptyList()
     ): Result<Unit> = backend.sendPrompt(prompt, conversationId, continueChat, settings, attachments)
 
+    suspend fun steerMessage(
+        prompt: String,
+        conversationId: String? = null,
+        attachments: List<Attachment> = emptyList()
+    ): Result<Unit> = backend.steerPrompt(prompt, conversationId, attachments)
+
     suspend fun startNewChat(): Result<SessionResponse> = backend.newChat()
 
     suspend fun stopExecution(): Result<Unit> = backend.stopGeneration()

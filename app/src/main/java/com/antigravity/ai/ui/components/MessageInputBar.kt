@@ -272,7 +272,7 @@ fun MessageInputBar(
                 ) {
                     if (text.isEmpty() && pastedBlocks.isEmpty() && attachments.isEmpty()) {
                         Text(
-                            text = if (isGenerating) "Antigravity çalışıyor..." else "Antigravity'ye bir şey sorun veya / yazın...",
+                            text = if (isGenerating) "Canlı yönlendirme (steer) ekleyin..." else "Antigravity'ye bir şey sorun veya / yazın...",
                             color = TextMuted,
                             fontSize = 15.sp
                         )
@@ -378,10 +378,7 @@ fun MessageInputBar(
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(Icons.Default.Draw, contentDescription = null, tint = DangerRed, modifier = Modifier.size(18.dp))
                                             Spacer(modifier = Modifier.width(10.dp))
-                                            Column {
-                                                Text("Görsel Seç & Üzerine Çiz", color = TextPrimary, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                                                Text("Kırmızıyla işaretleyip talimat verin", color = TextMuted, fontSize = 11.sp)
-                                            }
+                                            Text("Çizim & Görsel İşaretleme...", color = DangerRed, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
                                         }
                                     },
                                     onClick = {
@@ -407,15 +404,15 @@ fun MessageInputBar(
                                 )
                             }
 
-                            // 2. Basılı Tutunca Açılan ŞABLONLAR & PROMPTLAR Menüsü
+                            // 2. Uzun Basma Menüsü (Şablonlar)
                             DropdownMenu(
                                 expanded = showTemplateMenu,
                                 onDismissRequest = { showTemplateMenu = false },
                                 modifier = Modifier
                                     .background(SurfaceDark)
-                                    .border(1.dp, BorderSubtle, RoundedCornerShape(14.dp))
+                                    .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                                    .widthIn(min = 240.dp, max = 320.dp)
                             ) {
-                                // Başlık
                                 Surface(
                                     color = SurfaceVariantDark,
                                     modifier = Modifier.fillMaxWidth()
@@ -520,7 +517,7 @@ fun MessageInputBar(
 
                     Spacer(modifier = Modifier.width(6.dp))
 
-                    // Right Actions: Mic & Live Waveform / Send Button
+                    // Right Actions: Mic & Live Waveform / Send / Stop Button
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -542,19 +539,22 @@ fun MessageInputBar(
                             )
                         }
 
-                        // Send / Stop / Live Button with Animated Rotating Spinner
+                        val canSend = text.isNotBlank() || pastedBlocks.isNotEmpty() || attachments.isNotEmpty()
+
+                        // Send / Stop / Steer / Live Button
                         if (isGenerating) {
+                            // 1. Stop Button with Animated Rotating Spinner
                             Box(
                                 contentAlignment = Alignment.Center,
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(34.dp)
                                     .clip(CircleShape)
                                     .clickable { onStop() }
                             ) {
                                 // Animated rotating gradient ring
                                 Box(
                                     modifier = Modifier
-                                        .size(36.dp)
+                                        .size(34.dp)
                                         .rotate(rotationAngle)
                                         .border(
                                             2.dp,
@@ -563,11 +563,11 @@ fun MessageInputBar(
                                             ),
                                             CircleShape
                                         )
-                                )
+                                    )
                                 // Inner Stop Button
                                 Box(
                                     modifier = Modifier
-                                        .size(26.dp)
+                                        .size(24.dp)
                                         .clip(CircleShape)
                                         .background(DangerRed),
                                     contentAlignment = Alignment.Center
@@ -576,12 +576,29 @@ fun MessageInputBar(
                                         imageVector = Icons.Outlined.Stop,
                                         contentDescription = "Durdur",
                                         tint = Color.White,
-                                        modifier = Modifier.size(14.dp)
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
+                            }
+
+                            // 2. Canlı Yönlendirme (Steer) Butonu - Kullanıcı metin yazdıysa görünür
+                            if (canSend) {
+                                IconButton(
+                                    onClick = onSend,
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(PrimaryIndigo)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowUpward,
+                                        contentDescription = "Canlı Yönlendir (Steer)",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
                         } else {
-                            val canSend = text.isNotBlank() || pastedBlocks.isNotEmpty() || attachments.isNotEmpty()
                             if (canSend) {
                                 IconButton(
                                     onClick = onSend,
