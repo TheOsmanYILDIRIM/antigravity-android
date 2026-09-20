@@ -541,6 +541,7 @@ fun ChatScreen(
                         selectedModelName = modelWithEffort,
                         onModelPillClick = { showQuickModelSheet = true },
                         isGenerating = uiState.isGenerating,
+                        canSteer = uiState.supportsSteer,
                         isListening = uiState.isListening,
                         onSend = viewModel::sendMessage,
                         onStop = viewModel::stopExecution,

@@ -257,6 +257,8 @@ class CodexBackend(
             SessionResponse("ok", SessionData(id, id, "Yeni Codex Sohbeti", messages = emptyList()))
         }
 
+    override val supportsSteer: Boolean = true
+
     override suspend fun stopGeneration(): Result<Unit> {
         val threadId = currentThreadId ?: return Result.success(Unit)
         val turnId = currentTurnId ?: return Result.success(Unit)

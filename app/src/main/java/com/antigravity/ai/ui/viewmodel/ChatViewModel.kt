@@ -89,6 +89,7 @@ data class ChatUiState(
     val errorMessage: String? = null,
     val notice: String? = null,
     val activeBackend: String = "agy",
+    val supportsSteer: Boolean = false,
     val pendingPermission: PermissionRequestData? = null,
     val pendingQuestion: QuestionRequestData? = null,
     val currentProjectName: String? = null,
@@ -143,7 +144,7 @@ class ChatViewModel @JvmOverloads constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val name = fixedBackend ?: resolveBackendName()
             repository = ChatRepository(buildBackend(name))
-            _uiState.update { it.copy(activeBackend = name) }
+            _uiState.update { it.copy(activeBackend = name, supportsSteer = repository.supportsSteer) }
             startEventCollection()
             refreshAll()
             val health = AgyServerManager.checkHealth()
@@ -1684,7 +1685,9 @@ class ChatViewModel @JvmOverloads constructor(
         val activeDraftId = activeConvId ?: state.currentSessionId
 
         if (state.isGenerating) {
-            // Canlı Yönlendirme (Steer): Model çalışırken girilen mesaj sıradaki adıma eklenir
+            if (!state.supportsSteer) return // Steer desteklemeyen backend'lerde üretim esnasında göndermeyi engelle
+
+            // Canlı Yönlendirme (Steer): Yalnızca Codex gibi gerçek turn-steer destekleyen backend'lerde sıradaki adıma enjekte edilir
             _uiState.update {
                 it.copy(
                     inputText = "",

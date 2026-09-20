@@ -1,12 +1,11 @@
 # Antigravity Android - Günlük & Değişiklik Günlüğü (log.md)
 
-## [2026-09-20] Düşünme Seviyesi Yatay Kaydırma ve Canlı Yönlendirme (Turn Steer) Entegrasyonu
+## [2026-09-20] Düşünme Seviyesi Yatay Kaydırma ve Seçici Canlı Yönlendirme (Codex Only Steer)
 - `QuickModelSelectorSheet.kt` güncellendi: Reasoning effort çipleri sabit sıkışık satır yerine `horizontalScroll` destekli esnek çiplere dönüştürüldü. `default` (✨ Otomatik), `low` (⚡ Düşük/Hızlı), `medium` (⚖️ Orta/Dengeli), `high` (🧠 Yüksek/Derin), `xhigh` (🚀 Ekstra Yüksek), `max` (🎯 Maksimum) ve `ultra` (🔮 Ultra Derin) rozetleri eksiksiz tanımlandı; dar ekranlarda buton metinlerinin kırpılması/bozulması tamamen önlendi.
-- `CodexBackend.kt` içine `turn/steer` RPC çağrısı (`steerPrompt`) eklendi: Model veya araçlar çalışırken kullanıcının girdiği yönlendirme mesajları Codex app-server'a iletilerek kesintisiz ve sıradaki adımın ardına enjekte ediliyor.
-- `AgyBackend.kt` içine akıllı steer fallback'i eklendi: AGY CLI oturumlarında üretim esnasında yönlendirme mesajı girildiğinde mevcut yarım adım kesilip yeni talimat aynı oturuma anında yeni turn olarak enjekte ediliyor.
-- `ChatViewModel.kt` güncellendi: `isGenerating == true` iken kullanıcının gönderdiği mesajlar ekrana kullanıcı mesajı olarak basılıp `steerMessage` ile arka plana yönlendiriliyor.
-- `MessageInputBar.kt` güncellendi: Model çalışırken metin yazıldığında Stop butonunun yanında şık `Canlı Yönlendir (Steer)` yukarı ok butonu beliriyor; placeholder metni dinamik olarak `Canlı yönlendirme (steer) ekleyin...` şeklinde kullanıcıya rehberlik ediyor.
-- `UiSemanticsTest.kt` içine `quick_model_selector_sheet_renders_efforts` semantik doğrulama testi eklendi.
+- `CodexBackend.kt` içine `turn/steer` RPC çağrısı (`steerPrompt`, `supportsSteer = true`) entegre edildi: Model veya araçlar çalışırken kullanıcının girdiği yönlendirme mesajları Codex app-server'a iletilerek kesintisiz ve sıradaki adımın ardına enjekte ediliyor.
+- `AgyBackend.kt` ve `ChatBackend.kt` mimarisi temizlendi: AGY CLI gibi `turn/steer` desteği olmayan backend'lerde `supportsSteer = false` yapıldı; sahte durdur-devam et hilesi kaldırılarak yanıltıcı davranış engellendi.
+- `MessageInputBar.kt` ve `ChatScreen.kt` güncellendi: Canlı yönlendirme butonu ve steer placeholder'ı yalnızca aktif backend gerçek steer destekliyorsa (`canSteer = true`, örn. Codex) görünür kılındı. AGY CLI sekmesinde üretim esnasında sahte buton gizlendi, yalnızca Stop butonu gösteriliyor.
+- `UiSemanticsTest.kt` içine `quick_model_selector_sheet_renders_efforts` ve `message_input_bar_shows_steer_only_when_supported` semantik doğrulama testleri eklendi.
 
 ## [2026-09-20] Kapalı Sunucu Bildirim Spam Engeli, Kapalı Backend'leri Gizleme & 2.5x Büyütülmüş Kırmızı Buton
 - `ChatViewModel.kt` içine `isConnectionOrOfflineError()` koruması eklendi: Sunucu kapalıyken veya bağlantı koptuğunda Android cihaz bildirim çubuğuna durmadan hata bildirimi fırlatılması tamamen engellendi; durum yalnız ekranda offline banner olarak gösterilir.

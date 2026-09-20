@@ -31,6 +31,12 @@ interface ChatBackend {
     suspend fun stopGeneration(): Result<Unit>
 
     /**
+     * Backend'in model çalışırken canlı yönlendirme (turn/steer) destekleyip desteklemediğini belirtir.
+     * Yalnızca gerçek kesintisiz steer destekleyen backend'lerde (örn. Codex) true olur.
+     */
+    val supportsSteer: Boolean get() = false
+
+    /**
      * Model çalışırken / turn devam ederken canlı yönlendirme mesajı (steer) gönderir.
      * Codex'te `turn/steer`, diğer backend'lerde destekleniyorsa enjekte edilir.
      */

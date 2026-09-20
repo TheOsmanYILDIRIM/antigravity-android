@@ -74,6 +74,7 @@ fun MessageInputBar(
     selectedModelName: String = "Gemini 3.7 Flash",
     onModelPillClick: () -> Unit = {},
     isGenerating: Boolean,
+    canSteer: Boolean = false,
     isListening: Boolean,
     onSend: () -> Unit,
     onStop: () -> Unit,
@@ -272,7 +273,9 @@ fun MessageInputBar(
                 ) {
                     if (text.isEmpty() && pastedBlocks.isEmpty() && attachments.isEmpty()) {
                         Text(
-                            text = if (isGenerating) "Canlı yönlendirme (steer) ekleyin..." else "Antigravity'ye bir şey sorun veya / yazın...",
+                            text = if (isGenerating) {
+                                if (canSteer) "Canlı yönlendirme (steer) ekleyin..." else "Antigravity çalışıyor..."
+                            } else "Antigravity'ye bir şey sorun veya / yazın...",
                             color = TextMuted,
                             fontSize = 15.sp
                         )
@@ -581,8 +584,8 @@ fun MessageInputBar(
                                 }
                             }
 
-                            // 2. Canlı Yönlendirme (Steer) Butonu - Kullanıcı metin yazdıysa görünür
-                            if (canSend) {
+                            // 2. Canlı Yönlendirme (Steer) Butonu - Yalnızca steer destekleyen backend'lerde (örn. Codex) görünür
+                            if (canSteer && canSend) {
                                 IconButton(
                                     onClick = onSend,
                                     modifier = Modifier

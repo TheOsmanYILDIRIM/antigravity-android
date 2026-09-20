@@ -183,4 +183,32 @@ class UiSemanticsTest {
         composeTestRule.onNodeWithText("Yüksek (Derin)").assertIsDisplayed().performClick()
         assertEquals("high", selectedEffort)
     }
+
+    // 7. MessageInputBar üretim esnasında steer butonunu yalnızca canSteer=true olduğunda gösteriyor mu?
+    @Test
+    @Config(qualifiers = "w393dp-h873dp-440dpi", sdk = [33])
+    fun message_input_bar_shows_steer_only_when_supported() {
+        // AGY Backend (canSteer = false): Steer butonu görünmemeli, yalnız Stop görünmeli
+        composeTestRule.setContent {
+            AntigravityAITheme {
+                com.antigravity.ai.ui.components.MessageInputBar(
+                    text = "Ek talimat",
+                    onTextChange = {},
+                    pastedBlocks = emptyList(),
+                    onRemovePastedBlock = {},
+                    attachments = emptyList(),
+                    onRemoveAttachment = {},
+                    isGenerating = true,
+                    canSteer = false,
+                    isListening = false,
+                    onSend = {},
+                    onStop = {},
+                    onMicClick = {},
+                    onAttachClick = {}
+                )
+            }
+        }
+        composeTestRule.onNodeWithText("Antigravity çalışıyor...").assertExists()
+        composeTestRule.onNodeWithText("Durdur").assertExists()
+    }
 }

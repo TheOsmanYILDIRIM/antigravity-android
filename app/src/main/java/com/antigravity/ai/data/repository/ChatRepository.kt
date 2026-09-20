@@ -46,6 +46,8 @@ class ChatRepository(private val backend: ChatBackend) {
         attachments: List<Attachment> = emptyList()
     ): Result<Unit> = backend.sendPrompt(prompt, conversationId, continueChat, settings, attachments)
 
+    val supportsSteer: Boolean get() = backend.supportsSteer
+
     suspend fun steerMessage(
         prompt: String,
         conversationId: String? = null,
