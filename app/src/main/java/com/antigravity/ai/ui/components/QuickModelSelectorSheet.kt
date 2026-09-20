@@ -1,11 +1,14 @@
 package com.antigravity.ai.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -131,7 +134,7 @@ fun QuickModelSelectorSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .androidx.compose.foundation.horizontalScroll(androidx.compose.foundation.rememberScrollState())
+                    .horizontalScroll(rememberScrollState())
                     .padding(bottom = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -150,7 +153,7 @@ fun QuickModelSelectorSheet(
                     Surface(
                         shape = RoundedCornerShape(10.dp),
                         color = if (isEffortSelected) PrimaryIndigo.copy(alpha = 0.22f) else SurfaceVariantDark,
-                        border = androidx.compose.foundation.BorderStroke(
+                        border = BorderStroke(
                             1.dp,
                             if (isEffortSelected) PrimaryIndigo else BorderSubtle
                         ),
