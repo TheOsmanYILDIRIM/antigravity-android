@@ -4,6 +4,7 @@
 - `CodexBackend.kt` içindeki iki `thread/start` yolu ortak payload üreticisine bağlandı; geçersiz `unlessTrusted` değeri güncel `on-request` politikasıyla değiştirildi.
 - `CodexBackendProtocolTest.kt` gerçek JSON serileştirmesinde `approvalPolicy == "on-request"` değerini doğruluyor.
 - Payload, kurulu `codex app-server 0.155.1` sürecine gönderildi; sunucu isteği kabul ederek yeni thread ve `approvalPolicy: "on-request"` sonucu döndürdü. Yerel Gradle/Android derlemesi proje kuralı gereği çalıştırılmadı.
+- Commit `774ef1a` origin/main'e pushlandı. GitHub Actions lint/unit test koşusu `35567617008` ve imzalı ARM64 APK build/release koşusu `35567617036` başarıyla tamamlandı.
 
 ## [2026-09-20] Düşünme Seviyesi Yatay Kaydırma ve Seçici Canlı Yönlendirme (Codex Only Steer)
 - `QuickModelSelectorSheet.kt` güncellendi: Reasoning effort çipleri sabit sıkışık satır yerine `horizontalScroll` destekli esnek çiplere dönüştürüldü. `default` (✨ Otomatik), `low` (⚡ Düşük/Hızlı), `medium` (⚖️ Orta/Dengeli), `high` (🧠 Yüksek/Derin), `xhigh` (🚀 Ekstra Yüksek), `max` (🎯 Maksimum) ve `ultra` (🔮 Ultra Derin) rozetleri eksiksiz tanımlandı; dar ekranlarda buton metinlerinin kırpılması/bozulması tamamen önlendi.
