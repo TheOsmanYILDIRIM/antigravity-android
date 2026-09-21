@@ -7,6 +7,12 @@ import com.google.gson.JsonObject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapNotNull
 
+internal fun codexThreadStartParams(): JsonObject = JsonObject().apply {
+    addProperty("cwd", "/data/data/com.termux/files/home")
+    addProperty("approvalPolicy", "on-request")
+    addProperty("serviceName", "antigravity_android")
+}
+
 /** Adapts the official Codex app-server protocol to the app's shared chat model. */
 class CodexBackend(
     private val api: CodexApiService = CodexApiService()
@@ -222,11 +228,7 @@ class CodexBackend(
             api.request("thread/resume", JsonObject().apply { addProperty("threadId", target) }).getOrThrow()
             target
         } else {
-            val result = api.request("thread/start", JsonObject().apply {
-                addProperty("cwd", "/data/data/com.termux/files/home")
-                addProperty("approvalPolicy", "unlessTrusted")
-                addProperty("serviceName", "antigravity_android")
-            }).getOrThrow()
+            val result = api.request("thread/start", codexThreadStartParams()).getOrThrow()
             result.getAsJsonObject("thread")?.string("id") ?: error("Codex thread id dönmedi")
         }
         currentThreadId = threadId
@@ -247,11 +249,7 @@ class CodexBackend(
     }
 
     override suspend fun newChat(): Result<SessionResponse> =
-        api.request("thread/start", JsonObject().apply {
-            addProperty("cwd", "/data/data/com.termux/files/home")
-            addProperty("approvalPolicy", "unlessTrusted")
-            addProperty("serviceName", "antigravity_android")
-        }).mapCatching { result ->
+        api.request("thread/start", codexThreadStartParams()).mapCatching { result ->
             val id = result.getAsJsonObject("thread")?.string("id") ?: error("Codex thread id dönmedi")
             currentThreadId = id
             SessionResponse("ok", SessionData(id, id, "Yeni Codex Sohbeti", messages = emptyList()))

@@ -1,5 +1,3 @@
 # Antigravity Android Backlog
 
-- Aktif WIP yok.
-
-
+- [WIP / Yapılıyor: Codex approval policy düzeltmesini commit/push et ve GitHub Actions CI sonucunu doğrula]

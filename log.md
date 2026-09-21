@@ -1,5 +1,10 @@
 # Antigravity Android - Günlük & Değişiklik Günlüğü (log.md)
 
+## [2026-09-21] Codex App-Server Approval Policy Uyumluluk Düzeltmesi
+- `CodexBackend.kt` içindeki iki `thread/start` yolu ortak payload üreticisine bağlandı; geçersiz `unlessTrusted` değeri güncel `on-request` politikasıyla değiştirildi.
+- `CodexBackendProtocolTest.kt` gerçek JSON serileştirmesinde `approvalPolicy == "on-request"` değerini doğruluyor.
+- Payload, kurulu `codex app-server 0.155.1` sürecine gönderildi; sunucu isteği kabul ederek yeni thread ve `approvalPolicy: "on-request"` sonucu döndürdü. Yerel Gradle/Android derlemesi proje kuralı gereği çalıştırılmadı.
+
 ## [2026-09-20] Düşünme Seviyesi Yatay Kaydırma ve Seçici Canlı Yönlendirme (Codex Only Steer)
 - `QuickModelSelectorSheet.kt` güncellendi: Reasoning effort çipleri sabit sıkışık satır yerine `horizontalScroll` destekli esnek çiplere dönüştürüldü. `default` (✨ Otomatik), `low` (⚡ Düşük/Hızlı), `medium` (⚖️ Orta/Dengeli), `high` (🧠 Yüksek/Derin), `xhigh` (🚀 Ekstra Yüksek), `max` (🎯 Maksimum) ve `ultra` (🔮 Ultra Derin) rozetleri eksiksiz tanımlandı; dar ekranlarda buton metinlerinin kırpılması/bozulması tamamen önlendi.
 - `CodexBackend.kt` içine `turn/steer` RPC çağrısı (`steerPrompt`, `supportsSteer = true`) entegre edildi: Model veya araçlar çalışırken kullanıcının girdiği yönlendirme mesajları Codex app-server'a iletilerek kesintisiz ve sıradaki adımın ardına enjekte ediliyor.
