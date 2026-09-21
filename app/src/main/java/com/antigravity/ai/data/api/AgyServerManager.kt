@@ -69,7 +69,7 @@ object AgyServerManager {
     fun startServer(context: Context, onLaunched: ((Boolean, String) -> Unit)? = null) {
         var launched = false
 
-        // Pure Background Termux RUN_COMMAND IPC Service (Zero UI intrusion, No popup windows)
+        // 1. Pure Background Termux RUN_COMMAND with automatic WakeLock & KeepAlive
         try {
             val intent = Intent().apply {
                 setClassName("com.termux", "com.termux.app.RunCommandService")
@@ -79,6 +79,8 @@ object AgyServerManager {
                 putExtra("com.termux.RUN_COMMAND_WORKDIR", "/data/data/com.termux/files/home")
                 putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
                 putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0")
+                putExtra("com.termux.RUN_COMMAND_WAKE_LOCK", true)
+                putExtra("com.termux.RUN_COMMAND_KEEP_ALIVE", true)
             }
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 try {
@@ -94,19 +96,19 @@ object AgyServerManager {
             launched = false
         }
 
-        // 2. Trigger Invisible Termux:Float Clone (Keeps Termux UID alive in 100% invisible mode)
+        // 2. Direct Wake Lock Signal to TermuxService (Headless foreground persistence)
         try {
-            val floatIntent = Intent("com.termux.window.ACTION_START_INVISIBLE").apply {
-                setClassName("com.termux.window.clone", "com.termux.window.TermuxFloatService")
+            val wakeIntent = Intent("com.termux.service_wake_lock").apply {
+                setClassName("com.termux", "com.termux.app.TermuxService")
             }
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 try {
-                    context.startForegroundService(floatIntent)
+                    context.startForegroundService(wakeIntent)
                 } catch (e: Exception) {
-                    context.startService(floatIntent)
+                    context.startService(wakeIntent)
                 }
             } else {
-                context.startService(floatIntent)
+                context.startService(wakeIntent)
             }
         } catch (e: Exception) {}
 
@@ -172,15 +174,15 @@ object AgyServerManager {
             context.startService(stopIntent)
         } catch (e: Exception) {}
 
-        // 3. Stop Termux:Float Clone service
+        // 3. Release Wake Lock on TermuxService
         try {
-            val floatStopIntent = Intent("com.termux.window.ACTION_STOP_SERVICE").apply {
-                setClassName("com.termux.window.clone", "com.termux.window.TermuxFloatService")
+            val wakeUnlockIntent = Intent("com.termux.service_wake_unlock").apply {
+                setClassName("com.termux", "com.termux.app.TermuxService")
             }
-            context.startService(floatStopIntent)
+            context.startService(wakeUnlockIntent)
         } catch (e: Exception) {}
 
-        // 4. Stop Antigravity FloatingKeepAliveService
+        // 4. Stop Antigravity FloatingKeepAliveService if active
         try {
             com.antigravity.ai.service.FloatingKeepAliveService.stopKeepAlive(context)
         } catch (e: Exception) {}
