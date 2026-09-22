@@ -2,9 +2,12 @@ package com.antigravity.ai.ui.screens
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.dp
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -24,7 +27,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -37,6 +39,10 @@ import com.antigravity.ai.ui.viewmodel.ChatViewModelFactory
 import com.antigravity.ai.ui.components.PreviewScreen
 
 internal fun shouldOpenHub(progress: Float): Boolean = progress >= 0.35f
+
+private val terminalHubDragDistance = 96.dp
+private val terminalHubEdgeInset = 16.dp
+private val terminalHubHitWidth = 40.dp
 
 /**
  * Bağımsız AGY, Codex, OpenCode ve Cline sohbet istemcilerini canlı tutarak
@@ -128,12 +134,15 @@ fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
                     0.18f at 8000
                 }, RepeatMode.Restart), label = "edge-alpha"
             )
-            Box(Modifier.align(androidx.compose.ui.Alignment.CenterEnd).width(24.dp).fillMaxSize()
+            Box(Modifier.align(androidx.compose.ui.Alignment.CenterEnd)
+                .offset(x = -terminalHubEdgeInset)
+                .width(terminalHubHitWidth)
+                .fillMaxHeight()
                 .semantics { contentDescription = "Terminal Hub açma alanı" }
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
                         onDragStart = { edgeDrag = 0.01f },
-                        onHorizontalDrag = { _, amount -> edgeDrag = (edgeDrag - amount / 120.dp.toPx()).coerceIn(0f, 1f) },
+                        onHorizontalDrag = { _, amount -> edgeDrag = (edgeDrag - amount / terminalHubDragDistance.toPx()).coerceIn(0f, 1f) },
                         onDragEnd = { if (shouldOpenHub(edgeDrag)) showHub = true; edgeDrag = 0f },
                         onDragCancel = { edgeDrag = 0f }
                     )

@@ -1,3 +1,3 @@
 # Antigravity Android Backlog
 
-- Aktif WIP yok.
+- [WIP / Yapılıyor: Terminal Hub tutamacını Android geri jestinden ayırma]
