@@ -3,6 +3,8 @@ package com.antigravity.ai.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,7 +25,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.platform.LocalContext
 import com.antigravity.ai.ui.theme.SurfaceDark
 import com.antigravity.ai.ui.theme.TextMuted
@@ -35,9 +39,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import com.antigravity.ai.data.model.TerminalPlugin
 import com.antigravity.ai.data.model.TerminalSchedule
 import com.antigravity.ai.data.model.TerminalTask
+import com.antigravity.ai.data.model.ActionItem
 import com.antigravity.ai.service.TerminalScheduleReceiver
 import com.antigravity.ai.service.TerminalScheduleManager
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
@@ -128,14 +134,20 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Güvenli Actions", style = MaterialTheme.typography.titleMedium)
                     Text(status, color = TextMuted)
-                    actions.groupBy { action -> action.id.substringBefore('-').lowercase() }
+                    actions.groupBy { action -> action.category ?: action.id.substringBefore('-').lowercase() }
                         .toSortedMap()
-                        .forEach { (serviceId, serviceActions) ->
+                        .forEach { (category, categoryActions) ->
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(actionServiceLabel(serviceId), style = MaterialTheme.typography.labelLarge)
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    serviceActions.forEach { action ->
+                                Text(category, style = MaterialTheme.typography.labelLarge)
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    maxItemsInEachRow = 2
+                                ) {
+                                    categoryActions.sortedWith(compareBy<ActionItem> { it.order }.thenBy { it.label }).forEach { action ->
                                         androidx.compose.material3.Button(
+                                            modifier = Modifier.widthIn(min = 104.dp, max = 220.dp),
                                             enabled = !busy,
                                             onClick = {
                                                 scope.launch {
@@ -144,7 +156,13 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
                                                     }
                                                 }
                                             }
-                                        ) { Text(actionActionLabel(action.label)) }
+                                        ) {
+                                            Text(
+                                                action.compactLabel ?: actionActionLabel(action.label),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
                                     }
                                 }
                             }

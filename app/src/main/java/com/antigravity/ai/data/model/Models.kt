@@ -3,7 +3,14 @@ package com.antigravity.ai.data.model
 import com.google.gson.annotations.SerializedName
 import java.util.UUID
 
-data class ActionItem(val id: String, val label: String)
+data class ActionItem(
+    val id: String,
+    val label: String,
+    val compactLabel: String? = null,
+    val category: String? = null,
+    val icon: String? = null,
+    val order: Int = 0
+)
 data class ActionsResponse(val status: String = "", val actions: List<ActionItem> = emptyList())
 data class ActionRunResponse(val status: String = "", val actionId: String? = null, val id: String? = null, val pid: Long? = null)
 
