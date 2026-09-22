@@ -97,3 +97,5 @@
 - **Tool Çağrı Grubu Sabitliği (Collapse/Expand Override):** Kullanıcı araç çağrı kutusunu daralttığında yeni araç çağrısı gelse veya üretim tamamlansa dahi kullanıcının daraltma tercihi korunarak kutunun kendiliğinden açılıp kapanması önlendi.
 - **Tool Çağrıları Birleştirme & Kayıp Önleme:** Akış sırasında ve mesaj tamamlama anında tool çağrılarının tek tek ayrılması veya kaybolması engellendi, tek bir üst kapsayıcıda güvenle toplandı.
 [2026-09-22] Yapıldı: Terminal Hub güvenli action kartları, run çağrısı ve SSE çıktı paneli eklendi.
+[2026-09-22] Yapıldı: Terminal Hub'a Codex/OpenCode/Cline servis start-stop action'ları ve güvenli Termux controller'ları eklendi; alias kaynakları tarandı.
+[2026-09-22] Yapıldı: Terminal Hub action'ları servis bazında gruplandı; iki yönlü swipe için %25 ekran/96dp minimum eşik ve 1.2x yatay baskınlık eklendi.

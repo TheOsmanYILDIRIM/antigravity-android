@@ -73,8 +73,26 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Güvenli Actions", style = MaterialTheme.typography.titleMedium)
                     Text(status, color = TextMuted)
-                    actions.forEach { action ->
-                        androidx.compose.material3.Button(enabled = !busy, onClick = { scope.launch { api.runAction(action.id).onFailure { status = "Action hatası: ${it.message ?: "N/A"}" } } }) { Text(action.label) }
+                    actions.groupBy { action -> action.id.substringBefore('-').lowercase() }
+                        .toSortedMap()
+                        .forEach { (serviceId, serviceActions) ->
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(actionServiceLabel(serviceId), style = MaterialTheme.typography.labelLarge)
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    serviceActions.forEach { action ->
+                                        androidx.compose.material3.Button(
+                                            enabled = !busy,
+                                            onClick = {
+                                                scope.launch {
+                                                    api.runAction(action.id).onFailure {
+                                                        status = "Action hatası: ${it.message ?: "N/A"}"
+                                                    }
+                                                }
+                                            }
+                                        ) { Text(actionActionLabel(action.label)) }
+                                    }
+                                }
+                            }
                     }
                     if (output.isNotBlank()) Text(output, color = TextMuted, style = MaterialTheme.typography.bodySmall)
                 }
@@ -84,6 +102,22 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
         item { HubCard("Çalışan görevler", listOf("Çalışan görev yok" to "N/A")) }
         item { HubCard("Kaynaklar", listOf("CPU / RAM" to "N/A", "Arka plan işlemleri" to "N/A")) }
     }
+}
+
+private fun actionServiceLabel(serviceId: String): String = when (serviceId) {
+    "agy" -> "AGY"
+    "codex" -> "Codex"
+    "opencode" -> "OpenCode"
+    "cline" -> "Cline"
+    "vault" -> "Vault"
+    else -> serviceId.replaceFirstChar { it.uppercase() }
+}
+
+private fun actionActionLabel(label: String): String = when {
+    label.contains("başlat", ignoreCase = true) || label.contains("start", ignoreCase = true) -> "Başlat"
+    label.contains("kapat", ignoreCase = true) || label.contains("stop", ignoreCase = true) -> "Kapat"
+    label.contains("sync", ignoreCase = true) -> "Senkronize et"
+    else -> label
 }
 
 private fun formatUptime(seconds: Long): String {

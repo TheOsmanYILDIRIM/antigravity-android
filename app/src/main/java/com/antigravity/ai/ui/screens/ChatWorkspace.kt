@@ -113,26 +113,31 @@ fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
                     Modifier.pointerInput(showHub) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
-                            var previousX = down.position.x
+                            val thresholdPx = maxOf(terminalHubDragDistance.toPx(), size.width * 0.25f)
                             var acceptedDirection = false
                             var rejectedDirection = false
+                            var totalX = 0f
+                            var totalY = 0f
                             hubDragProgress = 0f
                             while (true) {
                                 val event = awaitPointerEvent()
                                 val change = event.changes.firstOrNull() ?: break
                                 if (change.changedToUp()) {
-                                    if (acceptedDirection && shouldOpenHub(hubDragProgress)) {
+                                    val validDistance = kotlin.math.abs(totalX) >= thresholdPx &&
+                                        kotlin.math.abs(totalX) > kotlin.math.abs(totalY) * 1.2f
+                                    val validDirection = (!showHub && totalX < 0f) || (showHub && totalX > 0f)
+                                    if (acceptedDirection && validDistance && validDirection) {
                                         showHub = !showHub
                                     }
                                     hubDragProgress = 0f
                                     break
                                 }
 
-                                val amount = change.position.x - previousX
-                                previousX = change.position.x
+                                totalX = change.position.x - down.position.x
+                                totalY = change.position.y - down.position.y
                                 if (rejectedDirection) continue
-                                if (!acceptedDirection && kotlin.math.abs(amount) > viewConfiguration.touchSlop) {
-                                    val validDirection = (!showHub && amount < 0f) || (showHub && amount > 0f)
+                                if (!acceptedDirection && kotlin.math.abs(totalX) > viewConfiguration.touchSlop) {
+                                    val validDirection = (!showHub && totalX < 0f) || (showHub && totalX > 0f)
                                     if (!validDirection) {
                                         rejectedDirection = true
                                         hubDragProgress = 0f
@@ -141,7 +146,7 @@ fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
                                     acceptedDirection = true
                                 }
                                 if (acceptedDirection) {
-                                    hubDragProgress = (hubDragProgress + kotlin.math.abs(amount) / terminalHubDragDistance.toPx())
+                                    hubDragProgress = (kotlin.math.abs(totalX) / thresholdPx)
                                         .coerceIn(0f, 1f)
                                     change.consume()
                                 }
