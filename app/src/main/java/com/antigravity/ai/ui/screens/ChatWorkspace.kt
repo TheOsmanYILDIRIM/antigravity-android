@@ -4,9 +4,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInHorizontally
@@ -42,7 +42,6 @@ internal fun shouldOpenHub(progress: Float): Boolean = progress >= 0.35f
 
 private val terminalHubDragDistance = 96.dp
 private val terminalHubEdgeInset = 16.dp
-private val terminalHubHitWidth = 40.dp
 
 /**
  * Bağımsız AGY, Codex, OpenCode ve Cline sohbet istemcilerini canlı tutarak
@@ -54,7 +53,7 @@ fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
     var previewUrl by rememberSaveable { mutableStateOf<String?>(null) }
     var previewSourcePath by rememberSaveable { mutableStateOf<String?>(null) }
     var showHub by rememberSaveable { mutableStateOf(false) }
-    var edgeDrag by rememberSaveable { mutableStateOf(0f) }
+    var hubDragProgress by rememberSaveable { mutableStateOf(0f) }
     val context = LocalContext.current
     val animationsEnabled = Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
     val application = context.applicationContext as android.app.Application
@@ -87,7 +86,37 @@ fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .then(
+                if (previewUrl == null) {
+                    Modifier.pointerInput(showHub) {
+                        detectHorizontalDragGestures(
+                            onDragStart = { hubDragProgress = 0f },
+                            onHorizontalDrag = { _, amount ->
+                                val isOpening = !showHub && amount < 0f
+                                val isClosing = showHub && amount > 0f
+                                if (isOpening || isClosing) {
+                                    val distance = terminalHubDragDistance.toPx()
+                                    hubDragProgress = (hubDragProgress + kotlin.math.abs(amount) / distance)
+                                        .coerceIn(0f, 1f)
+                                }
+                            },
+                            onDragEnd = {
+                                if (shouldOpenHub(hubDragProgress)) {
+                                    showHub = !showHub
+                                }
+                                hubDragProgress = 0f
+                            },
+                            onDragCancel = { hubDragProgress = 0f }
+                        )
+                    }
+                } else {
+                    Modifier
+                }
+            )
+    ) {
         AnimatedVisibility(showHub, enter = slideInHorizontally { it } + fadeIn(), exit = slideOutHorizontally { it } + fadeOut()) {
             TerminalHubScreen { showHub = false }
         }
@@ -136,22 +165,15 @@ fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
             )
             Box(Modifier.align(androidx.compose.ui.Alignment.CenterEnd)
                 .offset(x = -terminalHubEdgeInset)
-                .width(terminalHubHitWidth)
+                .width(2.dp)
                 .fillMaxHeight()
                 .semantics { contentDescription = "Terminal Hub açma alanı" }
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
-                        onDragStart = { edgeDrag = 0.01f },
-                        onHorizontalDrag = { _, amount -> edgeDrag = (edgeDrag - amount / terminalHubDragDistance.toPx()).coerceIn(0f, 1f) },
-                        onDragEnd = { if (shouldOpenHub(edgeDrag)) showHub = true; edgeDrag = 0f },
-                        onDragCancel = { edgeDrag = 0f }
-                    )
-                }.drawBehind {
+                .drawBehind {
                     val alpha = if (animationsEnabled) pulse.value else 0.18f
-                    drawLine(Color.White.copy(alpha = (alpha + edgeDrag * 0.42f).coerceIn(0f, 1f)),
+                    drawLine(Color.White.copy(alpha = alpha),
                         androidx.compose.ui.geometry.Offset(size.width - 1.dp.toPx(), size.height * .42f),
                         androidx.compose.ui.geometry.Offset(size.width - 1.dp.toPx(), size.height * .58f),
-                        strokeWidth = 1.dp.toPx() + edgeDrag * 2.dp.toPx())
+                        strokeWidth = 1.dp.toPx() + hubDragProgress * 2.dp.toPx())
                 })
         }
     }
