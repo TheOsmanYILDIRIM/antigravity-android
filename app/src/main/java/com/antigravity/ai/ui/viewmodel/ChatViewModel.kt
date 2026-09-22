@@ -621,6 +621,9 @@ class ChatViewModel @JvmOverloads constructor(
                     is StreamEvent.Heartbeat -> {
                         // Keep connection alive, no UI change needed
                     }
+                    is StreamEvent.ActionStarted,
+                    is StreamEvent.ActionOutput,
+                    is StreamEvent.ActionFinished -> Unit
                 }
             }
         }
