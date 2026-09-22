@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
@@ -37,9 +38,12 @@ import androidx.compose.ui.semantics.semantics
 import android.provider.Settings
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.antigravity.ai.data.api.CodexServerManager
+import com.antigravity.ai.data.api.AgyServerManager
+import com.antigravity.ai.data.api.ServerHealth
 import com.antigravity.ai.ui.viewmodel.ChatViewModel
 import com.antigravity.ai.ui.viewmodel.ChatViewModelFactory
 import com.antigravity.ai.ui.components.PreviewScreen
+import kotlinx.coroutines.delay
 
 internal fun shouldOpenHub(progress: Float): Boolean = progress >= 0.35f
 
@@ -57,6 +61,7 @@ fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
     var previewSourcePath by rememberSaveable { mutableStateOf<String?>(null) }
     var showHub by rememberSaveable { mutableStateOf(false) }
     var hubDragProgress by rememberSaveable { mutableStateOf(0f) }
+    var agyHealth by remember { mutableStateOf<ServerHealth?>(null) }
     val context = LocalContext.current
     val animationsEnabled = Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
     val application = context.applicationContext as android.app.Application
@@ -86,6 +91,17 @@ fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
             if (ready) {
                 codexViewModel.refreshAll()
             }
+        }
+    }
+
+    LaunchedEffect(showHub) {
+        if (showHub) {
+            while (true) {
+                agyHealth = AgyServerManager.checkHealth()
+                delay(2500L)
+            }
+        } else {
+            agyHealth = null
         }
     }
 
@@ -151,7 +167,7 @@ fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
             label = "chat-terminal-hub-transition"
         ) { showingHub ->
             if (showingHub) {
-                TerminalHubScreen { showHub = false }
+                TerminalHubScreen(agyHealth = agyHealth) { showHub = false }
             } else {
                 val activeViewModel = when (selectedBackend) {
                     "codex" -> codexViewModel
