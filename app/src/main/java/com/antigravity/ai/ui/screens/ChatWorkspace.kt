@@ -9,11 +9,12 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.unit.dp
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -136,38 +137,51 @@ fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
                 }
             )
     ) {
-        AnimatedVisibility(showHub, enter = slideInHorizontally { it } + fadeIn(), exit = slideOutHorizontally { it } + fadeOut()) {
-            TerminalHubScreen { showHub = false }
-        }
-        if (!showHub) {
-            val activeViewModel = when (selectedBackend) {
-                "codex" -> codexViewModel
-                "opencode" -> opencodeViewModel
-                "cline" -> clineViewModel
-                else -> agyViewModel
-            }
-            val activeUiState by activeViewModel.uiState.collectAsState()
+        AnimatedContent(
+            targetState = showHub,
+            transitionSpec = {
+                if (targetState) {
+                    (slideInHorizontally { it } + fadeIn()) togetherWith
+                        (slideOutHorizontally { -it } + fadeOut())
+                } else {
+                    (slideInHorizontally { -it } + fadeIn()) togetherWith
+                        (slideOutHorizontally { it } + fadeOut())
+                }
+            },
+            label = "chat-terminal-hub-transition"
+        ) { showingHub ->
+            if (showingHub) {
+                TerminalHubScreen { showHub = false }
+            } else {
+                val activeViewModel = when (selectedBackend) {
+                    "codex" -> codexViewModel
+                    "opencode" -> opencodeViewModel
+                    "cline" -> clineViewModel
+                    else -> agyViewModel
+                }
+                val activeUiState by activeViewModel.uiState.collectAsState()
 
-            ChatScreen(
-                viewModel = activeViewModel,
-                forcedBackend = selectedBackend,
-                selectedBackend = selectedBackend,
-                onBackendSelected = { selectedBackend = it },
-                onExitApp = onExitApp,
-                onPreviewHtml = { path ->
-                    previewSourcePath = path
-                    activeViewModel.openPreview(path) { previewUrl = it }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
-            if (previewUrl != null && !activeUiState.showImageMarkupDialog) {
-                PreviewScreen(
-                    previewUrl!!,
-                    previewSourcePath.orEmpty(),
-                    { previewUrl = null },
-                    activeViewModel
-                ) { bitmap ->
-                    activeViewModel.openImageMarkup(bitmap, "Preview ekran görüntüsü")
+                ChatScreen(
+                    viewModel = activeViewModel,
+                    forcedBackend = selectedBackend,
+                    selectedBackend = selectedBackend,
+                    onBackendSelected = { selectedBackend = it },
+                    onExitApp = onExitApp,
+                    onPreviewHtml = { path ->
+                        previewSourcePath = path
+                        activeViewModel.openPreview(path) { previewUrl = it }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+                if (previewUrl != null && !activeUiState.showImageMarkupDialog) {
+                    PreviewScreen(
+                        previewUrl!!,
+                        previewSourcePath.orEmpty(),
+                        { previewUrl = null },
+                        activeViewModel
+                    ) { bitmap ->
+                        activeViewModel.openImageMarkup(bitmap, "Preview ekran görüntüsü")
+                    }
                 }
             }
         }
