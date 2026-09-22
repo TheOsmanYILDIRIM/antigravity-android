@@ -126,7 +126,7 @@ fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
                                 if (acceptedDirection) {
                                     hubDragProgress = (hubDragProgress + kotlin.math.abs(amount) / terminalHubDragDistance.toPx())
                                         .coerceIn(0f, 1f)
-                                    change.consumePositionChange()
+                                    change.consume()
                                 }
                             }
                         }
