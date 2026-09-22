@@ -1,5 +1,12 @@
 # Antigravity Android - Günlük & Değişiklik Günlüğü (log.md)
 
+## [2026-09-22] Terminal Hub İkinci Çalışma Yüzeyi
+- Uygulamanın görünen adı, paket kimliği korunarak `Terminal Hub` olarak değiştirildi.
+- Mevcut agent sohbetlerine dokunmadan, yalnız sağdaki 24dp kenar alanından sola sürüklenerek açılan ikinci operasyon yüzeyi eklendi.
+- Sağ kenara sürekli yanıp sönmeyen; kısa parlayıp uzun süre sakin kalan ince ışık çizgisi ve sürükleme ilerlemesine bağlı geri bildirim eklendi.
+- Terminal Hub servis, kısayol, zamanlama, çalışan görev ve kaynak bölümlerini sahte metrik üretmeden `N/A` durumlarıyla sunuyor.
+- Geçiş eşiği unit testi eklendi. Kod commit'i `9d669aa`, Compose import düzeltmesi `beadcce`; lint/unit `35739897363` ve imzalı APK build/release `35739897394` başarılı.
+
 ## [2026-09-22] Saf HTML Preview ve Görsel Element Inspector
 - Saf HTML dosyaları ve Static Web projeleri uygulama içi WebView preview'da açılır hale getirildi.
 - Element seçimi; selector, sınırlı HTML/CSS bilgisi ve ekran görüntüsüyle aktif agente gönderiliyor.
