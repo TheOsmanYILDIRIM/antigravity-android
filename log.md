@@ -1,5 +1,11 @@
 # Antigravity Android - Günlük & Değişiklik Günlüğü (log.md)
 
+## [2026-09-22] Terminal Hub AGY Sağlık Bağlantısı
+- Terminal Hub servis durumu kartı mevcut AGY `/api/health` endpoint'ine bağlandı.
+- Hub açıkken 2,5 saniyelik polling ile çevrimiçi/çevrimdışı, latency, uptime, PID ve hata bilgisi gösteriliyor.
+- Hub kapanınca polling iptal ediliyor; ölçülmemiş Codex/OpenCode değerleri `N/A` kalıyor.
+- Commit `c6fb986`; Build & Release `35749501214` ve Android Lint & Unit Tests `35749501173` başarılı.
+
 ## [2026-09-22] Terminal Hub Tam Ekran Çift Yönlü Kaydırma
 - Kenar başlatma zorunluluğu kaldırıldı; tüm ekran yatay kaydırma alanı oldu.
 - Chat → Terminal Hub yalnız sola, Terminal Hub → Chat yalnız sağa kaydırmayla açılıyor; yaklaşık 34dp minimum hareket korunuyor.
