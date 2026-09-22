@@ -1,5 +1,11 @@
 # Antigravity Android - Günlük & Değişiklik Günlüğü (log.md)
 
+## [2026-09-22] Terminal Hub Tam Ekran Çift Yönlü Kaydırma
+- Kenar başlatma zorunluluğu kaldırıldı; tüm ekran yatay kaydırma alanı oldu.
+- Chat → Terminal Hub yalnız sola, Terminal Hub → Chat yalnız sağa kaydırmayla açılıyor; yaklaşık 34dp minimum hareket korunuyor.
+- Chat ekranında sağa başlayan hareketler tüketilmiyor; Android sistem geri jesti ve normal geri davranışı engellenmiyor.
+- Compose pointer API uyumluluğu düzeltildi. Kod commit'leri `1e3f2e1`, `9a3e5f2`, `f1f9dd0`, `7747914`; nihai lint/unit ve APK build başarılı.
+
 ## [2026-09-22] Terminal Hub Kenar Jesti Ergonomi Düzeltmesi
 - Terminal Hub tutamacı Android geri jestiyle çakışmaması için sağ fiziksel kenardan 16dp içeri taşındı.
 - Görünür ince çizgi korunurken dokunma alanı 40dp'ye genişletildi; açılma hareketi yaklaşık 33,6dp sola sürüklemeye indirildi.
