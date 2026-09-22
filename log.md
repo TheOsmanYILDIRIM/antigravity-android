@@ -1,5 +1,11 @@
 # Antigravity Android - Günlük & Değişiklik Günlüğü (log.md)
 
+## [2026-09-22] Terminal Hub Güvenli Action ve Canlı Çıktı
+- Terminal Hub'a yalnız sunucu allowlist'indeki Action ID'lerini çalıştıran kartlar eklendi: AGY başlat/durdur ve Vault sync.
+- Termux companion `/api/actions` ve `/api/actions/run` endpoint'leriyle shell injection olmadan sabit executable/args, tek eşzamanlı çalışma, 120 saniye timeout ve SSE stdout/stderr olayları sağlıyor.
+- Android Action kartları canlı çıktı, PID, busy ve exit code durumlarını gösteriyor; ChatViewModel yeni Action olaylarını no-op olarak güvenle ele alıyor.
+- Android kod commit'leri `ecb9190` ve `b2e46fa`; server commit'i `6a62808`. Lint/unit ve imzalı APK build başarılı.
+
 ## [2026-09-22] Terminal Hub AGY Sağlık Bağlantısı
 - Terminal Hub servis durumu kartı mevcut AGY `/api/health` endpoint'ine bağlandı.
 - Hub açıkken 2,5 saniyelik polling ile çevrimiçi/çevrimdışı, latency, uptime, PID ve hata bilgisi gösteriliyor.
