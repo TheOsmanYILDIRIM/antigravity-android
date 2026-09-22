@@ -3,7 +3,7 @@ package com.antigravity.ai.ui.screens
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.drawBehind
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.width
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInHorizontally
