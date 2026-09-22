@@ -19,6 +19,9 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 sealed class StreamEvent {
+    data class ActionStarted(val actionId: String, val id: String, val pid: Long?) : StreamEvent()
+    data class ActionOutput(val actionId: String, val id: String, val stream: String, val line: String) : StreamEvent()
+    data class ActionFinished(val actionId: String, val id: String, val exitCode: Int?) : StreamEvent()
     data class Init(val conversationId: String) : StreamEvent()
     data class GeneratingStatus(val conversationId: String?, val isGenerating: Boolean) : StreamEvent()
     data class Chunk(val textDelta: String, val fullContent: String, val conversationId: String? = null) : StreamEvent()
@@ -59,6 +62,19 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
         .build()
 
     private val sseFactory = EventSources.createFactory(sseClient)
+
+    suspend fun getActions(): Result<ActionsResponse> = withContext(Dispatchers.IO) {
+        try { client.newCall(Request.Builder().url("$baseUrl/api/actions").get().build()).execute().use { r ->
+            if (!r.isSuccessful) Result.failure(IOException("HTTP ${r.code}")) else Result.success(gson.fromJson(r.body?.string() ?: "{}", ActionsResponse::class.java))
+        }} catch (e: Exception) { Result.failure(e) }
+    }
+
+    suspend fun runAction(id: String): Result<ActionRunResponse> = withContext(Dispatchers.IO) {
+        try { val body = JsonObject().apply { addProperty("id", id) }.toString().toRequestBody("application/json".toMediaType())
+            client.newCall(Request.Builder().url("$baseUrl/api/actions/run").post(body).build()).execute().use { r ->
+                if (!r.isSuccessful) Result.failure(IOException("HTTP ${r.code}")) else Result.success(gson.fromJson(r.body?.string() ?: "{}", ActionRunResponse::class.java))
+            }} catch (e: Exception) { Result.failure(e) }
+    }
 
     suspend fun getConversations(): Result<ConversationsResponse> = withContext(Dispatchers.IO) {
         try {
@@ -528,6 +544,9 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
             override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
                 try {
                     when (type) {
+                        "action_started" -> { val j = gson.fromJson(data, JsonObject::class.java); trySend(StreamEvent.ActionStarted(j["actionId"].asString, j["id"].asString, j["pid"]?.asLong)) }
+                        "action_output" -> { val j = gson.fromJson(data, JsonObject::class.java); trySend(StreamEvent.ActionOutput(j["actionId"].asString, j["id"].asString, j["stream"].asString, j["line"].asString)) }
+                        "action_finished" -> { val j = gson.fromJson(data, JsonObject::class.java); trySend(StreamEvent.ActionFinished(j["actionId"].asString, j["id"].asString, j["exitCode"]?.asInt)) }
                         "init" -> {
                             terminated = false
                             val json = gson.fromJson(data, JsonObject::class.java)

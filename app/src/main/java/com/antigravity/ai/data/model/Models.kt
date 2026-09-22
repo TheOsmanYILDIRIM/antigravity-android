@@ -3,6 +3,10 @@ package com.antigravity.ai.data.model
 import com.google.gson.annotations.SerializedName
 import java.util.UUID
 
+data class ActionItem(val id: String, val label: String)
+data class ActionsResponse(val status: String = "", val actions: List<ActionItem> = emptyList())
+data class ActionRunResponse(val status: String = "", val actionId: String? = null, val id: String? = null, val pid: Long? = null)
+
 data class Message(
     val id: String = UUID.randomUUID().toString(),
     val role: String, // "user" or "bot"
