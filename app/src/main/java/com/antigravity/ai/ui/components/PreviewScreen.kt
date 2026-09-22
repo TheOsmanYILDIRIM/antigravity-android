@@ -45,12 +45,12 @@ fun PreviewScreen(url: String, sourcePath: String, onClose: () -> Unit, viewMode
             IconButton(enabled = canInspect, onClick = { webView?.evaluateJavascript(stableSelectorScript(), null) }) { Icon(Icons.Default.Search, "Inspect") }
             IconButton(onClick = { screenshot()?.let { onScreenshot?.invoke(it) } ?: viewModel.setErrorMessage("Preview ekran görüntüsü alınamadı: WebView henüz hazır değil") }) { Icon(Icons.Default.Edit, "Ekran görüntüsü al / İşaretle") }
         }
-        AndroidView(Modifier.weight(1f), factory = { context -> WebView(context).apply {
+        AndroidView(factory = { context -> WebView(context).apply {
             settings.javaScriptEnabled = true; settings.domStorageEnabled = true; webView = this
             canInspect = WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)
             if (canInspect) WebViewCompat.addWebMessageListener(this, "previewChannel", setOf(PREVIEW_ORIGIN)) { _, message, _, _, _ -> parseInspectorMessage(message.data.orEmpty())?.let { selected = it } }
             loadUrl(url); loadedUrl = url
-        } }, update = { view -> if (loadedUrl != url) { loadedUrl = url; view.loadUrl(url) } })
+        } }, modifier = Modifier.weight(1f), update = { view: WebView -> if (loadedUrl != url) { loadedUrl = url; view.loadUrl(url) } })
         selected?.let { item ->
             Text("${item.selector}\n${item.styles}", maxLines = 3, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp))
             OutlinedTextField(instruction, { instruction = it }, Modifier.fillMaxWidth().padding(8.dp), maxLines = 2, label = { Text("Element talimatı") })
