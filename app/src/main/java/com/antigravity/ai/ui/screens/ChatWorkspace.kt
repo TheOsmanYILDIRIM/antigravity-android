@@ -27,9 +27,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.awaitPointerEvent
 import androidx.compose.ui.input.pointer.changedToUp
-import androidx.compose.ui.input.pointer.consume
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -97,40 +95,38 @@ fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
                 if (previewUrl == null) {
                     Modifier.pointerInput(showHub) {
                         awaitEachGesture {
-                            awaitPointerEventScope {
-                                val down = awaitFirstDown(requireUnconsumed = false)
-                                var previousX = down.position.x
-                                var acceptedDirection = false
-                                var rejectedDirection = false
-                                hubDragProgress = 0f
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    val change = event.changes.firstOrNull() ?: break
-                                    if (change.changedToUp()) {
-                                        if (acceptedDirection && shouldOpenHub(hubDragProgress)) {
-                                            showHub = !showHub
-                                        }
-                                        hubDragProgress = 0f
-                                        break
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            var previousX = down.position.x
+                            var acceptedDirection = false
+                            var rejectedDirection = false
+                            hubDragProgress = 0f
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull() ?: break
+                                if (change.changedToUp()) {
+                                    if (acceptedDirection && shouldOpenHub(hubDragProgress)) {
+                                        showHub = !showHub
                                     }
+                                    hubDragProgress = 0f
+                                    break
+                                }
 
-                                    val amount = change.position.x - previousX
-                                    previousX = change.position.x
-                                    if (rejectedDirection) continue
-                                    if (!acceptedDirection && kotlin.math.abs(amount) > viewConfiguration.touchSlop) {
-                                        val validDirection = (!showHub && amount < 0f) || (showHub && amount > 0f)
-                                        if (!validDirection) {
-                                            rejectedDirection = true
-                                            hubDragProgress = 0f
-                                            continue
-                                        }
-                                        acceptedDirection = true
+                                val amount = change.position.x - previousX
+                                previousX = change.position.x
+                                if (rejectedDirection) continue
+                                if (!acceptedDirection && kotlin.math.abs(amount) > viewConfiguration.touchSlop) {
+                                    val validDirection = (!showHub && amount < 0f) || (showHub && amount > 0f)
+                                    if (!validDirection) {
+                                        rejectedDirection = true
+                                        hubDragProgress = 0f
+                                        continue
                                     }
-                                    if (acceptedDirection) {
-                                        hubDragProgress = (hubDragProgress + kotlin.math.abs(amount) / terminalHubDragDistance.toPx())
-                                            .coerceIn(0f, 1f)
-                                        change.consume()
-                                    }
+                                    acceptedDirection = true
+                                }
+                                if (acceptedDirection) {
+                                    hubDragProgress = (hubDragProgress + kotlin.math.abs(amount) / terminalHubDragDistance.toPx())
+                                        .coerceIn(0f, 1f)
+                                    change.consumePositionChange()
                                 }
                             }
                         }
