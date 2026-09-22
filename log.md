@@ -1,5 +1,12 @@
 # Antigravity Android - Günlük & Değişiklik Günlüğü (log.md)
 
+## [2026-09-22] Saf HTML Preview ve Görsel Element Inspector
+- Saf HTML dosyaları ve Static Web projeleri uygulama içi WebView preview'da açılır hale getirildi.
+- Element seçimi; selector, sınırlı HTML/CSS bilgisi ve ekran görüntüsüyle aktif agente gönderiliyor.
+- Preview ekran görüntüsü mevcut işaretleme akışına bağlandı; preview durumu backend geçişlerinde korunuyor.
+- Güvenli WebMessage origin'i ayrı localhost preview portuna (`127.0.0.1:8081`) bağlandı.
+- Commit'ler `a653711` ve `81b07ea`; CI lint/unit `35713116169`, APK build `35713116209` başarılı.
+
 ## [2026-09-22] Codex Soğuk Başlangıç ve AGY Sağlık Göstergesi Düzeltmesi
 - Codex sekmesi seçildiğinde app-server hazır olana kadar bekleniyor; hazır olduğunda Codex geçmiş/model/kota verileri yeniden yükleniyor.
 - Codex ViewModel açılışta eski kalan `agy-web` sağlık durumunu sekme geçişinde yeniden ölçüyor; ortak `serverHealth` alanı Codex ve AGY arasında karıştırılmıyor.

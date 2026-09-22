@@ -1,3 +1,3 @@
 # Antigravity Android Backlog
 
-- [WIP / Yapılıyor: Saf HTML WebView preview, element inspector, ekran görüntüsü ile agente gönderim ve sade Git diff]
+- [WIP / Yapılıyor: Terminal Hub ikinci ekran iskeleti ve sağ kenar geçiş parıltısı]
