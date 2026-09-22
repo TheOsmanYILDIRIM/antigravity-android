@@ -44,7 +44,12 @@ fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
 
     LaunchedEffect(selectedBackend) {
         if (selectedBackend == "codex") {
-            CodexServerManager.ensureStarted(context)
+            val ready = CodexServerManager.ensureStarted(context)
+            // serverHealth is the AGY status shown by shared server UI.
+            codexViewModel.checkServerHealth()
+            if (ready) {
+                codexViewModel.refreshAll()
+            }
         }
     }
 

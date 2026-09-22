@@ -1,5 +1,11 @@
 # Antigravity Android - Günlük & Değişiklik Günlüğü (log.md)
 
+## [2026-09-22] Codex Soğuk Başlangıç ve AGY Sağlık Göstergesi Düzeltmesi
+- Codex sekmesi seçildiğinde app-server hazır olana kadar bekleniyor; hazır olduğunda Codex geçmiş/model/kota verileri yeniden yükleniyor.
+- Codex ViewModel açılışta eski kalan `agy-web` sağlık durumunu sekme geçişinde yeniden ölçüyor; ortak `serverHealth` alanı Codex ve AGY arasında karıştırılmıyor.
+- Codex RUN_COMMAND çağrısına `WAKE_LOCK` ve `KEEP_ALIVE` sinyalleri eklendi.
+- Canlı `:4500/readyz` ve `:8080/api/health` kontrolleri başarılı; `git diff --check` temiz. Termux kuralı gereği yerel Gradle çalıştırılmadı.
+
 ## [2026-09-21] Codex App-Server Approval Policy Uyumluluk Düzeltmesi
 - `CodexBackend.kt` içindeki iki `thread/start` yolu ortak payload üreticisine bağlandı; geçersiz `unlessTrusted` değeri güncel `on-request` politikasıyla değiştirildi.
 - `CodexBackendProtocolTest.kt` gerçek JSON serileştirmesinde `approvalPolicy == "on-request"` değerini doğruluyor.

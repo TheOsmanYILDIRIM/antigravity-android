@@ -44,6 +44,8 @@ object CodexServerManager {
             putExtra("com.termux.RUN_COMMAND_WORKDIR", "/data/data/com.termux/files/home")
             putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
             putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0")
+            putExtra("com.termux.RUN_COMMAND_WAKE_LOCK", true)
+            putExtra("com.termux.RUN_COMMAND_KEEP_ALIVE", true)
         }
         runCatching {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
