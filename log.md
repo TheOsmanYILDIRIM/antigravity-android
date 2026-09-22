@@ -1,5 +1,10 @@
 # Antigravity Android - Günlük & Değişiklik Günlüğü (log.md)
 
+## [2026-09-22] Terminal Hub Kenar Jesti Ergonomi Düzeltmesi
+- Terminal Hub tutamacı Android geri jestiyle çakışmaması için sağ fiziksel kenardan 16dp içeri taşındı.
+- Görünür ince çizgi korunurken dokunma alanı 40dp'ye genişletildi; açılma hareketi yaklaşık 33,6dp sola sürüklemeye indirildi.
+- Commit `562febe`; lint/unit `35742791401` ve imzalı APK build/release `35742791315` başarılı.
+
 ## [2026-09-22] Terminal Hub İkinci Çalışma Yüzeyi
 - Uygulamanın görünen adı, paket kimliği korunarak `Terminal Hub` olarak değiştirildi.
 - Mevcut agent sohbetlerine dokunmadan, yalnız sağdaki 24dp kenar alanından sola sürüklenerek açılan ikinci operasyon yüzeyi eklendi.
