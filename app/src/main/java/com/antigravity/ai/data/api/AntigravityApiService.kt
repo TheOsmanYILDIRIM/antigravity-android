@@ -76,6 +76,36 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
             }} catch (e: Exception) { Result.failure(e) }
     }
 
+    suspend fun getTerminalTasks(): Result<TerminalTasksResponse> = getTerminal("/api/terminal/tasks", TerminalTasksResponse::class.java)
+    suspend fun getTerminalPlugins(): Result<TerminalPluginsResponse> = getTerminal("/api/terminal/plugins", TerminalPluginsResponse::class.java)
+    suspend fun getTerminalSchedules(): Result<TerminalSchedulesResponse> = getTerminal("/api/terminal/schedules", TerminalSchedulesResponse::class.java)
+
+    suspend fun createTerminalSchedule(actionId: String, triggerAtMillis: Long): Result<TerminalSchedule> = withContext(Dispatchers.IO) {
+        try {
+            val body = JsonObject().apply {
+                addProperty("id", java.util.UUID.randomUUID().toString())
+                addProperty("actionId", actionId)
+                addProperty("triggerAt", triggerAtMillis)
+            }.toString().toRequestBody("application/json".toMediaType())
+            client.newCall(Request.Builder().url("$baseUrl/api/terminal/schedules").post(body).build()).execute().use { response ->
+                if (!response.isSuccessful) Result.failure(IOException("HTTP ${response.code}"))
+                else {
+                    val payload = gson.fromJson(response.body?.string() ?: "{}", TerminalScheduleCreateResponse::class.java)
+                    payload.schedule?.let { Result.success(it) } ?: Result.failure(IOException("Schedule response missing schedule"))
+                }
+            }
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    private suspend fun <T> getTerminal(path: String, type: Class<T>): Result<T> = withContext(Dispatchers.IO) {
+        try {
+            client.newCall(Request.Builder().url("$baseUrl$path").get().build()).execute().use { response ->
+                if (!response.isSuccessful) Result.failure(IOException("HTTP ${response.code}"))
+                else Result.success(gson.fromJson(response.body?.string() ?: "{}", type))
+            }
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
     suspend fun getConversations(): Result<ConversationsResponse> = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()

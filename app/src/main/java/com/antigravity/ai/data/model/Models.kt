@@ -7,6 +7,33 @@ data class ActionItem(val id: String, val label: String)
 data class ActionsResponse(val status: String = "", val actions: List<ActionItem> = emptyList())
 data class ActionRunResponse(val status: String = "", val actionId: String? = null, val id: String? = null, val pid: Long? = null)
 
+data class TerminalTask(
+    val pid: Long? = null,
+    val name: String? = null,
+    val status: String? = null,
+    @SerializedName("cpuPercent") val cpuPercent: Double? = null,
+    @SerializedName("rssBytes") val rssBytes: Long? = null
+)
+data class TerminalTasksResponse(val status: String = "", val tasks: List<TerminalTask> = emptyList())
+data class TerminalPlugin(
+    val id: String? = null,
+    val name: String? = null,
+    val enabled: Boolean? = null,
+    val actions: List<TerminalPluginAction>? = null
+)
+data class TerminalPluginAction(val id: String? = null, val label: String? = null)
+data class TerminalPluginsResponse(val status: String = "", val plugins: List<TerminalPlugin> = emptyList())
+data class TerminalSchedule(
+    val id: String? = null,
+    val actionId: String? = null,
+    val label: String? = null,
+    val triggerAt: Long? = null,
+    val nextRunAt: String? = null,
+    val enabled: Boolean? = null
+)
+data class TerminalSchedulesResponse(val status: String = "", val schedules: List<TerminalSchedule> = emptyList())
+data class TerminalScheduleCreateResponse(val status: String = "", val schedule: TerminalSchedule? = null)
+
 data class Message(
     val id: String = UUID.randomUUID().toString(),
     val role: String, // "user" or "bot"
