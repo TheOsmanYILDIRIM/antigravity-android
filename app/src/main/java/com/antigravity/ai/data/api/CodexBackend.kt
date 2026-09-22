@@ -319,6 +319,7 @@ class CodexBackend(
     override suspend fun getFsProjects() = agyApi.getFsProjects()
     override suspend fun getFsContent(path: String) = agyApi.getFsContent(path)
     override suspend fun saveFsFile(path: String, content: String) = agyApi.saveFsFile(path, content)
+    override suspend fun openPreview(entryPath: String) = agyApi.openPreview(entryPath)
 
     private fun mapEvent(message: CodexRpcMessage): StreamEvent? {
         val p = message.params

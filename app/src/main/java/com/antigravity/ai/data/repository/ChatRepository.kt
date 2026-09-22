@@ -36,6 +36,7 @@ class ChatRepository(private val backend: ChatBackend) {
     suspend fun fetchFsProjects(): Result<FsProjectsResponse> = backend.getFsProjects()
     suspend fun fetchFsContent(path: String): Result<FsContentResponse> = backend.getFsContent(path)
     suspend fun saveFsFile(path: String, content: String): Result<FsSaveResponse> = backend.saveFsFile(path, content)
+    suspend fun openPreview(entryPath: String): Result<PreviewOpenResponse> = backend.openPreview(entryPath)
     suspend fun fetchSession(): Result<SessionResponse> = backend.fetchSession()
 
     suspend fun sendMessage(

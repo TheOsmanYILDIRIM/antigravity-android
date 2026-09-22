@@ -48,6 +48,7 @@ fun TermuxFileManagerScreen(
     onDismiss: () -> Unit,
     onNavigateToDir: (String) -> Unit,
     onOpenFile: (String) -> Unit,
+    onPreviewHtml: (String) -> Unit = {},
     onOpenImage: (String, String) -> Unit,
     onAttachToChat: (String) -> Unit,
     onMentionInChat: (String) -> Unit,
@@ -407,6 +408,7 @@ fun TermuxFileManagerScreen(
                                 ProjectCardItem(
                                     project = proj,
                                     onOpenDir = { onNavigateToDir(proj.path); selectedTab = 0 },
+                                    onPreview = { onPreviewHtml(proj.path) },
                                     onAttach = { onAttachToChat(proj.path) },
                                     onMention = { onMentionInChat(proj.path) }
                                 )
@@ -489,6 +491,8 @@ fun TermuxFileManagerScreen(
                                             val isImg = ext in listOf(".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg")
                                             if (isImg) {
                                                 onOpenImage(item.path, item.name)
+                                            } else if (ext == ".html" || ext == ".htm") {
+                                                onPreviewHtml(item.path)
                                             } else {
                                                 onOpenFile(item.path)
                                             }
@@ -602,6 +606,8 @@ fun TermuxFileManagerScreen(
                                     val ext = item.extension ?: ""
                                     if (ext in listOf(".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg")) {
                                         onOpenImage(item.path, item.name)
+                                    } else if (ext == ".html" || ext == ".htm") {
+                                        onPreviewHtml(item.path)
                                     } else {
                                         onOpenFile(item.path)
                                     }
@@ -684,6 +690,7 @@ fun QuickLocationChip(
 fun ProjectCardItem(
     project: ProjectItem,
     onOpenDir: () -> Unit,
+    onPreview: () -> Unit,
     onAttach: () -> Unit,
     onMention: () -> Unit
 ) {
@@ -742,6 +749,9 @@ fun ProjectCardItem(
                         color = badgeColor,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
+                }
+                if (project.type.equals("Static Web", true) || project.type.equals("HTML", true)) {
+                    IconButton(onClick = onPreview, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Visibility, "Preview", modifier = Modifier.size(18.dp)) }
                 }
             }
 

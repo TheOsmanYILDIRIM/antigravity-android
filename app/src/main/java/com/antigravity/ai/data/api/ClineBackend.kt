@@ -50,4 +50,5 @@ class ClineBackend(private val api: ClineApiService = ClineApiService()) : ChatB
     override suspend fun getFsProjects(): Result<FsProjectsResponse> = agyApi.getFsProjects()
     override suspend fun getFsContent(path: String): Result<FsContentResponse> = agyApi.getFsContent(path)
     override suspend fun saveFsFile(path: String, content: String): Result<FsSaveResponse> = agyApi.saveFsFile(path, content)
+    override suspend fun openPreview(entryPath: String) = agyApi.openPreview(entryPath)
 }

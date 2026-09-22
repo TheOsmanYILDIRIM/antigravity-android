@@ -8,12 +8,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.antigravity.ai.data.api.CodexServerManager
 import com.antigravity.ai.ui.viewmodel.ChatViewModel
 import com.antigravity.ai.ui.viewmodel.ChatViewModelFactory
+import com.antigravity.ai.ui.components.PreviewScreen
 
 /**
  * Bağımsız AGY, Codex, OpenCode ve Cline sohbet istemcilerini canlı tutarak
@@ -22,6 +24,8 @@ import com.antigravity.ai.ui.viewmodel.ChatViewModelFactory
 @Composable
 fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
     var selectedBackend by rememberSaveable { mutableStateOf("agy") }
+    var previewUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    var previewSourcePath by rememberSaveable { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val application = context.applicationContext as android.app.Application
 
@@ -60,6 +64,7 @@ fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
             "cline" -> clineViewModel
             else -> agyViewModel
         }
+        val activeUiState by activeViewModel.uiState.collectAsState()
 
         ChatScreen(
             viewModel = activeViewModel,
@@ -67,7 +72,11 @@ fun ChatWorkspace(onExitApp: (() -> Unit)? = null) {
             selectedBackend = selectedBackend,
             onBackendSelected = { selectedBackend = it },
             onExitApp = onExitApp,
+            onPreviewHtml = { path -> previewSourcePath = path; activeViewModel.openPreview(path) { previewUrl = it } },
             modifier = Modifier.fillMaxSize()
         )
+        if (previewUrl != null && !activeUiState.showImageMarkupDialog) {
+            PreviewScreen(previewUrl!!, previewSourcePath.orEmpty(), { previewUrl = null }, activeViewModel) { bitmap -> activeViewModel.openImageMarkup(bitmap, "Preview ekran görüntüsü") }
+        }
     }
 }

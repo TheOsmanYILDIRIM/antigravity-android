@@ -351,6 +351,18 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
         }
     }
 
+    suspend fun openPreview(entryPath: String): Result<PreviewOpenResponse> = withContext(Dispatchers.IO) {
+        try {
+            val json = JsonObject().apply { addProperty("entryPath", entryPath) }
+            val request = Request.Builder().url("$baseUrl/api/preview/open")
+                .post(json.toString().toRequestBody("application/json".toMediaType())).build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext Result.failure(IOException("HTTP ${response.code}"))
+                Result.success(gson.fromJson(response.body?.string() ?: "{}", PreviewOpenResponse::class.java))
+            }
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
     suspend fun getSession(): Result<SessionResponse> = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()

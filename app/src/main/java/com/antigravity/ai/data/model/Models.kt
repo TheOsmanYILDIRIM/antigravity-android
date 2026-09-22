@@ -279,6 +279,12 @@ data class FsSaveResponse(
     val size: Long? = null
 )
 
+data class PreviewOpenResponse(
+    @SerializedName("status") val status: String,
+    @SerializedName("previewId") val previewId: String,
+    @SerializedName("url") val url: String
+)
+
 fun resolveMediaUrl(rawPath: String, baseUrl: String = "http://127.0.0.1:8080"): String {
     if (rawPath.isBlank()) return ""
     if (rawPath.startsWith("http://") || rawPath.startsWith("https://") || rawPath.startsWith("content://")) {

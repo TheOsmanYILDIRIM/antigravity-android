@@ -57,6 +57,7 @@ fun ChatScreen(
     selectedBackend: String = forcedBackend ?: "agy",
     onBackendSelected: ((String) -> Unit)? = null,
     onExitApp: (() -> Unit)? = null,
+    onPreviewHtml: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -783,6 +784,7 @@ fun ChatScreen(
                 onDismiss = { viewModel.setFileManagerVisible(false) },
                 onNavigateToDir = { dir -> viewModel.loadFsDirectory(dir) },
                 onOpenFile = { path -> viewModel.openFileInViewer(path) },
+                onPreviewHtml = { path -> onPreviewHtml?.invoke(path) },
                 onOpenImage = { url, title -> viewModel.openImageInViewer(url, title) },
                 onAttachToChat = { path -> viewModel.attachFsPathToChat(path) },
                 onMentionInChat = { path -> viewModel.mentionFsPathInChat(path) },

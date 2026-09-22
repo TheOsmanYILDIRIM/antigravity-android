@@ -981,6 +981,26 @@ class ChatViewModel @JvmOverloads constructor(
         }
     }
 
+    fun sendPreviewInspection(bitmap: Bitmap, sourcePath: String, selector: String, outerHtml: String, bounds: String, styles: String, instruction: String) {
+        if (instruction.isBlank()) return
+        viewModelScope.launch {
+            val bytes = ByteArrayOutputStream().also { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
+            val encoded = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+            repository.uploadFile("preview-inspection-${System.currentTimeMillis()}.png", encoded, "image").onSuccess { upload ->
+                val attachment = Attachment(upload.fileName, upload.path, type = "image", relPath = upload.relPath, size = upload.size)
+                val prompt = "$instruction\n\nPreview source: $sourcePath\nSelector: $selector\nBounds: $bounds\nComputed styles: $styles\nOuterHTML:\n$outerHtml"
+                _uiState.update { it.copy(attachments = it.attachments + attachment, inputText = prompt) }
+                sendMessage()
+            }.onFailure { error -> _uiState.update { it.copy(errorMessage = "Preview ekran görüntüsü yüklenemedi: ${error.message ?: "bilinmeyen hata"}") } }
+        }
+    }
+
+    fun openPreview(path: String, onOpened: (String) -> Unit) {
+        viewModelScope.launch { repository.openPreview(path).onSuccess { onOpened(com.antigravity.ai.data.api.absolutePreviewUrl(it.url)) }.onFailure { error -> _uiState.update { it.copy(errorMessage = "Preview açılamadı: ${error.message ?: "bilinmeyen hata"}") } } }
+    }
+
+    fun setErrorMessage(message: String) { _uiState.update { it.copy(errorMessage = message) } }
+
     fun checkServerHealth() {
         viewModelScope.launch {
             _uiState.update { it.copy(isCheckingHealth = true) }

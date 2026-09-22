@@ -92,6 +92,8 @@ interface ChatBackend {
 
     suspend fun saveFsFile(path: String, content: String): Result<FsSaveResponse> =
         Result.failure(UnsupportedOperationException("fs kayıt desteklenmiyor"))
+    suspend fun openPreview(entryPath: String): Result<PreviewOpenResponse> =
+        Result.failure(UnsupportedOperationException("preview desteklenmiyor"))
 
     suspend fun fetchSession(): Result<SessionResponse> = Result.success(SessionResponse("ok", null, false))
 

@@ -48,6 +48,7 @@ class AgyBackend(private val api: AntigravityApiService = AntigravityApiService(
     override suspend fun getFsProjects(): Result<FsProjectsResponse> = api.getFsProjects()
     override suspend fun getFsContent(path: String): Result<FsContentResponse> = api.getFsContent(path)
     override suspend fun saveFsFile(path: String, content: String): Result<FsSaveResponse> = api.saveFsFile(path, content)
+    override suspend fun openPreview(entryPath: String): Result<PreviewOpenResponse> = api.openPreview(entryPath)
     override suspend fun fetchSession(): Result<SessionResponse> = api.getSession()
     override suspend fun fetchAuthStatus(): Result<AuthStatusResponse> = api.getAuthStatus()
     override suspend fun startAgLogin(): Result<AgLoginResponse> = api.startAgLogin()
