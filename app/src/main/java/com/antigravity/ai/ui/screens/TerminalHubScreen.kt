@@ -3,9 +3,8 @@ package com.antigravity.ai.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.platform.LocalContext
 import com.antigravity.ai.ui.theme.SurfaceDark
 import com.antigravity.ai.ui.theme.TextMuted
@@ -43,7 +41,6 @@ import com.antigravity.ai.data.model.ActionItem
 import com.antigravity.ai.service.TerminalScheduleReceiver
 import com.antigravity.ai.service.TerminalScheduleManager
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
@@ -139,32 +136,37 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
                         .forEach { (category, categoryActions) ->
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(category, style = MaterialTheme.typography.labelLarge)
-                                FlowRow(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                    maxItemsInEachRow = 2
-                                ) {
-                                    categoryActions.sortedWith(compareBy<ActionItem> { it.order }.thenBy { it.label }).forEach { action ->
-                                        androidx.compose.material3.Button(
-                                            modifier = Modifier.widthIn(min = 104.dp, max = 220.dp),
-                                            enabled = !busy,
-                                            onClick = {
-                                                scope.launch {
-                                                    api.runAction(action.id).onFailure {
-                                                        status = "Action hatası: ${it.message ?: "N/A"}"
+                                categoryActions.sortedWith(compareBy<ActionItem> { it.order }.thenBy { it.label })
+                                    .chunked(2)
+                                    .forEach { rowActions ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            rowActions.forEach { action ->
+                                                androidx.compose.material3.Button(
+                                                    modifier = Modifier.weight(1f),
+                                                    enabled = !busy,
+                                                    onClick = {
+                                                        scope.launch {
+                                                            api.runAction(action.id).onFailure {
+                                                                status = "Action hatası: ${it.message ?: "N/A"}"
+                                                            }
+                                                        }
                                                     }
+                                                ) {
+                                                    Text(
+                                                        action.compactLabel?.ifBlank { null } ?: actionActionLabel(action.label),
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
                                                 }
                                             }
-                                        ) {
-                                            Text(
-                                                action.compactLabel ?: actionActionLabel(action.label),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
+                                            if (rowActions.size == 1) {
+                                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.weight(1f))
+                                            }
                                         }
                                     }
-                                }
                             }
                     }
                     if (output.isNotBlank()) Text(output, color = TextMuted, style = MaterialTheme.typography.bodySmall)
@@ -210,8 +212,17 @@ private fun actionServiceLabel(serviceId: String): String = when (serviceId) {
 
 private fun actionActionLabel(label: String): String = when {
     label.contains("başlat", ignoreCase = true) || label.contains("start", ignoreCase = true) -> "Başlat"
-    label.contains("kapat", ignoreCase = true) || label.contains("stop", ignoreCase = true) -> "Kapat"
-    label.contains("sync", ignoreCase = true) -> "Senkronize et"
+    label.contains("durdur", ignoreCase = true) || label.contains("kapat", ignoreCase = true) || label.contains("stop", ignoreCase = true) -> "Durdur"
+    label.contains("senkronize", ignoreCase = true) || label.contains("sync", ignoreCase = true) -> "Senkronize et"
+    label.contains("listele", ignoreCase = true) || label.contains("list", ignoreCase = true) -> "Listele"
+    label.contains("durum", ignoreCase = true) || label.contains("status", ignoreCase = true) -> "Durum"
+    label.contains("kota", ignoreCase = true) || label.contains("quota", ignoreCase = true) -> "Kota"
+    label.contains("geçmiş", ignoreCase = true) || label.contains("history", ignoreCase = true) -> "Geçmiş"
+    label.contains("yenile", ignoreCase = true) || label.contains("refresh", ignoreCase = true) -> "Yenile"
+    label.contains("doktor", ignoreCase = true) || label.contains("doctor", ignoreCase = true) -> "Doktor"
+    label.contains("süreç", ignoreCase = true) || label.contains("ps", ignoreCase = true) -> "Süreçler"
+    label.contains("düzenle", ignoreCase = true) || label.contains("organize", ignoreCase = true) -> "Düzenle"
+    label.contains("geri al", ignoreCase = true) || label.contains("rollback", ignoreCase = true) -> "Geri al"
     else -> label
 }
 

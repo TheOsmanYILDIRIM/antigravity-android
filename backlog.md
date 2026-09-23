@@ -2,6 +2,12 @@
 
 - Aktif WIP yok.
 
+## Bitti
+
+- [x] 2026-09-22 — Action kartları kategori bazlı `FlowRow`, kısa etiket, ellipsis ve iki sütun sınırıyla dar ekran taşması olmadan gösterilecek şekilde güncellendi.
+
+- Aktif WIP yok.
+
 ## [2026-09-22] Terminal Hub Runtime Bağlantıları
 - Termux API'lerine gerçek bağlantı eklendi: yönetilen agent süreçleri için PID/CPU/RSS, manifest tabanlı plugin grupları ve kalıcı güvenli schedule kayıtları.
 - Schedule kayıtları yalnız bilinen manifest action ID'leri ve gelecekteki timestamp'leri kabul ediyor; arbitrary shell reddediliyor.

@@ -99,4 +99,6 @@
 [2026-09-22] Yapıldı: Terminal Hub güvenli action kartları, run çağrısı ve SSE çıktı paneli eklendi.
 [2026-09-22] Yapıldı: Terminal Hub'a Codex/OpenCode/Cline servis start-stop action'ları ve güvenli Termux controller'ları eklendi; alias kaynakları tarandı.
 [2026-09-22] Yapıldı: Terminal Hub action'ları servis bazında gruplandı; iki yönlü swipe için %25 ekran/96dp minimum eşik ve 1.2x yatay baskınlık eklendi.
+[2026-09-22] Yapıldı: Action modeli kategori/kısa etiket/sıra metadata'sını alıyor; Terminal Hub kartları adaptive `FlowRow` ile dar ekran taşmasını önlüyor.
 [2026-09-22] Yapıldı: Terminal Hub Termux runtime API'lerine bağlandı; görev kaynakları, plugin manifesti ve güvenli kalıcı schedule + AlarmManager wakeup akışı eklendi.
+[2026-09-23] Yapıldı: Terminal Hub'daki `FlowRow` dikey esneme ve taşma hatası düzeltildi; `chunked(2)` ve `Modifier.weight(1f)` ile 2 sütunlu sabit oranlı grid düzenine geçildi. `AGY Auth` ve tüm action kategorilerinin eksiksiz ve orantılı render edilmesi sağlandı, `actionActionLabel` Türkçe etiket haritası zenginleştirildi.
