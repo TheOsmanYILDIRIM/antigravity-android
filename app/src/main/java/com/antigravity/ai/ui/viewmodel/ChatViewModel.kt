@@ -1811,12 +1811,13 @@ class ChatViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             repository.startNewChat().onSuccess { res ->
                 val newDraft = getDraft(null)
+                val newId = res.session?.conversationId ?: res.session?.id
                 _uiState.update {
                     it.copy(
                         messages = emptyList(),
                         isGenerating = false,
-                        currentSessionId = null,
-                        currentConversationId = null,
+                        currentSessionId = newId,
+                        currentConversationId = newId,
                         currentProjectName = null,
                         inputText = newDraft,
                         pastedBlocks = emptyList(),

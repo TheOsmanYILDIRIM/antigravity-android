@@ -225,7 +225,6 @@ class CodexBackend(
     ): Result<Unit> = runCatching {
         val target = conversationId ?: currentThreadId
         val threadId = if (continueChat && target != null) {
-            api.request("thread/resume", JsonObject().apply { addProperty("threadId", target) }).getOrThrow()
             target
         } else {
             val result = api.request("thread/start", codexThreadStartParams()).getOrThrow()
@@ -252,18 +251,20 @@ class CodexBackend(
         api.request("thread/start", codexThreadStartParams()).mapCatching { result ->
             val id = result.getAsJsonObject("thread")?.string("id") ?: error("Codex thread id dönmedi")
             currentThreadId = id
+            currentTurnId = null
             SessionResponse("ok", SessionData(id, id, "Yeni Codex Sohbeti", messages = emptyList()))
         }
 
     override val supportsSteer: Boolean = true
 
-    override suspend fun stopGeneration(): Result<Unit> {
-        val threadId = currentThreadId ?: return Result.success(Unit)
-        val turnId = currentTurnId ?: return Result.success(Unit)
-        return api.request("turn/interrupt", JsonObject().apply {
+    override suspend fun stopGeneration(): Result<Unit> = runCatching {
+        val threadId = currentThreadId ?: return@runCatching
+        val turnId = currentTurnId ?: return@runCatching
+        api.request("turn/interrupt", JsonObject().apply {
             addProperty("threadId", threadId)
             addProperty("turnId", turnId)
-        }).mapCatching { Unit }
+        }).getOrNull()
+        currentTurnId = null
     }
 
     override suspend fun steerPrompt(
