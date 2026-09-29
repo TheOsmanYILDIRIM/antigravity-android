@@ -7,8 +7,9 @@ import android.content.Intent
 import android.os.Build
 
 object TerminalScheduleManager {
+    private val ACTION_ID = Regex("^[A-Za-z0-9._:-]{1,96}$")
     fun schedule(context: Context, id: String, triggerAtMillis: Long, actionId: String): Boolean {
-        if (actionId !in TerminalScheduleReceiver.ALLOWED_ACTIONS || triggerAtMillis <= System.currentTimeMillis()) return false
+        if (!ACTION_ID.matches(actionId) || triggerAtMillis <= System.currentTimeMillis()) return false
 
         val intent = Intent(context, TerminalScheduleReceiver::class.java)
             .putExtra(TerminalScheduleReceiver.EXTRA_ACTION_ID, actionId)
