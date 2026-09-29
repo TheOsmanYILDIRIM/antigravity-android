@@ -12,7 +12,11 @@ data class ActionItem(
     val order: Int = 0,
     val schedulable: Boolean = false
 )
-data class ActionsResponse(val status: String = "", val actions: List<ActionItem> = emptyList())
+data class ActionsResponse(
+    val status: String = "",
+    val version: String? = null,
+    val actions: List<ActionItem> = emptyList()
+)
 data class ActionRunResponse(val status: String = "", val actionId: String? = null, val id: String? = null, val pid: Long? = null)
 
 data class TerminalTask(
