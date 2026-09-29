@@ -5,6 +5,9 @@ import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -589,7 +592,26 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
             .header("Accept", "text/event-stream")
             .build()
 
-        val listener = object : EventSourceListener() {
+        var disposed = false
+        var activeEventSource: EventSource? = null
+        var reconnectJob: Job? = null
+        lateinit var listener: EventSourceListener
+
+        fun connect() {
+            if (!disposed) {
+                activeEventSource = sseFactory.newEventSource(request, listener)
+            }
+        }
+
+        fun scheduleReconnect() {
+            if (disposed || reconnectJob?.isActive == true) return
+            reconnectJob = launch {
+                delay(1_000)
+                if (!disposed) connect()
+            }
+        }
+
+        listener = object : EventSourceListener() {
             override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
                 try {
                     when (type) {
@@ -747,27 +769,35 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                 }
             }
 
+            override fun onOpen(eventSource: EventSource, response: Response) {
+                reconnectJob?.cancel()
+                reconnectJob = null
+            }
+
             override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {
-                // Sadece açık bir HTTP sunucu hatası (4xx/5xx) durumunda error fırlat, geçici kopmada oturumu sıfırlama
+                // Açık HTTP hatasını raporla; geçici bağlantı kopmalarında state'i
+                // sıfırlama. EventSource otomatik olarak yeniden bağlanır.
                 if (!terminated && response != null && response.code >= 400) {
-                    terminated = true
                     trySend(
                         StreamEvent.Error(
                             "Sunucu bağlantı hatası (HTTP ${response.code})${t?.message?.let { ": $it" } ?: ""}"
                         )
                     )
                 }
+                scheduleReconnect()
             }
 
             override fun onClosed(eventSource: EventSource) {
-                // EventSource normal kapandı
+                scheduleReconnect()
             }
         }
 
-        val eventSource = sseFactory.newEventSource(request, listener)
+        connect()
 
         awaitClose {
-            eventSource.cancel()
+            disposed = true
+            reconnectJob?.cancel()
+            activeEventSource?.cancel()
         }
     }
 }
