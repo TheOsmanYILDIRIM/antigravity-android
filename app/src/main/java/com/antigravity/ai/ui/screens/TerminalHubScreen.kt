@@ -49,7 +49,6 @@ import com.antigravity.ai.data.model.TerminalPlugin
 import com.antigravity.ai.data.model.TerminalSchedule
 import com.antigravity.ai.data.model.TerminalTask
 import com.antigravity.ai.data.model.ActionItem
-import com.antigravity.ai.service.TerminalScheduleReceiver
 import com.antigravity.ai.service.TerminalScheduleManager
 
 
@@ -92,12 +91,20 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
     var tasks by remember { mutableStateOf<List<TerminalTask>?>(null) }
     var plugins by remember { mutableStateOf<List<TerminalPlugin>?>(null) }
     var schedules by remember { mutableStateOf<List<TerminalSchedule>?>(null) }
-    var scheduleAction by remember { mutableStateOf("agy-start") }
+    var scheduleAction by remember { mutableStateOf<String?>(null) }
     var scheduleMinutes by remember { mutableStateOf("5") }
     var scheduleMenuOpen by remember { mutableStateOf(false) }
     var scheduleStatus by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
-        api.getActions().onSuccess { actions = it.actions; status = "Hazır" }.onFailure { status = "Sunucu kapalı / N/A" }
+        api.getActions().onSuccess {
+            actions = it.actions
+            if (scheduleAction == null) {
+                scheduleAction = it.actions.firstOrNull { action -> action.schedulable }?.id
+            }
+            status = "Hazır"
+        }.onFailure {
+            status = "Sunucu kapalı / N/A"
+        }
         api.getTerminalTasks().onSuccess { tasks = it.tasks }
         api.getTerminalPlugins().onSuccess { plugins = it.plugins }
         api.getTerminalSchedules().onSuccess { schedules = it.schedules }
@@ -164,27 +171,60 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
                     Text("Yeni zamanlama", style = MaterialTheme.typography.titleMedium)
                     Text("Yalnızca güvenli manifest action'ları çalıştırır.", color = TextMuted, style = MaterialTheme.typography.bodySmall)
                     androidx.compose.foundation.layout.Box {
-                        Button(onClick = { scheduleMenuOpen = true }) { Text(scheduleAction) }
-                        DropdownMenu(expanded = scheduleMenuOpen, onDismissRequest = { scheduleMenuOpen = false }) {
-                            TerminalScheduleReceiver.ALLOWED_ACTIONS.forEach { actionId ->
-                                DropdownMenuItem(text = { Text(actionId) }, onClick = { scheduleAction = actionId; scheduleMenuOpen = false })
-                            }
+                        Button(
+                            onClick = { scheduleMenuOpen = true },
+                            enabled = actions.any { it.schedulable }
+                        ) {
+                            Text(
+                                scheduleAction?.let { selected ->
+                                    actions.firstOrNull { it.id == selected }?.compactLabel ?: selected
+                                } ?: "Action seç"
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = scheduleMenuOpen,
+                            onDismissRequest = { scheduleMenuOpen = false }
+                        ) {
+                            actions.filter { it.schedulable }
+                                .sortedWith(compareBy<ActionItem> { it.order }.thenBy { it.label })
+                                .forEach { action ->
+                                    DropdownMenuItem(
+                                        text = { Text(action.label) },
+                                        onClick = {
+                                            scheduleAction = action.id
+                                            scheduleMenuOpen = false
+                                        }
+                                    )
+                                }
                         }
                     }
                     OutlinedTextField(value = scheduleMinutes, onValueChange = { scheduleMinutes = it.filter(Char::isDigit).take(4) }, label = { Text("Kaç dakika sonra") })
                     Button(onClick = {
+                        val actionId = scheduleAction
                         val minutes = scheduleMinutes.toLongOrNull()
-                        if (minutes == null || minutes < 1L) {
-                            scheduleStatus = "En az 1 dakika girin"
-                        } else {
-                            val triggerAt = System.currentTimeMillis() + minutes * 60_000L
-                            scope.launch {
-                                api.createTerminalSchedule(scheduleAction, triggerAt).onSuccess {
-                                    if (TerminalScheduleManager.schedule(context, it.id ?: "$scheduleAction-$triggerAt", triggerAt, scheduleAction)) {
-                                        schedules = schedules.orEmpty() + it
-                                        scheduleStatus = "Zamanlandı"
-                                    } else scheduleStatus = "Alarm kurulamadı"
-                                }.onFailure { scheduleStatus = "Zamanlama hatası: ${it.message ?: "N/A"}" }
+                        when {
+                            actionId == null -> scheduleStatus = "Önce zamanlanabilir bir action seçin"
+                            minutes == null || minutes < 1L -> scheduleStatus = "En az 1 dakika girin"
+                            else -> {
+                                val triggerAt = System.currentTimeMillis() + minutes * 60_000L
+                                scope.launch {
+                                    api.createTerminalSchedule(actionId, triggerAt).onSuccess {
+                                        if (TerminalScheduleManager.schedule(
+                                                context,
+                                                it.id ?: "$actionId-$triggerAt",
+                                                triggerAt,
+                                                actionId
+                                            )
+                                        ) {
+                                            schedules = schedules.orEmpty() + it
+                                            scheduleStatus = "Zamanlandı"
+                                        } else {
+                                            scheduleStatus = "Alarm kurulamadı"
+                                        }
+                                    }.onFailure {
+                                        scheduleStatus = "Zamanlama hatası: ${it.message ?: "N/A"}"
+                                    }
+                                }
                             }
                         }
                     }) { Text("Zamanla") }
