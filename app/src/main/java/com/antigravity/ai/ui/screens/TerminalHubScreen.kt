@@ -231,10 +231,36 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
                                                     modifier = Modifier.weight(1f),
                                                     enabled = !busy,
                                                     onClick = {
+                                                        val startedAt = System.currentTimeMillis()
+                                                        busy = true
+                                                        status = "Başlatılıyor • ${action.label}"
+                                                        terminal = ActionTerminalState(
+                                                            actionId = action.id,
+                                                            label = action.label,
+                                                            startedAtMillis = startedAt
+                                                        )
                                                         scope.launch {
-                                                            api.runAction(action.id).onFailure {
-                                                                status = "Action hatası: ${it.message ?: "N/A"}"
-                                                            }
+                                                            api.runAction(action.id)
+                                                                .onSuccess { response ->
+                                                                    terminal = terminal.copy(
+                                                                        runId = response.actionId ?: terminal.runId,
+                                                                        pid = response.pid ?: terminal.pid
+                                                                    )
+                                                                }
+                                                                .onFailure { error ->
+                                                                    val finishedAt = System.currentTimeMillis()
+                                                                    busy = false
+                                                                    status = "Action hatası • ${action.label}"
+                                                                    terminal = terminal.copy(
+                                                                        finishedAtMillis = finishedAt,
+                                                                        durationMs = (finishedAt - startedAt).coerceAtLeast(0L),
+                                                                        exitCode = -1,
+                                                                        stderr = appendTerminalLine(
+                                                                            terminal.stderr,
+                                                                            error.message ?: "Bilinmeyen action hatası"
+                                                                        )
+                                                                    )
+                                                                }
                                                         }
                                                     }
                                                 ) {
@@ -252,7 +278,15 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
                                     }
                             }
                     }
-                    if (output.isNotBlank()) Text(output, color = TextMuted, style = MaterialTheme.typography.bodySmall)
+                    if (terminal.hasData) {
+                        ActionTerminalPanel(
+                            state = terminal,
+                            onClear = {
+                                terminal = ActionTerminalState()
+                                if (!busy) status = "Hazır"
+                            }
+                        )
+                    }
                 }
             }
         }
