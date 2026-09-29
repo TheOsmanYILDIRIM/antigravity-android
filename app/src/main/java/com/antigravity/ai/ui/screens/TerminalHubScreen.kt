@@ -109,7 +109,8 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
                     .filter { it.schedulable }
                     .map { it.id }
                     .toSet()
-                if (scheduleAction !in schedulableIds) {
+                val selectedScheduleAction = scheduleAction
+                if (selectedScheduleAction == null || selectedScheduleAction !in schedulableIds) {
                     scheduleAction = response.actions.firstOrNull { it.schedulable }?.id
                 }
 
