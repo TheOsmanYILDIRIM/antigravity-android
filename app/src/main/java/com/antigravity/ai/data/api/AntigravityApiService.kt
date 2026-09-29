@@ -19,9 +19,21 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 sealed class StreamEvent {
-    data class ActionStarted(val actionId: String, val id: String, val pid: Long?) : StreamEvent()
+    data class ActionStarted(
+        val actionId: String,
+        val id: String,
+        val pid: Long?,
+        val startedAt: Long? = null
+    ) : StreamEvent()
     data class ActionOutput(val actionId: String, val id: String, val stream: String, val line: String) : StreamEvent()
-    data class ActionFinished(val actionId: String, val id: String, val exitCode: Int?) : StreamEvent()
+    data class ActionFinished(
+        val actionId: String,
+        val id: String,
+        val exitCode: Int?,
+        val startedAt: Long? = null,
+        val finishedAt: Long? = null,
+        val durationMs: Long? = null
+    ) : StreamEvent()
     data class Handshake(val conversationId: String?, val isGenerating: Boolean) : StreamEvent()
     data class Init(val conversationId: String) : StreamEvent()
     data class ConversationRebound(val fromConversationId: String, val conversationId: String) : StreamEvent()
@@ -583,9 +595,30 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                             val isGenerating = json.get("isGenerating")?.asBoolean ?: false
                             trySend(StreamEvent.Handshake(convId, isGenerating))
                         }
-                        "action_started" -> { val j = gson.fromJson(data, JsonObject::class.java); trySend(StreamEvent.ActionStarted(j["actionId"].asString, j["id"].asString, j["pid"]?.asLong)) }
-                        "action_output" -> { val j = gson.fromJson(data, JsonObject::class.java); trySend(StreamEvent.ActionOutput(j["actionId"].asString, j["id"].asString, j["stream"].asString, j["line"].asString)) }
-                        "action_finished" -> { val j = gson.fromJson(data, JsonObject::class.java); trySend(StreamEvent.ActionFinished(j["actionId"].asString, j["id"].asString, j["exitCode"]?.asInt)) }
+                        "action_started" -> {
+                            val j = gson.fromJson(data, JsonObject::class.java)
+                            trySend(StreamEvent.ActionStarted(
+                                j["actionId"].asString,
+                                j["id"].asString,
+                                j["pid"]?.asLong,
+                                j["startedAt"]?.asLong
+                            ))
+                        }
+                        "action_output" -> {
+                            val j = gson.fromJson(data, JsonObject::class.java)
+                            trySend(StreamEvent.ActionOutput(j["actionId"].asString, j["id"].asString, j["stream"].asString, j["line"].asString))
+                        }
+                        "action_finished" -> {
+                            val j = gson.fromJson(data, JsonObject::class.java)
+                            trySend(StreamEvent.ActionFinished(
+                                j["actionId"].asString,
+                                j["id"].asString,
+                                j["exitCode"]?.asInt,
+                                j["startedAt"]?.asLong,
+                                j["finishedAt"]?.asLong,
+                                j["durationMs"]?.asLong
+                            ))
+                        }
                         "init" -> {
                             terminated = false
                             val json = gson.fromJson(data, JsonObject::class.java)
