@@ -327,6 +327,137 @@ private fun actionServiceLabel(serviceId: String): String = when (serviceId) {
     else -> serviceId.replaceFirstChar { it.uppercase() }
 }
 
+@Composable
+private fun ActionTerminalPanel(
+    state: ActionTerminalState,
+    onClear: () -> Unit
+) {
+    val statusText = when {
+        state.isRunning -> "ÇALIŞIYOR"
+        state.exitCode == 0 -> "BAŞARILI"
+        state.exitCode != null -> "HATA"
+        else -> "BAŞLATILIYOR"
+    }
+    val statusColor = when {
+        state.isRunning -> MaterialTheme.colorScheme.primary
+        state.exitCode == 0 -> MaterialTheme.colorScheme.tertiary
+        state.exitCode != null -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.primary
+    }
+    val durationText = state.durationMs?.let { formatActionDuration(it) }
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        state.label,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        listOfNotNull(
+                            state.pid?.let { "PID \$it" },
+                            state.exitCode?.let { "exit \$it" },
+                            durationText
+                        ).joinToString(" · ").ifBlank { "Komut hazırlanıyor" },
+                        color = TextMuted,
+                        fontSize = 11.sp
+                    )
+                }
+                Column {
+                    Text(
+                        statusText,
+                        color = statusColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    TextButton(onClick = onClear, enabled = !state.isRunning) {
+                        Text("Temizle", fontSize = 11.sp)
+                    }
+                }
+            }
+
+            when {
+                state.stdout.isBlank() && state.stderr.isBlank() && state.isRunning -> {
+                    Text("Çıktı bekleniyor…", color = TextMuted, fontFamily = FontFamily.Monospace)
+                }
+                state.stdout.isBlank() && state.stderr.isBlank() -> {
+                    Text("Bu action çıktı üretmedi.", color = TextMuted)
+                }
+            }
+
+            if (state.stdout.isNotBlank()) {
+                TerminalStreamSection(
+                    title = "STDOUT",
+                    content = state.stdout,
+                    isError = false
+                )
+            }
+            if (state.stderr.isNotBlank()) {
+                TerminalStreamSection(
+                    title = "STDERR",
+                    content = state.stderr,
+                    isError = true
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TerminalStreamSection(
+    title: String,
+    content: String,
+    isError: Boolean
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            title,
+            color = if (isError) MaterialTheme.colorScheme.error else TextMuted,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
+        SelectionContainer {
+            Text(
+                text = content,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 240.dp)
+                    .verticalScroll(rememberScrollState())
+                    .background(
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                        RoundedCornerShape(8.dp)
+                    )
+                    .padding(10.dp),
+                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp,
+                lineHeight = 15.sp
+            )
+        }
+    }
+}
+
+private fun formatActionDuration(durationMs: Long): String {
+    return if (durationMs < 1_000L) {
+        "\$durationMs ms"
+    } else {
+        String.format("%.1f sn", durationMs / 1000.0)
+    }
+}
+
 private fun actionActionLabel(label: String): String = when {
     label.contains("başlat", ignoreCase = true) || label.contains("start", ignoreCase = true) -> "Başlat"
     label.contains("durdur", ignoreCase = true) || label.contains("kapat", ignoreCase = true) || label.contains("stop", ignoreCase = true) -> "Durdur"
