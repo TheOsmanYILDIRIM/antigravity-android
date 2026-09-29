@@ -66,7 +66,7 @@ private data class ActionTerminalState(
     val stdout: String = "",
     val stderr: String = ""
 ) {
-    val isRunning: Boolean get() = runId != null && finishedAtMillis == null
+    val isRunning: Boolean get() = actionId != null && finishedAtMillis == null && exitCode == null
     val hasData: Boolean
         get() = runId != null || actionId != null || stdout.isNotBlank() || stderr.isNotBlank() || exitCode != null
 }
