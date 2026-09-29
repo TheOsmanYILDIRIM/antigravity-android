@@ -74,6 +74,7 @@ fun MessageInputBar(
     selectedModelName: String = "Gemini 3.7 Flash",
     onModelPillClick: () -> Unit = {},
     isGenerating: Boolean,
+    isFinalizing: Boolean = false,
     canSteer: Boolean = false,
     isListening: Boolean,
     onSend: () -> Unit,
@@ -144,7 +145,7 @@ fun MessageInputBar(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Antigravity düşünüyor ve komutları yürütüyor (Running)...",
+                        text = if (isFinalizing) "Yanıt hazır • oturum sonlandırılıyor..." else "Antigravity düşünüyor ve komutları yürütüyor (Running)...",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         color = GeminiBlue.copy(alpha = pulseAlpha)
@@ -274,7 +275,9 @@ fun MessageInputBar(
                     if (text.isEmpty() && pastedBlocks.isEmpty() && attachments.isEmpty()) {
                         Text(
                             text = if (isGenerating) {
-                                if (canSteer) "Canlı yönlendirme (steer) ekleyin..." else "Antigravity çalışıyor..."
+                                if (isFinalizing) "Yanıt hazır; son durum doğrulanıyor..."
+                                else if (canSteer) "Canlı yönlendirme (steer) ekleyin..."
+                                else "Antigravity çalışıyor..."
                             } else "Antigravity'ye bir şey sorun veya / yazın...",
                             color = TextMuted,
                             fontSize = 15.sp
