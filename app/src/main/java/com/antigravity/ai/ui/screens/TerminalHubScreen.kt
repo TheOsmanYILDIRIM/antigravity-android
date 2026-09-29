@@ -73,7 +73,7 @@ private data class ActionTerminalState(
 
 private fun appendTerminalLine(current: String, line: String): String {
     if (line.isBlank()) return current
-    val next = if (current.isBlank()) line else "\$current\n\$line"
+    val next = if (current.isBlank()) line else "$current\n$line"
     return if (next.length <= ACTION_TERMINAL_MAX_CHARS) next
     else "… önceki çıktı kırpıldı …\n" + next.takeLast(ACTION_TERMINAL_MAX_CHARS)
 }
@@ -105,7 +105,7 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
                 is StreamEvent.ActionStarted -> {
                     val label = actions.firstOrNull { it.id == event.id }?.label ?: event.id
                     busy = true
-                    status = "Çalışıyor • \$label"
+                    status = "Çalışıyor • $label"
                     terminal = ActionTerminalState(
                         runId = event.actionId,
                         actionId = event.id,
@@ -146,7 +146,7 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
                             exitCode = event.exitCode
                         )
                         busy = false
-                        status = if (event.exitCode == 0) "Tamamlandı • \$label" else "Hata • \$label"
+                        status = if (event.exitCode == 0) "Tamamlandı • $label" else "Hata • $label"
                     }
                 }
                 else -> Unit
@@ -368,8 +368,8 @@ private fun ActionTerminalPanel(
                     )
                     Text(
                         listOfNotNull(
-                            state.pid?.let { "PID \$it" },
-                            state.exitCode?.let { "exit \$it" },
+                            state.pid?.let { "PID $it" },
+                            state.exitCode?.let { "exit $it" },
                             durationText
                         ).joinToString(" · ").ifBlank { "Komut hazırlanıyor" },
                         color = TextMuted,
@@ -452,7 +452,7 @@ private fun TerminalStreamSection(
 
 private fun formatActionDuration(durationMs: Long): String {
     return if (durationMs < 1_000L) {
-        "\$durationMs ms"
+        "$durationMs ms"
     } else {
         String.format("%.1f sn", durationMs / 1000.0)
     }
