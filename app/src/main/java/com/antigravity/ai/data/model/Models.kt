@@ -9,7 +9,8 @@ data class ActionItem(
     val compactLabel: String? = null,
     val category: String? = null,
     val icon: String? = null,
-    val order: Int = 0
+    val order: Int = 0,
+    val schedulable: Boolean = false
 )
 data class ActionsResponse(val status: String = "", val actions: List<ActionItem> = emptyList())
 data class ActionRunResponse(val status: String = "", val actionId: String? = null, val id: String? = null, val pid: Long? = null)
