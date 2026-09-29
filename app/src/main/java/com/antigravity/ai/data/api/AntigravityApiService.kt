@@ -34,6 +34,10 @@ sealed class StreamEvent {
         val finishedAt: Long? = null,
         val durationMs: Long? = null
     ) : StreamEvent()
+    data class ActionCatalogChanged(
+        val version: String?,
+        val actionCount: Int? = null
+    ) : StreamEvent()
     data class Handshake(val conversationId: String?, val isGenerating: Boolean) : StreamEvent()
     data class Init(val conversationId: String) : StreamEvent()
     data class ConversationRebound(val fromConversationId: String, val conversationId: String) : StreamEvent()
@@ -617,6 +621,13 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                                 j["startedAt"]?.asLong,
                                 j["finishedAt"]?.asLong,
                                 j["durationMs"]?.asLong
+                            ))
+                        }
+                        "action_catalog_changed" -> {
+                            val j = gson.fromJson(data, JsonObject::class.java)
+                            trySend(StreamEvent.ActionCatalogChanged(
+                                j["version"]?.asString,
+                                j["actionCount"]?.asInt
                             ))
                         }
                         "init" -> {
