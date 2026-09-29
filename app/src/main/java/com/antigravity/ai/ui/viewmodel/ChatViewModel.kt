@@ -712,7 +712,8 @@ class ChatViewModel @JvmOverloads constructor(
                     }
                     is StreamEvent.ActionStarted,
                     is StreamEvent.ActionOutput,
-                    is StreamEvent.ActionFinished -> Unit
+                    is StreamEvent.ActionFinished,
+                    is StreamEvent.ActionCatalogChanged -> Unit
                 }
             }
         }
