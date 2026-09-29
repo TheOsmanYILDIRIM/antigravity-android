@@ -43,6 +43,7 @@ import com.antigravity.ai.ui.theme.TextMuted
 import com.antigravity.ai.data.api.ServerHealth
 import com.antigravity.ai.data.api.AntigravityApiService
 import com.antigravity.ai.data.api.StreamEvent
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import com.antigravity.ai.data.model.TerminalPlugin
@@ -95,16 +96,43 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
     var scheduleMinutes by remember { mutableStateOf("5") }
     var scheduleMenuOpen by remember { mutableStateOf(false) }
     var scheduleStatus by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) {
-        api.getActions().onSuccess {
-            actions = it.actions
-            if (scheduleAction == null) {
-                scheduleAction = it.actions.firstOrNull { action -> action.schedulable }?.id
+    var catalogVersion by remember { mutableStateOf<String?>(null) }
+
+    val refreshActions: suspend (Boolean) -> Unit = { showStatus ->
+        api.getActions()
+            .onSuccess { response ->
+                val previousVersion = catalogVersion
+                catalogVersion = response.version
+                actions = response.actions
+
+                val schedulableIds = response.actions
+                    .filter { it.schedulable }
+                    .map { it.id }
+                    .toSet()
+                if (scheduleAction !in schedulableIds) {
+                    scheduleAction = response.actions.firstOrNull { it.schedulable }?.id
+                }
+
+                if (!terminal.isRunning) {
+                    status = when {
+                        previousVersion != null &&
+                            response.version != null &&
+                            previousVersion != response.version ->
+                            "Actions güncellendi • ${response.actions.size} kısayol"
+                        showStatus -> "Hazır"
+                        else -> status
+                    }
+                }
             }
-            status = "Hazır"
-        }.onFailure {
-            status = "Sunucu kapalı / N/A"
-        }
+            .onFailure {
+                if (showStatus && !terminal.isRunning) {
+                    status = "Sunucu kapalı / N/A"
+                }
+            }
+    }
+
+    LaunchedEffect(Unit) {
+        refreshActions(true)
         api.getTerminalTasks().onSuccess { tasks = it.tasks }
         api.getTerminalPlugins().onSuccess { plugins = it.plugins }
         api.getTerminalSchedules().onSuccess { schedules = it.schedules }
@@ -157,10 +185,27 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
                         status = if (event.exitCode == 0) "Tamamlandı • $label" else "Hata • $label"
                     }
                 }
+                is StreamEvent.ActionCatalogChanged -> {
+                    refreshActions(false)
+                }
+                is StreamEvent.Handshake -> {
+                    // Server restart/reconnect: immediately reconcile the external catalog.
+                    refreshActions(false)
+                }
                 else -> Unit
             }
         }
     }
+
+    // Fallback sync: survives missed SSE events and server restarts without
+    // requiring the Android app or Terminal Hub screen to be restarted.
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(5_000)
+            refreshActions(false)
+        }
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 28.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -169,7 +214,7 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
             Card(colors = CardDefaults.cardColors(containerColor = SurfaceDark), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Yeni zamanlama", style = MaterialTheme.typography.titleMedium)
-                    Text("Yalnızca güvenli manifest action'ları çalıştırır.", color = TextMuted, style = MaterialTheme.typography.bodySmall)
+                    Text("External action kataloğu otomatik yenilenir; uygulamayı yeniden başlatmak gerekmez.", color = TextMuted, style = MaterialTheme.typography.bodySmall)
                     androidx.compose.foundation.layout.Box {
                         Button(
                             onClick = { scheduleMenuOpen = true },
