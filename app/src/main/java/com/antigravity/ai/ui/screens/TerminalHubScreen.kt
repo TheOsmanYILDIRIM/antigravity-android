@@ -7,8 +7,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -17,6 +22,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -24,8 +31,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import com.antigravity.ai.ui.theme.SurfaceDark
 import com.antigravity.ai.ui.theme.TextMuted
@@ -41,14 +51,41 @@ import com.antigravity.ai.data.model.ActionItem
 import com.antigravity.ai.service.TerminalScheduleReceiver
 import com.antigravity.ai.service.TerminalScheduleManager
 
+
+private const val ACTION_TERMINAL_MAX_CHARS = 48_000
+
+private data class ActionTerminalState(
+    val runId: String? = null,
+    val actionId: String? = null,
+    val label: String = "Action terminali",
+    val pid: Long? = null,
+    val startedAtMillis: Long? = null,
+    val finishedAtMillis: Long? = null,
+    val durationMs: Long? = null,
+    val exitCode: Int? = null,
+    val stdout: String = "",
+    val stderr: String = ""
+) {
+    val isRunning: Boolean get() = runId != null && finishedAtMillis == null
+    val hasData: Boolean
+        get() = runId != null || actionId != null || stdout.isNotBlank() || stderr.isNotBlank() || exitCode != null
+}
+
+private fun appendTerminalLine(current: String, line: String): String {
+    if (line.isBlank()) return current
+    val next = if (current.isBlank()) line else "\$current\n\$line"
+    return if (next.length <= ACTION_TERMINAL_MAX_CHARS) next
+    else "… önceki çıktı kırpıldı …\n" + next.takeLast(ACTION_TERMINAL_MAX_CHARS)
+}
+
 @Composable
 fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val api = remember { AntigravityApiService() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    var actions by remember { mutableStateOf(emptyList<com.antigravity.ai.data.model.ActionItem>()) }
-    var output by remember { mutableStateOf("") }
+    var actions by remember { mutableStateOf(emptyList<ActionItem>()) }
+    var terminal by remember { mutableStateOf(ActionTerminalState()) }
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Sunucu bağlantısı bekleniyor") }
     var tasks by remember { mutableStateOf<List<TerminalTask>?>(null) }
@@ -63,12 +100,58 @@ fun TerminalHubScreen(agyHealth: ServerHealth? = null, onBack: () -> Unit) {
         api.getTerminalTasks().onSuccess { tasks = it.tasks }
         api.getTerminalPlugins().onSuccess { plugins = it.plugins }
         api.getTerminalSchedules().onSuccess { schedules = it.schedules }
-        api.observeEvents().collect { event -> when (event) {
-            is StreamEvent.ActionStarted -> { busy = true; status = "Çalışıyor (PID ${event.pid ?: "?"})"; output = "" }
-            is StreamEvent.ActionOutput -> output += "[${event.stream}] ${event.line}\n"
-            is StreamEvent.ActionFinished -> { busy = false; status = "Bitti (exitCode=${event.exitCode ?: "?"})" }
-            else -> Unit
-        }}
+        api.observeEvents().collect { event ->
+            when (event) {
+                is StreamEvent.ActionStarted -> {
+                    val label = actions.firstOrNull { it.id == event.id }?.label ?: event.id
+                    busy = true
+                    status = "Çalışıyor • \$label"
+                    terminal = ActionTerminalState(
+                        runId = event.actionId,
+                        actionId = event.id,
+                        label = label,
+                        pid = event.pid,
+                        startedAtMillis = event.startedAt ?: System.currentTimeMillis()
+                    )
+                }
+                is StreamEvent.ActionOutput -> {
+                    val label = actions.firstOrNull { it.id == event.id }?.label ?: event.id
+                    val base = if (terminal.runId == null || terminal.runId == event.actionId) {
+                        terminal.copy(
+                            runId = event.actionId,
+                            actionId = event.id,
+                            label = if (terminal.actionId == null) label else terminal.label
+                        )
+                    } else terminal
+                    if (base.runId == event.actionId) {
+                        terminal = if (event.stream.equals("stderr", ignoreCase = true)) {
+                            base.copy(stderr = appendTerminalLine(base.stderr, event.line))
+                        } else {
+                            base.copy(stdout = appendTerminalLine(base.stdout, event.line))
+                        }
+                    }
+                }
+                is StreamEvent.ActionFinished -> {
+                    if (terminal.runId == null || terminal.runId == event.actionId) {
+                        val label = actions.firstOrNull { it.id == event.id }?.label ?: terminal.label
+                        val finishedAt = event.finishedAt ?: System.currentTimeMillis()
+                        val startedAt = event.startedAt ?: terminal.startedAtMillis
+                        terminal = terminal.copy(
+                            runId = event.actionId,
+                            actionId = event.id,
+                            label = label,
+                            startedAtMillis = startedAt,
+                            finishedAtMillis = finishedAt,
+                            durationMs = event.durationMs ?: startedAt?.let { (finishedAt - it).coerceAtLeast(0L) },
+                            exitCode = event.exitCode
+                        )
+                        busy = false
+                        status = if (event.exitCode == 0) "Tamamlandı • \$label" else "Hata • \$label"
+                    }
+                }
+                else -> Unit
+            }
+        }
     }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 28.dp),
