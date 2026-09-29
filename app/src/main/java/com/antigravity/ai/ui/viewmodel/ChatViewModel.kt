@@ -51,6 +51,7 @@ data class ChatUiState(
     val activeVaultFilePath: String? = null,
     val isUploadingAttachment: Boolean = false,
     val isGenerating: Boolean = false,
+    val isFinalizing: Boolean = false,
     val generatingConversationIds: Set<String> = emptySet(),
     val isListening: Boolean = false,
     val showSettingsDialog: Boolean = false,
@@ -328,6 +329,62 @@ class ChatViewModel @JvmOverloads constructor(
         eventsJob = viewModelScope.launch {
             repository.observeStreamEvents().collect { event ->
                 when (event) {
+                    is StreamEvent.Handshake -> {
+                        _uiState.update { state ->
+                            val currentId = state.currentConversationId
+                            val updatedSet = state.generatingConversationIds.toMutableSet()
+                            val matchesCurrent = currentId == null || event.conversationId == null || event.conversationId == currentId
+                            if (event.isGenerating) {
+                                event.conversationId?.let { updatedSet.add(it) }
+                                state.copy(
+                                    generatingConversationIds = updatedSet,
+                                    isGenerating = if (matchesCurrent) true else state.isGenerating,
+                                    isFinalizing = if (matchesCurrent) false else state.isFinalizing
+                                )
+                            } else {
+                                event.conversationId?.let { updatedSet.remove(it) }
+                                if (matchesCurrent) currentId?.let { updatedSet.remove(it) }
+                                val updatedMessages = if (matchesCurrent) {
+                                    state.messages.map { msg ->
+                                        if (msg.state == MessageState.GENERATING) msg.copy(state = MessageState.DONE) else msg
+                                    }
+                                } else state.messages
+                                state.copy(
+                                    messages = updatedMessages,
+                                    generatingConversationIds = updatedSet,
+                                    isGenerating = if (matchesCurrent) false else state.isGenerating,
+                                    isFinalizing = if (matchesCurrent) false else state.isFinalizing
+                                )
+                            }
+                        }
+                    }
+                    is StreamEvent.ConversationRebound -> {
+                        val fromId = event.fromConversationId
+                        val toId = event.conversationId
+                        if (fromId != toId) {
+                            val oldCached = sessionMessagesCache.remove(fromId)
+                            if (oldCached != null) {
+                                val target = sessionMessagesCache[toId]
+                                if (target == null || target.size <= oldCached.size) {
+                                    sessionMessagesCache[toId] = oldCached
+                                }
+                            }
+                            _uiState.update { state ->
+                                val updatedSet = state.generatingConversationIds.toMutableSet()
+                                val wasGenerating = updatedSet.remove(fromId)
+                                if (wasGenerating) updatedSet.add(toId)
+                                val shouldRebind = state.currentConversationId == null ||
+                                    state.currentConversationId == fromId ||
+                                    state.currentSessionId == fromId
+                                state.copy(
+                                    currentSessionId = if (shouldRebind) toId else state.currentSessionId,
+                                    currentConversationId = if (shouldRebind) toId else state.currentConversationId,
+                                    generatingConversationIds = updatedSet,
+                                    isGenerating = if (shouldRebind && wasGenerating) true else state.isGenerating
+                                )
+                            }
+                        }
+                    }
                     is StreamEvent.Init -> {
                         _uiState.update { state ->
                             val updatedSet = state.generatingConversationIds.toMutableSet()
@@ -342,7 +399,8 @@ class ChatViewModel @JvmOverloads constructor(
                                 currentSessionId = targetId,
                                 currentConversationId = targetId,
                                 generatingConversationIds = updatedSet,
-                                isGenerating = if (isCurrentlyNew || targetId == event.conversationId) true else state.isGenerating
+                                isGenerating = if (isCurrentlyNew || targetId == event.conversationId) true else state.isGenerating,
+                                isFinalizing = if (isCurrentlyNew || targetId == event.conversationId) false else state.isFinalizing
                             )
                         }
                         fetchConversations()
@@ -356,7 +414,8 @@ class ChatViewModel @JvmOverloads constructor(
                                 val isCurrentGenerating = event.conversationId == null || event.conversationId == currentActiveId
                                 state.copy(
                                     generatingConversationIds = updatedSet,
-                                    isGenerating = if (isCurrentGenerating) true else state.isGenerating
+                                    isGenerating = if (isCurrentGenerating) true else state.isGenerating,
+                                    isFinalizing = if (isCurrentGenerating) false else state.isFinalizing
                                 )
                             } else {
                                 event.conversationId?.let { updatedSet.remove(it) }
@@ -371,7 +430,8 @@ class ChatViewModel @JvmOverloads constructor(
                                 state.copy(
                                     messages = updatedMessages,
                                     generatingConversationIds = updatedSet,
-                                    isGenerating = if (isCurrentDone) false else state.isGenerating
+                                    isGenerating = if (isCurrentDone) false else state.isGenerating,
+                                    isFinalizing = if (isCurrentDone) false else state.isFinalizing
                                 )
                             }
                         }
@@ -393,7 +453,7 @@ class ChatViewModel @JvmOverloads constructor(
                                 cached.add(Message(role = "bot", content = event.fullContent, state = MessageState.GENERATING))
                             }
                             if (targetId == currentActiveId || currentActiveId == null) {
-                                _uiState.update { it.copy(messages = ArrayList(cached), isGenerating = true) }
+                                _uiState.update { it.copy(messages = ArrayList(cached), isGenerating = true, isFinalizing = false) }
                             }
                         }
                     }
@@ -427,7 +487,31 @@ class ChatViewModel @JvmOverloads constructor(
                                 cached.add(Message(role = "bot", content = "", tools = mutableListOf(event.tool), state = MessageState.GENERATING))
                             }
                             if (targetId == currentActiveId || currentActiveId == null) {
-                                _uiState.update { it.copy(messages = ArrayList(cached)) }
+                                _uiState.update { it.copy(messages = ArrayList(cached), isFinalizing = false) }
+                            }
+                        }
+                    }
+                    is StreamEvent.ResponseFinalizing -> {
+                        val currentActiveId = _uiState.value.currentConversationId
+                        val targetId = event.conversationId ?: currentActiveId
+                        if (targetId != null && sessionMessagesCache.containsKey(targetId)) {
+                            val cached = sessionMessagesCache[targetId]!!
+                            val botMsgIndex = cached.indexOfLast { it.role == "bot" }
+                            if (botMsgIndex >= 0) {
+                                cached[botMsgIndex] = cached[botMsgIndex].copy(state = MessageState.DONE)
+                            }
+                        }
+                        _uiState.update { state ->
+                            val isMatching = targetId == null || state.currentConversationId == null || targetId == state.currentConversationId
+                            if (!isMatching) state else {
+                                val updatedMessages = if (targetId != null && sessionMessagesCache.containsKey(targetId)) {
+                                    ArrayList(sessionMessagesCache[targetId] ?: emptyList())
+                                } else {
+                                    state.messages.map { msg ->
+                                        if (msg.state == MessageState.GENERATING) msg.copy(state = MessageState.DONE) else msg
+                                    }
+                                }
+                                state.copy(messages = updatedMessages, isFinalizing = true)
                             }
                         }
                     }
@@ -472,6 +556,7 @@ class ChatViewModel @JvmOverloads constructor(
                                 messages = updatedMessages,
                                 isGenerating = isStillGenerating,
                                 generatingConversationIds = updatedSet,
+                                isFinalizing = false,
                                 errorMessage = null
                             )
                         }
@@ -503,6 +588,7 @@ class ChatViewModel @JvmOverloads constructor(
                             state.copy(
                                 messages = updatedMessages,
                                 isGenerating = isStillGenerating,
+                                isFinalizing = false,
                                 generatingConversationIds = updatedSet
                             )
                         }
@@ -518,14 +604,15 @@ class ChatViewModel @JvmOverloads constructor(
                                     messages = serverMessages,
                                     currentSessionId = loadedConvId,
                                     currentConversationId = loadedConvId,
-                                    isGenerating = event.session.isGenerating
+                                    isGenerating = event.session.isGenerating,
+                                    isFinalizing = false
                                 )
                             }
                         }
                     }
                     is StreamEvent.SessionReset -> {
                         if (_uiState.value.currentConversationId == null) {
-                            _uiState.update { it.copy(messages = emptyList(), isGenerating = false, currentSessionId = null) }
+                            _uiState.update { it.copy(messages = emptyList(), isGenerating = false, isFinalizing = false, currentSessionId = null) }
                         }
                         fetchConversations()
                     }
@@ -587,6 +674,7 @@ class ChatViewModel @JvmOverloads constructor(
                             state.copy(
                                 messages = list,
                                 isGenerating = isStillGenerating,
+                                isFinalizing = if (isMatching) false else state.isFinalizing,
                                 generatingConversationIds = updatedSet,
                                 errorMessage = if (isMatching) event.message else state.errorMessage,
                                 notice = null
@@ -602,6 +690,7 @@ class ChatViewModel @JvmOverloads constructor(
                             it.copy(
                                 isAuthenticated = false,
                                 isGenerating = false,
+                                isFinalizing = false,
                                 errorMessage = event.message,
                                 showAuthDialog = true,
                                 agyAuthUrl = event.authUrl,
@@ -638,16 +727,28 @@ class ChatViewModel @JvmOverloads constructor(
                     .toSet()
 
                 _uiState.update { state ->
-                    val combinedGenerating = (state.generatingConversationIds + serverGeneratingIds).toSet()
+                    val conversations = res.conversations ?: emptyList()
+                    val knownIds = conversations.map { it.id }.toSet()
+                    val reconciledGenerating = state.generatingConversationIds.toMutableSet()
+                    knownIds.forEach { id ->
+                        if (id in serverGeneratingIds) reconciledGenerating.add(id)
+                        else reconciledGenerating.remove(id)
+                    }
+                    reconciledGenerating.addAll(serverGeneratingIds)
+
                     val activeId = state.currentConversationId ?: state.currentSessionId
                     val activeProj = if (activeId != null) {
-                        res.conversations?.find { it.id == activeId }?.let { it.projectName ?: it.projectTag } ?: state.currentProjectName
+                        conversations.find { it.id == activeId }?.let { it.projectName ?: it.projectTag } ?: state.currentProjectName
                     } else state.currentProjectName
+                    val serverKnowsActive = activeId != null && activeId in knownIds
+                    val activeGenerating = activeId != null && activeId in reconciledGenerating
 
                     state.copy(
-                        conversations = res.conversations ?: emptyList(),
+                        conversations = conversations,
                         currentProjectName = activeProj,
-                        generatingConversationIds = combinedGenerating
+                        generatingConversationIds = reconciledGenerating,
+                        isGenerating = if (serverKnowsActive) activeGenerating else state.isGenerating,
+                        isFinalizing = if (serverKnowsActive && !activeGenerating) false else state.isFinalizing
                     )
                 }
             }
@@ -736,6 +837,7 @@ class ChatViewModel @JvmOverloads constructor(
                         currentConversationId = convId,
                         currentProjectName = projectName,
                         isGenerating = isConvGenerating,
+                        isFinalizing = false,
                         inputText = draftText,
                         attachments = emptyList(),
                         pastedBlocks = emptyList(),
@@ -1761,6 +1863,7 @@ class ChatViewModel @JvmOverloads constructor(
                 showMentions = false,
                 messages = it.messages + userMessage + botPlaceholder,
                 isGenerating = true,
+                isFinalizing = false,
                 notice = null
             )
         }
@@ -1797,6 +1900,7 @@ class ChatViewModel @JvmOverloads constructor(
                     current.copy(
                         messages = cleanList,
                         isGenerating = false,
+                        isFinalizing = false,
                         errorMessage = friendlyMessage
                     )
                 }
@@ -1816,6 +1920,7 @@ class ChatViewModel @JvmOverloads constructor(
                     it.copy(
                         messages = emptyList(),
                         isGenerating = false,
+                        isFinalizing = false,
                         currentSessionId = newId,
                         currentConversationId = newId,
                         currentProjectName = null,
@@ -1833,7 +1938,7 @@ class ChatViewModel @JvmOverloads constructor(
     fun stopExecution() {
         viewModelScope.launch {
             repository.stopExecution()
-            _uiState.update { it.copy(isGenerating = false) }
+            _uiState.update { it.copy(isGenerating = false, isFinalizing = false) }
         }
     }
 
