@@ -22,8 +22,11 @@ sealed class StreamEvent {
     data class ActionStarted(val actionId: String, val id: String, val pid: Long?) : StreamEvent()
     data class ActionOutput(val actionId: String, val id: String, val stream: String, val line: String) : StreamEvent()
     data class ActionFinished(val actionId: String, val id: String, val exitCode: Int?) : StreamEvent()
+    data class Handshake(val conversationId: String?, val isGenerating: Boolean) : StreamEvent()
     data class Init(val conversationId: String) : StreamEvent()
+    data class ConversationRebound(val fromConversationId: String, val conversationId: String) : StreamEvent()
     data class GeneratingStatus(val conversationId: String?, val isGenerating: Boolean) : StreamEvent()
+    data class ResponseFinalizing(val conversationId: String? = null) : StreamEvent()
     data class Chunk(val textDelta: String, val fullContent: String, val conversationId: String? = null) : StreamEvent()
     data class ToolUpdate(val tool: ToolCall, val conversationId: String? = null) : StreamEvent()
     data class Done(val botMessage: SessionMessage?, val conversationId: String? = null) : StreamEvent()
@@ -574,6 +577,12 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
             override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
                 try {
                     when (type) {
+                        "handshake" -> {
+                            val json = gson.fromJson(data, JsonObject::class.java)
+                            val convId = json.get("conversationId")?.takeUnless { it.isJsonNull }?.asString
+                            val isGenerating = json.get("isGenerating")?.asBoolean ?: false
+                            trySend(StreamEvent.Handshake(convId, isGenerating))
+                        }
                         "action_started" -> { val j = gson.fromJson(data, JsonObject::class.java); trySend(StreamEvent.ActionStarted(j["actionId"].asString, j["id"].asString, j["pid"]?.asLong)) }
                         "action_output" -> { val j = gson.fromJson(data, JsonObject::class.java); trySend(StreamEvent.ActionOutput(j["actionId"].asString, j["id"].asString, j["stream"].asString, j["line"].asString)) }
                         "action_finished" -> { val j = gson.fromJson(data, JsonObject::class.java); trySend(StreamEvent.ActionFinished(j["actionId"].asString, j["id"].asString, j["exitCode"]?.asInt)) }
@@ -591,10 +600,23 @@ class AntigravityApiService(private val baseUrl: String = "http://127.0.0.1:8080
                             val convId = json.get("conversationId")?.asString
                             trySend(StreamEvent.GeneratingStatus(convId, true))
                         }
+                        "conversation_rebound" -> {
+                            val json = gson.fromJson(data, JsonObject::class.java)
+                            val fromId = json.get("fromConversationId")?.asString ?: ""
+                            val convId = json.get("conversationId")?.asString ?: ""
+                            if (fromId.isNotBlank() && convId.isNotBlank()) {
+                                trySend(StreamEvent.ConversationRebound(fromId, convId))
+                            }
+                        }
                         "generating_done" -> {
                             val json = gson.fromJson(data, JsonObject::class.java)
                             val convId = json.get("conversationId")?.asString
                             trySend(StreamEvent.GeneratingStatus(convId, false))
+                        }
+                        "response_finalizing" -> {
+                            val json = gson.fromJson(data, JsonObject::class.java)
+                            val convId = json.get("conversationId")?.asString
+                            trySend(StreamEvent.ResponseFinalizing(convId))
                         }
                         "chunk" -> {
                             val json = gson.fromJson(data, JsonObject::class.java)
