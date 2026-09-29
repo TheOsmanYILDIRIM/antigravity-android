@@ -28,6 +28,7 @@ fun ChatTopBar(
     settings: ChatSettings,
     usage: UsageData?,
     isGenerating: Boolean,
+    isFinalizing: Boolean = false,
     modelName: String? = null,
     projectName: String? = null,
     sessionTokens: Int = 0,
@@ -47,7 +48,7 @@ fun ChatTopBar(
 
     // 2. Stats Subtitle state: only shows briefly on update or generating (no aggressive periodic ticker)
     var showStatsSubtitle by remember { mutableStateOf(false) }
-    LaunchedEffect(sessionTokens, isGenerating) {
+    LaunchedEffect(sessionTokens, isGenerating, isFinalizing) {
         if (isGenerating) {
             showStatsSubtitle = true
         } else if (sessionTokens > 0) {
@@ -163,7 +164,11 @@ fun ChatTopBar(
                         }
 
                         Text(
-                            text = if (isGenerating) "⚡ Üretiliyor • $tokenDisplay tok" else "$tokenDisplay tok • $dataDisplay",
+                            text = when {
+                                isFinalizing -> "✓ Yanıt hazır • $tokenDisplay tok"
+                                isGenerating -> "⚡ Üretiliyor • $tokenDisplay tok"
+                                else -> "$tokenDisplay tok • $dataDisplay"
+                            },
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (isGenerating) GeminiBlue else PrimaryIndigo,
