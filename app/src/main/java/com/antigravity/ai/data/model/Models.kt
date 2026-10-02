@@ -481,7 +481,7 @@ data class AgLoginCodeResponse(
 )
 
 data class ChatSettings(
-    val model: String = "gemini-3.7-flash-medium",
+    val model: String = "default",
     val effort: String = "default", // default, low, medium, high
     val mode: String = "default", // default, plan, accept-edits
     val useVault: Boolean = true,
