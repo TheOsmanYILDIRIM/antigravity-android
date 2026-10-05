@@ -1,5 +1,9 @@
 name: Build & Release Antigravity AI APK
 
+concurrency:
+  group: antigravity-build-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ "main", "master" ]

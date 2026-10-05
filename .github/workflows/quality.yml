@@ -1,5 +1,9 @@
 name: Android Lint & Unit Tests
 
+concurrency:
+  group: antigravity-quality-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ "main", "master" ]
